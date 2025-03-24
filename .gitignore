@@ -1,0 +1,6 @@
+.venv
+.DS_Store
+
+# Ignore all files in the data folder
+data/*
+
