@@ -4,8 +4,8 @@ import re
 import argparse
 from pathlib import Path
 
-# data_path = '/deepstore/datasets/hmi/speechlaugh-corpus/ami' # path to AMI Meeting Corpus in deepstore
-data_path = '../data' # path to AMI Meeting Corpus in local
+data_path = '/deepstore/datasets/hmi/speechlaugh-corpus/ami' # path to AMI Meeting Corpus in deepstore
+# data_path = '../data' # path to AMI Meeting Corpus in local
 transcript_path = f'{data_path}/transcripts'
 transcript_segments = f'{data_path}/transcript_segments'
 
