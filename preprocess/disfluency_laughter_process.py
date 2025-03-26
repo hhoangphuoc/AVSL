@@ -5,11 +5,11 @@ import re
 import argparse
 from pathlib import Path
 
-# Paths to data directories
-data_path = '/deepstore/datasets/hmi/speechlaugh-corpus/ami'  # path to AMI Meeting Corpus in deepstore
-# data_path = '../data'  # Local path
-transcript_path = f'{data_path}/transcripts'
-csv_output_path = f'{data_path}/dsfl_laugh'
+from constants import DATA_PATH, TRANS_PATH
+
+data_path = DATA_PATH
+transcript_path = TRANS_PATH
+csv_output_path = os.path.join(DATA_PATH, 'dsfl_laugh')
 
 def disfluency_laughter_to_csv(input_dir=None, output_dir=None):
     """

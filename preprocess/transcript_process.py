@@ -4,10 +4,11 @@ import re
 import argparse
 from pathlib import Path
 
-data_path = '/deepstore/datasets/hmi/speechlaugh-corpus/ami' # path to AMI Meeting Corpus in deepstore
-# data_path = '../data' # path to AMI Meeting Corpus in local
-transcript_path = f'{data_path}/transcripts'
-transcript_segments = f'{data_path}/transcript_segments'
+from constants import DATA_PATH, TRANS_PATH, TRANS_SEG_PATH
+
+data_path = DATA_PATH
+transcript_path = TRANS_PATH
+transcript_segments_dir = TRANS_SEG_PATH
 
 
 def process_transcripts(input_dir=None, output_dir=None):
@@ -25,7 +26,7 @@ def process_transcripts(input_dir=None, output_dir=None):
     if not input_dir:
         input_dir = transcript_path
     if not output_dir:
-        output_dir = transcript_segments
+        output_dir = transcript_segments_dir
     
     # Create output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
@@ -206,7 +207,7 @@ def process_transcript_files(segment_file, words_file, output_file):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process AMI Corpus transcripts")
     parser.add_argument("--input", default=transcript_path, help="Input directory containing transcript XML files")
-    parser.add_argument("--output", default=transcript_segments, help="Output directory for text transcripts")
+    parser.add_argument("--output", default=transcript_segments_dir, help="Output directory for text transcripts")
     
     args = parser.parse_args()
     process_transcripts(args.input, args.output)
