@@ -10,6 +10,9 @@ numpy
 soundfile
 librosa
 ffmpeg-python
+opencv-python
 sentencepiece
+dlib
+tqdm
 
 

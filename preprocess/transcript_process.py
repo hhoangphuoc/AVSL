@@ -2,8 +2,7 @@ import os
 import xml.etree.ElementTree as ET
 import re
 import argparse
-from pathlib import Path
-
+from tqdm import tqdm
 from constants import DATA_PATH, TRANS_PATH, TRANS_SEG_PATH
 
 data_path = DATA_PATH
