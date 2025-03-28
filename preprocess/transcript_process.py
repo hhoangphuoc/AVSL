@@ -1,9 +1,11 @@
 import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import xml.etree.ElementTree as ET
 import re
 import argparse
 from tqdm import tqdm
-from constants import DATA_PATH, TRANS_PATH, TRANS_SEG_PATH
+from preprocess.constants import DATA_PATH, TRANS_PATH, TRANS_SEG_PATH
 
 data_path = DATA_PATH
 transcript_path = TRANS_PATH

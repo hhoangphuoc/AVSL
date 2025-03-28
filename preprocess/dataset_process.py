@@ -16,14 +16,13 @@ The source segments are saved in the following format:
 import os
 import sys
 import re
-# Add the preprocess directory to the path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
 from datasets import Dataset, Audio, Video, Features, Value, DatasetDict
 
-from constants import DATA_PATH, TRANS_SEG_PATH, SOURCE_PATH, AUDIO_PATH, VIDEO_PATH, DATASET_PATH
+from preprocess.constants import DATA_PATH, TRANS_SEG_PATH, SOURCE_PATH, AUDIO_PATH, VIDEO_PATH, DATASET_PATH
 
 from audio_process import segment_audio
 from video_process import segment_video
