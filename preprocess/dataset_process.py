@@ -23,7 +23,7 @@ import numpy as np
 from tqdm import tqdm
 from datasets import Dataset, Audio, Video, Features, Value, DatasetDict
 
-from constants import DATA_PATH, TRANS_SEG_PATH, SOURCE_PATH, AUDIO_PATH, VIDEO_PATH
+from constants import DATA_PATH, TRANS_SEG_PATH, SOURCE_PATH, AUDIO_PATH, VIDEO_PATH, DATASET_PATH
 
 from audio_process import segment_audio
 from video_process import segment_video
@@ -217,8 +217,7 @@ def segment_sources(transcript_segments_dir,
     
     # Create dataset if requested
     if to_dataset and dataset_records:
-        dataset_path = os.path.join(DATA_PATH, "dataset")
-        audio_video_to_dataset(dataset_records, meeting_ids, dataset_path)
+        audio_video_to_dataset(dataset_records, meeting_ids, DATASET_PATH)
     
     print("Source segmentation completed.")
 
@@ -229,71 +228,46 @@ def audio_video_to_dataset(recordings, meeting_ids, dataset_path=None):
     
     Args:
         recordings: List of dictionaries containing segment information
-        meeting_ids: List of meeting IDs used for train/val/test splitting (70%, 15%, 15%)
+        meeting_ids: List of meeting IDs (not used for splitting)
         dataset_path: Path to HuggingFace Dataset. If None, defaults to `DATA_PATH/dataset`
     """
     print(f"Creating HuggingFace dataset with {len(recordings)} records")
-    
-
     
     os.makedirs(dataset_path, exist_ok=True)
     
     # GENERATE THE DATASET FROM THE RECORDINGS
     df = pd.DataFrame(recordings)
+
+    # save the dataframe to a csv file
+    csv_path = os.path.join(dataset_path, 'ami-segmented-recordings.csv')
+    print(f"Saving dataframe to csv file: {csv_path}")
+    df.to_csv(csv_path, index=False)
     
-    # Split the dataset
-    meeting_ids = list(sorted(meeting_ids))
-    np.random.seed(42)  # For reproducibility
-    np.random.shuffle(meeting_ids)
-    
-    # Split meetings into train (70%), validation (15%), test (15%)
-    n = len(meeting_ids)
-    train_meetings = meeting_ids[:int(0.7*n)]
-    val_meetings = meeting_ids[int(0.7*n):int(0.85*n)]
-    test_meetings = meeting_ids[int(0.85*n):]
-    
-    print(f"Train meetings: {len(train_meetings)} recordings, Val meetings: {len(val_meetings)} recordings, Test meetings: {len(test_meetings)} recordings")
-    
-    # Create DatasetDict with splits
-    datasets = DatasetDict()
-    
-    # Create train dataset
-    train_df = df[df['meeting_id'].isin(train_meetings)]
-    datasets['train'] = Dataset.from_pandas(train_df)
-    
-    # Create validation dataset
-    val_df = df[df['meeting_id'].isin(val_meetings)]
-    datasets['validation'] = Dataset.from_pandas(val_df)
-    
-    # Create test dataset
-    test_df = df[df['meeting_id'].isin(test_meetings)]
-    datasets['test'] = Dataset.from_pandas(test_df)
+    # Create HuggingFace Dataset containing all recordings
+    dataset = Dataset.from_pandas(df)
     
     # Add audio and video features
-    for split in datasets.keys():
-        # Add audio feature
-        if 'audio_path' in datasets[split].features:
-            datasets[split] = datasets[split].cast_column('audio', Audio(sampling_rate=16000))
-        
-        # Add video feature
-        if 'video_path' in datasets[split].features:
-            datasets[split] = datasets[split].cast_column('video', Video())
+    if 'audio' in dataset.features:
+        dataset = dataset.cast_column('audio', Audio(sampling_rate=16000))
+    
+    if 'video' in dataset.features:
+        dataset = dataset.cast_column('video', Video())
     
     # Save the dataset
     print(f"Saving dataset to {dataset_path}")
-    datasets.save_to_disk(dataset_path)
-    print(f"Dataset saved with {len(datasets['train'])} train recordings, {len(datasets['validation'])} validation recordings, {len(datasets['test'])} test recordings")
+    dataset.save_to_disk(dataset_path)
+    print(f"HuggingFace dataset saved: {dataset}")
 
 if __name__ == "__main__":
     import argparse
     
     parser = argparse.ArgumentParser(description='Segment audio and video sources based on transcript timestamps')
-    parser.add_argument('--to_dataset', default=False, help='Create HuggingFace dataset')
+    parser.add_argument('--to_dataset', default=True, help='Create HuggingFace dataset')
     
     args = parser.parse_args()
     
     segment_sources(transcript_segments_dir, audio_segment_dir, video_segment_dir, 
-                   to_dataset=True)
+                   to_dataset=args.to_dataset)
 
 
 

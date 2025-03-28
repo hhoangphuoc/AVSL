@@ -37,13 +37,13 @@ def segment_video(video_file, start_time, end_time, video_output_file):
             start_time = 0
             
         # Get video duration to validate end_time - FIXME: Remove this part---------------
-        # probe = ffmpeg.probe(video_file)
-        # video_duration = float(probe['format']['duration'])
-        #---------------------------------------------------------------------------------
+        probe = ffmpeg.probe(video_file)
+        video_duration = float(probe['format']['duration'])
+        # ---------------------------------------------------------------------------------
         
-        # if end_time > video_duration:
-        #     print(f"Warning: End time {end_time} exceeds video duration {video_duration} for {video_file}, truncating")
-        #     end_time = video_duration
+        if end_time > video_duration:
+            print(f"Warning: End time {end_time} exceeds video duration {video_duration} for {video_file}, truncating")
+            end_time = video_duration
             
         if start_time >= end_time:
             print(f"Warning: Invalid video segment {start_time}-{end_time} for {video_file}")
