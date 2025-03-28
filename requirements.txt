@@ -12,6 +12,7 @@ librosa
 ffmpeg-python
 opencv-python
 sentencepiece
+scikit-image
 dlib
 tqdm
 
