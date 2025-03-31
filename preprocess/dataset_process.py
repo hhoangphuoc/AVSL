@@ -22,9 +22,18 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
-from datasets import Dataset, Audio, Video, Features, Value, DatasetDict
+from datasets import Dataset, Audio, Video
+import math # Added for isnan
 
-from preprocess.constants import DATA_PATH, TRANS_SEG_PATH, SOURCE_PATH, AUDIO_PATH, VIDEO_PATH, DATASET_PATH
+from preprocess.constants import (
+    DATA_PATH, 
+    TRANS_SEG_PATH, 
+    SOURCE_PATH, 
+    AUDIO_PATH, 
+    VIDEO_PATH, 
+    DATASET_PATH, 
+    DSFL_PATH,
+)
 
 from audio_process import segment_audio
 from video_process import segment_video, extract_and_save_lip_video
@@ -32,10 +41,10 @@ from video_process import segment_video, extract_and_save_lip_video
 
 transcript_segments_dir = TRANS_SEG_PATH
 source_original_dir = SOURCE_PATH
-audio_segment_dir = AUDIO_PATH
-video_segment_dir = VIDEO_PATH
-original_video_dir = os.path.join(VIDEO_PATH, "original_videos")
-lip_video_dir = os.path.join(VIDEO_PATH, "lip_videos")  # Create a subdirectory for lip videos
+audio_segment_dir = AUDIO_PATH # data/audio_segments
+video_segment_dir = VIDEO_PATH # data/video_segments
+original_video_dir = os.path.join(VIDEO_PATH, "original_videos") # data/video_segments/original_videos
+lip_video_dir = os.path.join(VIDEO_PATH, "lip_videos")  # data/video_segments/lip_videos
 
 
 ami_speakers ={
@@ -75,15 +84,22 @@ def segment_sources(transcript_segments_dir,
     If `to_dataset` is True, the sources will be saved in a HuggingFace Dataset.
     If `extract_lip_videos` is True, lip regions will be extracted from successful video segments.
 
-    The segmented audio and video sources will be saved in `audio_segment_dir` and `video_segment_dir` respectively, with the following format:\n
+    The segmented audio and video sources will be saved in:
+    - `audio_segment_dir` : Audio segments. Default: `AUDIO_PATH`   
+    - `video_segment_dir` : Video segments. Default: `VIDEO_PATH`
+        - `/original_videos` : Original video segments. Default: `VIDEO_PATH/original_videos`
+        - `/lip_videos` : Lip video segments. Default: `VIDEO_PATH/lip_videos`
+    
+    with the following format:\n
     
     For audio:
-    [meeting_id]-[speaker_id]-[start_time]-[end_time]-[source_type].wav\n
+    [meeting_id]-[speaker_id]-[start_time]-[end_time]-audio.wav\n
     
     For video:
-    - original video (Path: `VIDEO_PATH/original_videos`)
-    [meeting_id]-[speaker_id]-[start_time]-[end_time]-[source_type].mp4\n
-    - lip video (Path: `VIDEO_PATH/lip_videos`)
+    - original video
+    [meeting_id]-[speaker_id]-[start_time]-[end_time]-video.mp4\n
+
+    - lip video
     [meeting_id]-[speaker_id]-[start_time]-[end_time]-lip_video.mp4
     
     Args:
@@ -286,14 +302,192 @@ def segment_sources(transcript_segments_dir,
 # -------------------------------------------------------------------------------------------
     print("Source segmentation completed.")
 
-def audio_video_to_dataset(recordings, meeting_ids, dataset_path=None):
+
+
+def segment_disfluency_laughter(dsfl_laugh_dir, 
+                                dataset_path, # Specific path for this dataset
+                                to_dataset=True,
+                                extract_lip_videos=True
+                               ):
+    """
+    Segments audio and video based on timestamps in the disfluency/laughter CSV file,
+    extracts lip videos, and saves information to a HuggingFace Dataset.
+
+    The audio and video segments are saved in the subdirectories of `dsfl_laugh_dir`:
+    - `/audio_segments` : Audio segments of disfluency/laughter events
+    - `/video_segments`
+        - `/dsfl_original` : Original video segments of disfluency/laughter events
+        - `/dsfl_lip` : Lip video segments of disfluency/laughter events
+
+    Args:
+        dsfl_laugh_dir: Path to the disfluency/laughter directory.
+        dataset_path: Path to save the output HuggingFace Dataset, defaults to `DSFL_PATH/dataset`
+        to_dataset: Whether to create a HuggingFace dataset.
+        extract_lip_videos: Whether to extract lip regions from video segments.
+    """
+    # CREATE OUTPUT DIRECTORIES  ------------------------------------------------------------------------------------------------    
+    os.makedirs(dsfl_laugh_dir, exist_ok=True)
+
+    # Video and audio segment directories are inside the `dsfl_laugh_dir`
+    video_segment_dir = os.path.join(dsfl_laugh_dir, "video_segments")
+    audio_segment_dir = os.path.join(dsfl_laugh_dir, "audio_segments")
+
+    # Specific subdirectories for original and lip videos
+    original_video_dir = os.path.join(video_segment_dir, "dsfl_original")
+    os.makedirs(original_video_dir, exist_ok=True)
+    
+    lip_video_dir = None
+    if extract_lip_videos:
+        lip_video_dir = os.path.join(video_segment_dir, "dsfl_lip")
+        os.makedirs(lip_video_dir, exist_ok=True)
+    # ------------------------------------------------------------------------------------------------    
+
+    # READ THE CSV FILE ------------------------------------------------------------------------------------------------    
+    try:
+        csv_file_path = os.path.join(dsfl_laugh_dir, 'disfluency_laughter_markers.csv')
+        df_markers = pd.read_csv(csv_file_path)
+        print(f"Loaded {len(df_markers)} records from {csv_file_path}")
+    except FileNotFoundError:
+        print(f"Error: CSV file not found at {csv_file_path}")
+        return
+    except Exception as e:
+        print(f"Error reading CSV file {csv_file_path}: {e}")
+        return
+
+    # PROCESS EACH ROW IN THE CSV ------------------------------------------------------------------------------------------------    
+    dataset_records = []
+    processed_count = 0
+    
+    # Process each row in the CSV
+    for index, row in tqdm(df_markers.iterrows(), total=len(df_markers), desc="Processing Disfluency/Laughter CSV"):
+        meeting_id = row['meeting_id']
+        ami_speaker_id = row['speaker_id'] # AMI uses A, B, C, D, E
+        start_time = row['start_time']
+        end_time = row['end_time']
+        disfluency_type = row['disfluency_type']
+        is_laugh = bool(row['is_laugh']) # Convert 0/1 to False/True
+        word = row['word'] # Can be useful for context or filtering
+
+        # Handle potential NaN in disfluency_type
+        if isinstance(disfluency_type, float) and math.isnan(disfluency_type):
+            disfluency_type = None # Represent NaN as None
+
+        # Skip if speaker not in mapping
+        if ami_speaker_id not in ami_speakers:
+            # print(f"Warning: Speaker {ami_speaker_id} in meeting {meeting_id} not found in mapping. Skipping row {index}")
+            continue
+
+        # GET ORIGINAL SOURCE PATHS ------------------------------------------------------------------------------------------------    
+        audio_source = ami_speakers[ami_speaker_id]['audio'] # Headset-0, Headset-1, etc.
+        video_source = ami_speakers[ami_speaker_id]['video'] # Closeup1, Closeup2, etc.
+        
+        audio_file = os.path.join(SOURCE_PATH, meeting_id, 'audio', f"{meeting_id}.{audio_source}.wav")
+        video_file = os.path.join(SOURCE_PATH, meeting_id, 'video', f"{meeting_id}.{video_source}.avi")
+            
+        # Check if original files exist
+        process_audio = os.path.exists(audio_file)
+        process_video = os.path.exists(video_file)
+
+        # Skip if neither source exists
+        if not process_audio and not process_video:
+            print(f"Warning: Neither audio nor video source found for {meeting_id}-{ami_speaker_id}. Skipping row")
+            continue
+        
+        # Skip very short segments (less than 0.05 seconds) - adjust threshold if needed
+        if end_time - start_time < 0.05:
+            print(f"Warning: Skipping very short segment {start_time}-{end_time} (duration: {end_time-start_time:.2f}s) for row {index}")
+            continue
+        # ------------------------------------------------------------------------------------------------    
+
+        # PROCESSING AUDIO AND VIDEO ------------------------------------------------------------------------------------------------    
+        # Get start and end time segment
+        start_time_str = f"{start_time:.2f}"
+        end_time_str = f"{end_time:.2f}"
+        
+        # Determine event type for filename
+        event_label = "laugh" if is_laugh else (disfluency_type if disfluency_type else "speech") # Use disfluency type or 'speech' if neither
+        event_label_safe = re.sub(r'[\\/*?:"<>|]', '_', event_label) 
+        segment_name = f"{meeting_id}-{ami_speaker_id}-{start_time_str}-{end_time_str}-{event_label_safe}"
+        
+        # --- Process Audio ---
+        audio_success = False
+        audio_output_file = None
+        if process_audio:
+            audio_output_file = os.path.join(audio_segment_dir, f"{segment_name}-audio.wav")
+            audio_success, audio_output_file = segment_audio(audio_file, start_time, end_time, audio_output_file)
+            
+        # --- Process Video ---
+        video_success = False
+        video_output_file = None
+        if process_video:
+            video_output_file = os.path.join(original_video_dir, f"{segment_name}-video.mp4")
+            video_success, video_output_file = segment_video(video_file, start_time, end_time, video_output_file)
+
+        # --- Extract Lip Video ---
+        lip_video_success = False
+        lip_video_output_file = None
+        if extract_lip_videos and video_success and lip_video_dir:
+            lip_video_output_file = os.path.join(lip_video_dir, f"{segment_name}-lip_video.mp4")
+            try:
+                lip_video_success, lip_video_output_file = extract_and_save_lip_video(
+                    video_output_file, 
+                    lip_video_output_file,
+                    to_grayscale=True 
+                )
+                if not lip_video_success:
+                    print(f"Warning: Failed to extract lip video for {segment_name}")
+            except Exception as e:
+                print(f"Error extracting lip video for {segment_name}: {str(e)}")
+                lip_video_success = False
+        # ------------------------------------------------------------------------------------------------    
+
+        # ADD RECORD TO DATASET ------------------------------------------------------------------------------------------------    
+        if audio_success or video_success:
+            processed_count += 1
+            record = {
+                "id": segment_name,
+                "meeting_id": meeting_id,
+                "speaker_id": ami_speaker_id,
+                "word": word,
+                "start_time": start_time,
+                "end_time": end_time,
+                "duration": end_time - start_time,
+                "disfluency_type": disfluency_type,
+                "is_laugh": is_laugh,
+                "has_audio": audio_success,
+                "has_video": video_success,
+                "has_lip_video": lip_video_success
+            }
+            
+            if audio_success:
+                record["audio"] = audio_output_file
+            if video_success:
+                record["video"] = video_output_file
+            if lip_video_success:
+                record["lip_video"] = lip_video_output_file
+                
+            dataset_records.append(record)
+        # ------------------------------------------------------------------------------------------------    
+    
+    print(f"\nProcessed {processed_count} segments from the CSV.")
+    
+    # Create dataset if requested
+    if to_dataset and dataset_records:
+        # Use the specific dataset path and a descriptive name
+        audio_video_to_dataset(dataset_records, 
+                               dataset_path=dataset_path) 
+    else:
+        print("Dataset creation skipped as per request or no records were processed.")
+
+    print("Disfluency/Laughter segmentation completed.")
+
+def audio_video_to_dataset(recordings, dataset_path=None):
     """
     Create a HuggingFace dataset from the processed segments (audio, video, and lip videos), 
     along with the transcript text.
     
     Args:
         recordings: List of dictionaries containing segment information
-        meeting_ids: List of meeting IDs (not used for splitting)
         dataset_path: Path to HuggingFace Dataset. If None, defaults to `DATA_PATH/dataset`
     """
     print(f"Creating HuggingFace dataset with {len(recordings)} records")
@@ -329,17 +523,41 @@ def audio_video_to_dataset(recordings, meeting_ids, dataset_path=None):
 if __name__ == "__main__":
     import argparse
     
-    parser = argparse.ArgumentParser(description='Segment audio and video sources based on transcript timestamps')
-    parser.add_argument('--to_dataset', default=True, help='Create HuggingFace dataset')
-    parser.add_argument('--extract_lip_videos', default=True, help='Extract lip videos from video segments')    
+    parser = argparse.ArgumentParser(description='Segment sources based on transcript segments or disfluency/laughter markers.')
+    
+    # ARGUMENTS FOR SEGMENTATION ---------------------------------------------------------------------
+    parser.add_argument('--mode', choices=['transcript', 'dsfl_laugh'], default='transcript', 
+                        help='Mode of operation: segment based on transcript segments or disfluency/laughter CSV.')
+    parser.add_argument('--to_dataset', default=True, 
+                        help='Create HuggingFace dataset (True/False)')
+    parser.add_argument('--extract_lip_videos', default=True, 
+                        help='Extract lip videos from video segments (True/False)') 
+    #-----------------------------------------------------------------------------------------------------
+    
     args = parser.parse_args()
     
-    segment_sources(transcript_segments_dir, 
-                    audio_segment_dir, 
-                    video_segment_dir, 
-                    to_dataset=args.to_dataset,
-                    extract_lip_videos=args.extract_lip_videos,
-                   )
+    if args.mode == 'transcript':
+        print("Running in mode: TRANSCRIPT SEGMENTATION...")
+        segment_sources(transcript_segments_dir=TRANS_SEG_PATH, 
+                        audio_segment_dir=AUDIO_PATH, 
+                        video_segment_dir=VIDEO_PATH, 
+                        to_dataset=args.to_dataset,
+                        extract_lip_videos=args.extract_lip_videos,
+                       )
+
+    elif args.mode == 'dsfl_laugh':
+        print("Running in mode: DISFLUENCY/LAUGHTER SEGMENTATION...")
+        dsfl_dataset_path = os.path.join(DSFL_PATH, 'dataset')
+
+        print(f"DSFL_PATH: {DSFL_PATH}")
+        print(f"DSFL_DATASET saved at: {dsfl_dataset_path}")
+
+        segment_disfluency_laughter(
+            dsfl_laugh_dir=DSFL_PATH,
+            dataset_path=dsfl_dataset_path, # Use the specific dataset path (DSFL_PATH/dataset)
+            to_dataset=args.to_dataset,
+            extract_lip_videos=args.extract_lip_videos
+        )
 
 
 

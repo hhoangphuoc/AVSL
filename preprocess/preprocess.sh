@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=preprocess-AMI-Corpus-with-lip-videos                    # Job name
+#SBATCH --job-name=preprocess-full-AMI-Corpus-with-lip-videos                    # Job name
 #SBATCH -c 16                                               # Number of cores
-#SBATCH --mem=16G                                           # Request 8GB memory
+#SBATCH --mem=16G                                           # Request 16GB memory
 #SBATCH --time=24:00:00                                      # Set a walltime limit
 #SBATCH --mail-type=BEGIN,END,FAIL                          # Email status changes
 #SBATCH --mail-user=hohoangphuoc@student.utwente.nl  # Your email address
@@ -22,4 +22,8 @@ echo "Starting worker: "
 # Activate your environment (if applicable)
 source activate .venv
 
-python dataset_process.py
+# RUNNING MODE: TRANSCRIPT SEGMENTATION ------------------------------------------------------------    
+# python dataset_process.py --mode transcript
+
+# RUNNING MODE: DISFLUENCY/LAUGHTER SEGMENTATION ------------------------------------------------------------    
+python dataset_process.py --mode dsfl_laugh
