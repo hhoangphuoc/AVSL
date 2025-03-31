@@ -97,16 +97,17 @@ def segment_video(video_file, start_time, end_time, video_output_file):
         print(f"Unexpected error processing video {video_file}: {str(e)}")
         return False, None
 
-def load_video(video_path):
+def load_video(video_path, to_grayscale=True):
     """
     Load a video file from `video_path` and extract all frames as grayscale. 
     This is used for capturing sequence of frames from video and used for lip-reading.
     
     Args:
         video_path: Path to the video file
+        to_grayscale: Whether to convert frames to grayscale
         
     Returns:
-        numpy.ndarray: Array of grayscale frames with shape [T, H, W]
+        numpy.ndarray: Array of frames with shape [T, H, W] if grayscale or [T, H, W, 3] if RGB
     """
     try:
         cap = cv2.VideoCapture(video_path)
@@ -114,7 +115,11 @@ def load_video(video_path):
         while True:
             ret, frame = cap.read()
             if ret:
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                if to_grayscale:
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                else:
+                    # Convert from BGR (OpenCV default) to RGB
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 frames.append(frame)
             else:
                 break
@@ -138,7 +143,8 @@ def extract_lip_frames(video_path,
                        width_roi=96, 
                        height_roi=96, 
                        start_idx=48, 
-                       stop_idx=68):
+                       stop_idx=68,
+                       to_grayscale=True):
     """
     Extract lip regions from a video file.
     
@@ -151,10 +157,19 @@ def extract_lip_frames(video_path,
         height_roi: Height of the lip crop ROI
         start_idx: Start index of mouth landmarks
         stop_idx: End index of mouth landmarks
+        to_grayscale: Whether to process and return grayscale frames 
         
     Returns:
-        numpy.ndarray: Array of lip frames with shape [T, H, W]
+        numpy.ndarray: Array of lip frames with shape [T, H, W] if grayscale or [T, H, W, 3] if RGB
     """
+    # Set default paths if not provided
+    if face_predictor_path is None:
+        face_predictor_path = FACE_PREDICTOR_PATH
+    if cnn_detector_path is None:
+        cnn_detector_path = CNN_DETECTOR_PATH
+    if mean_face_path is None:
+        mean_face_path = MEAN_FACE_PATH
+        
     # Load mean face
     try:
         mean_face_landmarks = np.load(mean_face_path)
@@ -169,13 +184,18 @@ def extract_lip_frames(video_path,
         print(f"Error creating face detectors: {str(e)}")
         raise
     
-    # Load video frames
-    frames = load_video(video_path)
+    # Load video frames (either grayscale or RGB based on to_grayscale)
+    frames = load_video(video_path, to_grayscale=to_grayscale)
     
     # Detect landmarks for each frame
     landmarks = []
     for frame in frames:
-        landmark = detect_landmarks(frame, detector, cnn_detector, predictor)
+        # If frames are RGB, convert to grayscale temporarily for landmark detection
+        if not to_grayscale:
+            gray_frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+            landmark = detect_landmarks(gray_frame, detector, cnn_detector, predictor)
+        else:
+            landmark = detect_landmarks(frame, detector, cnn_detector, predictor)
         landmarks.append(landmark)
     
     # Interpolate landmarks where detection failed
@@ -211,14 +231,18 @@ def extract_lip_frames(video_path,
             
             # Crop mouth patch
             try:
-                sequence.append(cut_patch(trans_frame,
-                                        trans_landmarks[start_idx:stop_idx],
-                                        height_roi//2,
-                                        width_roi//2))
+                cropped_patch = cut_patch(trans_frame,
+                                    trans_landmarks[start_idx:stop_idx],
+                                    height_roi//2,
+                                    width_roi//2)
+                sequence.append(cropped_patch)
             except Exception as e:
                 print(f"Error cropping frame {frame_idx}: {str(e)}")
                 # If cropping fails, add a black frame to maintain synchronization
-                sequence.append(np.zeros((height_roi, width_roi), dtype=np.uint8))
+                if to_grayscale:
+                    sequence.append(np.zeros((height_roi, width_roi), dtype=np.uint8))
+                else:
+                    sequence.append(np.zeros((height_roi, width_roi, 3), dtype=np.uint8))
         
         frame_idx += 1
     
@@ -231,19 +255,25 @@ def extract_lip_frames(video_path,
         trans_landmarks = trans(q_landmarks.popleft())
         # Crop mouth patch
         try:
-            sequence.append(cut_patch(trans_frame,
-                                    trans_landmarks[start_idx:stop_idx],
-                                    height_roi//2,
-                                    width_roi//2))
+            cropped_patch = cut_patch(trans_frame,
+                                trans_landmarks[start_idx:stop_idx],
+                                height_roi//2,
+                                width_roi//2)
+            sequence.append(cropped_patch)
         except Exception as e:
             print(f"Error cropping frame: {str(e)}")
-            sequence.append(np.zeros((height_roi, width_roi), dtype=np.uint8))
+            if to_grayscale:
+                sequence.append(np.zeros((height_roi, width_roi), dtype=np.uint8))
+            else:
+                sequence.append(np.zeros((height_roi, width_roi, 3), dtype=np.uint8))
     
     return np.array(sequence)
 
 def video_to_tensor(frames, normalize=True, image_mean=0.0, image_std=1.0, image_crop_size=88):
     """
-    Convert video frames to tensor format suitable for AV-HuBERT.
+    Convert video frames to tensor format suitable for AV-HuBERT. 
+    The frames are grayscale, and being normalised to [0, 1], 
+    cropped to `image_crop_size=(88 x 88)`, and then expanded to `dims = [T, H, W, 1]`.
     
     Args:
         frames: numpy.ndarray of shape [T, H, W]
@@ -276,7 +306,8 @@ def process_video_for_av_hubert(video_path,
                                 image_std=1.0, 
                                 image_crop_size=88):
     """
-    Process a HuggingFace Video object for AV-HuBERT Video Encoder.
+    Process a HuggingFace Video object (a video file) for AV-HuBERT Video Encoder.
+    The video frames will be converted to grayscale for AV-HuBERT to process
     
     Args:
         video_path: Path to the video file
@@ -299,7 +330,8 @@ def process_video_for_av_hubert(video_path,
             video_path, 
             face_predictor_path, 
             cnn_detector_path, 
-            mean_face_path
+            mean_face_path, 
+            to_grayscale=True
         )
         
         # Convert to tensor format
@@ -317,15 +349,14 @@ def process_video_for_av_hubert(video_path,
         print(f"Error processing video {video_path}: {str(e)}")
         raise e
 
-def save_lip_frames_to_video(lip_frames, output_path, fps=25, method='opencv'):
+def save_lip_frames_to_video(lip_frames, output_path, fps=25):
     """
     Save lip-cropped frames as an MP4 video.
     
     Args:
-        lip_frames: numpy.ndarray of shape [T, H, W] containing lip-cropped frames
+        lip_frames: numpy.ndarray of shape [T, H, W] for grayscale or [T, H, W, 3] for RGB
         output_path: Path to save the output video (.mp4)
         fps: Frame rate of the output video, defaults to 25fps
-            method: Method to use for output video ('opencv' or 'torch')
         
     Returns:
         Tuple of (success_flag, output_file_path)
@@ -337,52 +368,23 @@ def save_lip_frames_to_video(lip_frames, output_path, fps=25, method='opencv'):
             output_path = f"{os.path.splitext(output_path)[0]}.mp4"
             print(f"Changing output format from {original_output} to {output_path}")
         
-        if method == 'opencv':
-            # Method 1: Using OpenCV's VideoWriter
-            h, w = lip_frames[0].shape[:2]
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # mp4 codec
-            out = cv2.VideoWriter(output_path, fourcc, fps, (w, h))
-            
-            # Convert grayscale to RGB if needed
-            for frame in lip_frames:
-                if len(frame.shape) == 2:  # grayscale
-                    # frame_rgb = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
-                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
-                else:
-                    frame_rgb = frame
-                out.write(frame_rgb)
-            
-            out.release()
-
-        elif method == 'torch':
-            # Method 3: Using torchvision
-            import torchvision
-            
-            # Convert frames to proper format for torchvision
-            frames_tensor = []
-            for frame in lip_frames:
-                if len(frame.shape) == 2:  # grayscale
-                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
-                else:
-                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # Convert to RGB
-                # Convert to torch tensor [C, H, W]
-                frame_tensor = torch.from_numpy(frame_rgb.transpose(2, 0, 1))
-                frames_tensor.append(frame_tensor)
-            
-            # Stack all frames into a single tensor [T, C, H, W]
-            video_tensor = torch.stack(frames_tensor)
-            
-            # Write video
-            torchvision.io.write_video(
-                output_path,
-                video_tensor,
-                fps=fps,
-                video_codec="libx264",
-                options={"crf": "23", "preset": "fast"}
-            )
+        # Check if frames are grayscale or RGB
+        is_grayscale = len(lip_frames.shape) == 3  # [T, H, W]
         
-        else:
-            raise ValueError(f"Unknown method: {method}. Choose from 'opencv' or 'torchvision'")
+        # Save lip frames as a video using OpenCV
+        h, w = lip_frames[0].shape[:2]
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # mp4 codec
+        out = cv2.VideoWriter(output_path, fourcc, fps, (w, h))
+        
+        for frame in lip_frames:
+            if is_grayscale:
+                # Convert grayscale to BGR (OpenCV expects BGR for writing)
+                frame_bgr = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+            else:
+                # Convert RGB to BGR (OpenCV expects BGR for writing)
+                frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+            out.write(frame_bgr)
+        out.release()
         
         # Verify the output video
         if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
@@ -402,9 +404,16 @@ def extract_and_save_lip_video(video_path, output_path,
                               width_roi=96, 
                               height_roi=96, 
                               fps=25,
-                              method='opencv'):
+                              to_grayscale=False):  # Default to color for visualization
     """
     Extract lip regions from a video file and save them as a new video.
+    This is the combined function of `extract_lip_frames` and `save_lip_frames_to_video`.
+
+    This function is mainly used for visualisation of lip-reading results.
+    The output video is in RGB format by default (`to_grayscale=False`).
+    This is not recommended for using for AV-HuBERT, instead, set `to_grayscale=True` if we want to output a grayscale video.
+    
+    Alternatively, use `process_video_for_av_hubert` for AV-HuBERT video processing.
     
     Args:
         video_path: Path to the input video file
@@ -415,12 +424,23 @@ def extract_and_save_lip_video(video_path, output_path,
         width_roi: Width of the lip crop ROI
         height_roi: Height of the lip crop ROI
         fps: Frame rate of the output video, defaults to 25fps
-        method: Method to use for creating video ('opencv' or 'torch')
+        to_grayscale: Whether to process frames in grayscale (True) or color (False)
         
     Returns:
         Tuple of (success_flag, output_file_path)
     """
     try:
+        # Set default paths if not provided
+        if face_predictor_path is None:
+            face_predictor_path = FACE_PREDICTOR_PATH
+        if cnn_detector_path is None:
+            cnn_detector_path = CNN_DETECTOR_PATH
+        if mean_face_path is None:
+            mean_face_path = MEAN_FACE_PATH
+            
+        print(f"Extracting lip frames from {video_path}")
+        print(f"Using {'grayscale' if to_grayscale else 'color'} mode")
+        
         # Extract lip frames
         lip_frames = extract_lip_frames(
             video_path, 
@@ -428,11 +448,15 @@ def extract_and_save_lip_video(video_path, output_path,
             cnn_detector_path, 
             mean_face_path,
             width_roi=width_roi,
-            height_roi=height_roi
+            height_roi=height_roi,
+            to_grayscale=to_grayscale
         )
         
+        print(f"Lip frames extracted with shape: {lip_frames.shape}")
+        
         # Save to video
-        return save_lip_frames_to_video(lip_frames, output_path, fps=fps, method=method)
+        print(f"Saving video to {output_path}")
+        return save_lip_frames_to_video(lip_frames, output_path, fps=fps)
         
     except Exception as e:
         print(f"Error extracting and saving lip video from {video_path}: {str(e)}")
@@ -444,9 +468,10 @@ if __name__ == "__main__":
     face_predictor_path = FACE_PREDICTOR_PATH
     cnn_detector_path = CNN_DETECTOR_PATH
     mean_face_path = MEAN_FACE_PATH
-    # process_video_for_av_hubert(video_path, face_predictor_path, cnn_detector_path, mean_face_path)
     
     # Extract and save lip video
     extract_and_save_lip_video(video_path, output_path, 
-                             face_predictor_path, cnn_detector_path, mean_face_path,
-                             method='torch')
+                             face_predictor_path, 
+                             cnn_detector_path, 
+                             mean_face_path,
+                             to_grayscale=False)
