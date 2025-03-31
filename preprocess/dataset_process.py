@@ -6,9 +6,11 @@ corresponding to each [meeting_id]-[speaker_id].
 The source segments are saved in the following format:
     [meeting_id]-[speaker_id]-[start_time]-[end_time]-[source_type].wav
     [meeting_id]-[speaker_id]-[start_time]-[end_time]-[source_type].mp4
+    [meeting_id]-[speaker_id]-[start_time]-[end_time]-lip_video.mp4 (lip regions)
 
 - audio_segment_dir: the directory to save the audio segments
 - video_segment_dir: the directory to save the video segments
+- lip_video_dir: the directory to save the lip frame videos
 - transcript_segments: the transcript segments dataframe
 
 """
@@ -25,13 +27,15 @@ from datasets import Dataset, Audio, Video, Features, Value, DatasetDict
 from preprocess.constants import DATA_PATH, TRANS_SEG_PATH, SOURCE_PATH, AUDIO_PATH, VIDEO_PATH, DATASET_PATH
 
 from audio_process import segment_audio
-from video_process import segment_video
+from video_process import segment_video, extract_and_save_lip_video
 
 
 transcript_segments_dir = TRANS_SEG_PATH
 source_original_dir = SOURCE_PATH
 audio_segment_dir = AUDIO_PATH
 video_segment_dir = VIDEO_PATH
+original_video_dir = os.path.join(VIDEO_PATH, "original_videos")
+lip_video_dir = os.path.join(VIDEO_PATH, "lip_videos")  # Create a subdirectory for lip videos
 
 
 ami_speakers ={
@@ -61,29 +65,48 @@ ami_speakers ={
 def segment_sources(transcript_segments_dir, 
                     audio_segment_dir, 
                     video_segment_dir,
-                    to_dataset=False
+                    to_dataset=False,
+                    extract_lip_videos=True,
                     ):
     """
     This function is used to segment the audio and video sources based on the `transcript_segments` timestamps and 
     save the segmented audio and video resources. 
     
     If `to_dataset` is True, the sources will be saved in a HuggingFace Dataset.
+    If `extract_lip_videos` is True, lip regions will be extracted from successful video segments.
 
     The segmented audio and video sources will be saved in `audio_segment_dir` and `video_segment_dir` respectively, with the following format:\n
-    [meeting_id]-[speaker_id]-[start_time]-[end_time]-[source_type].wav (e.g. EN2001a-A-0.00-0.10-audio.wav)\n
-    [meeting_id]-[speaker_id]-[start_time]-[end_time]-[source_type].mp4 (e.g. EN2001a-A-0.00-0.10-video.mp4)
+    
+    For audio:
+    [meeting_id]-[speaker_id]-[start_time]-[end_time]-[source_type].wav\n
+    
+    For video:
+    - original video (Path: `VIDEO_PATH/original_videos`)
+    [meeting_id]-[speaker_id]-[start_time]-[end_time]-[source_type].mp4\n
+    - lip video (Path: `VIDEO_PATH/lip_videos`)
+    [meeting_id]-[speaker_id]-[start_time]-[end_time]-lip_video.mp4
     
     Args:
         transcript_segments_dir: Directory containing transcript segment files
         audio_segment_dir: Directory to save audio segments
         video_segment_dir: Directory to save video segments
         to_dataset: Whether to create a HuggingFace dataset
+        extract_lip_videos: Whether to extract lip regions from video segments
         dataset_path: Path to HuggingFace Dataset (default: `DATA_PATH/dataset`)
     """
     
     # Create output directories if they don't exist
     os.makedirs(audio_segment_dir, exist_ok=True)
     os.makedirs(video_segment_dir, exist_ok=True)
+
+    # Making original video directory if it doesn't exist
+    original_video_dir = os.path.join(video_segment_dir, "original_videos")
+    os.makedirs(original_video_dir, exist_ok=True)
+    
+    # Create lip video directory 
+    if extract_lip_videos:
+        lip_video_dir = os.path.join(video_segment_dir, "lip_videos")
+        os.makedirs(lip_video_dir, exist_ok=True)
     
     # Keep track of segments with alignment issues
     alignment_issues = []
@@ -108,12 +131,13 @@ def segment_sources(transcript_segments_dir,
             if ami_speaker_id not in ami_speakers:
                 print(f"Warning: Speaker {ami_speaker_id} not found in mapping. Skipping file {file}")
                 continue
-                
+
+# --------------------------------------- Getting Original Audio and Video --------------------------------------- 
             # Get the corresponding audio and video sources for this speaker
             audio_source = ami_speakers[ami_speaker_id]['audio']
             video_source = ami_speakers[ami_speaker_id]['video']
                 
-            # Construct paths to the original audio and video files
+            # Paths to the original audio and video files
             audio_file = os.path.join(source_original_dir, meeting_id, 'audio', f"{meeting_id}.{audio_source}.wav")
             video_file = os.path.join(source_original_dir, meeting_id, 'video', f"{meeting_id}.{video_source}.avi")
                 
@@ -134,7 +158,8 @@ def segment_sources(transcript_segments_dir,
             if not process_audio and not process_video:
                 print(f"Skipping file {file} as neither audio nor video source exists")
                 continue
-                
+
+# --------------------------------------- Processing Transcript Segments ---------------------------------------     
             # Process each line in the transcript file
             with open(os.path.join(transcript_segments_dir, file), 'r') as f:
                 for line in tqdm(f, desc=f"Processing {file}", leave=False):
@@ -157,6 +182,7 @@ def segment_sources(transcript_segments_dir,
                         # Base segment identifier for both audio and video
                         segment_id = f"{meeting_id}-{ami_speaker_id}-{start_time_str}-{end_time_str}"
                         
+# --------------------------------------- Processing Audio and Video --------------------------------------- 
                         # Process audio if the file exists
                         audio_success = False
                         audio_output_file = None
@@ -172,11 +198,33 @@ def segment_sources(transcript_segments_dir,
                         video_output_file = None
                         if process_video:
                             video_output_file = os.path.join(
-                                video_segment_dir, 
+                                original_video_dir, 
                                 f"{segment_id}-video.mp4"
                             )
                             video_success, video_output_file = segment_video(video_file, start_time, end_time, video_output_file)
-                        
+
+# --------------------------------------- Extracting Lip Video --------------------------------------- 
+                        lip_video_success = False
+                        lip_video_output_file = None
+                        if extract_lip_videos and video_success:
+                            lip_video_output_file = os.path.join(
+                                lip_video_dir, 
+                                f"{segment_id}-lip_video.mp4"
+                            )
+                            try:
+                                print(f"Extracting lip video for {segment_id}")
+                                lip_video_success, lip_video_output_file = extract_and_save_lip_video(
+                                    video_output_file,  # Use the segmented video as input
+                                    lip_video_output_file,
+                                    to_grayscale=True  # Use color for better visualization
+                                )
+                                if not lip_video_success:
+                                    print(f"Warning: Failed to extract lip video for {segment_id}")
+                            except Exception as e:
+                                print(f"Error extracting lip video for {segment_id}: {str(e)}")
+                                lip_video_success = False
+
+# --------------------------------------- Checking for Alignment Issues --------------------------------------- 
                         # Check for alignment issues
                         if process_audio and process_video:
                             if audio_success != video_success:
@@ -184,7 +232,8 @@ def segment_sources(transcript_segments_dir,
                                 print(msg)
                                 alignment_issues.append(msg)
                                 
-                        # Add to dataset records if at least one of audio or video was processed successfully
+# --------------------------------------- Adding to Dataset Records --------------------------------------- 
+
                         if (process_audio and audio_success) or (process_video and video_success):
                             record = {
                                 "id": segment_id,
@@ -195,7 +244,8 @@ def segment_sources(transcript_segments_dir,
                                 "duration": end_time - start_time,
                                 "transcript": text,
                                 "has_audio": audio_success,
-                                "has_video": video_success
+                                "has_video": video_success,
+                                "has_lip_video": lip_video_success
                             }
                             
                             if audio_success:
@@ -203,6 +253,9 @@ def segment_sources(transcript_segments_dir,
                                 
                             if video_success:
                                 record["video"] = video_output_file
+                                
+                            if lip_video_success:
+                                record["lip_video"] = lip_video_output_file
 
                             print("Record: ", record)
                                 
@@ -218,11 +271,24 @@ def segment_sources(transcript_segments_dir,
     if to_dataset and dataset_records:
         audio_video_to_dataset(dataset_records, meeting_ids, DATASET_PATH)
     
+# --------------------------------------- Reporting Statistics --------------------------------------- 
+    total_segments = len(dataset_records)
+    audio_segments = sum(1 for record in dataset_records if record["has_audio"])
+    video_segments = sum(1 for record in dataset_records if record["has_video"])
+    lip_video_segments = sum(1 for record in dataset_records if record.get("has_lip_video", False))
+    
+    print("\nSegmentation Statistics:")
+    print(f"Total segments processed: {total_segments}")
+    print(f"Audio segments: {audio_segments} ({audio_segments/total_segments*100:.1f}%)")
+    print(f"Video segments: {video_segments} ({video_segments/total_segments*100:.1f}%)")
+    print(f"Lip video segments: {lip_video_segments} ({lip_video_segments/total_segments*100:.1f}%)")
+
+# -------------------------------------------------------------------------------------------
     print("Source segmentation completed.")
 
 def audio_video_to_dataset(recordings, meeting_ids, dataset_path=None):
     """
-    Create a HuggingFace dataset from the processed segments (audio and video), 
+    Create a HuggingFace dataset from the processed segments (audio, video, and lip videos), 
     along with the transcript text.
     
     Args:
@@ -251,6 +317,9 @@ def audio_video_to_dataset(recordings, meeting_ids, dataset_path=None):
     
     if 'video' in dataset.features:
         dataset = dataset.cast_column('video', Video())
+        
+    if 'lip_video' in dataset.features:
+        dataset = dataset.cast_column('lip_video', Video())
     
     # Save the dataset
     print(f"Saving dataset to {dataset_path}")
@@ -262,11 +331,15 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser(description='Segment audio and video sources based on transcript timestamps')
     parser.add_argument('--to_dataset', default=True, help='Create HuggingFace dataset')
-    
+    parser.add_argument('--extract_lip_videos', default=True, help='Extract lip videos from video segments')    
     args = parser.parse_args()
     
-    segment_sources(transcript_segments_dir, audio_segment_dir, video_segment_dir, 
-                   to_dataset=args.to_dataset)
+    segment_sources(transcript_segments_dir, 
+                    audio_segment_dir, 
+                    video_segment_dir, 
+                    to_dataset=args.to_dataset,
+                    extract_lip_videos=args.extract_lip_videos,
+                   )
 
 
 
