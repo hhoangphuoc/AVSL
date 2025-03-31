@@ -39,63 +39,100 @@ def segment_video(video_file, start_time, end_time, video_output_file):
     Returns:
         Tuple of (success_flag, output_file_path)
     """
+    # Call batch segmentation with a single segment
+    segments = [(start_time, end_time, video_output_file)]
+    results = batch_segment_video(video_file, segments)
+    
+    # Return the result for the single segment
+    if results and len(results) > 0:
+        return results[0]
+    return False, None
+
+def batch_segment_video(video_file, segments):
+    """
+    Process multiple video segments from the same source file more efficiently.
+    Probes the video file once and extracts all segments.
+    
+    Args:
+        video_file: Path to the input video file
+        segments: List of tuples (start_time, end_time, output_file)
+    
+    Returns:
+        List of tuples (success_flag, output_file_path) for each segment
+    """
+    if not segments:
+        return []
+        
+    results = []
+    
     try:
-        # Check that output file ends with .mp4
-        if not video_output_file.lower().endswith('.mp4'):
-            original_output = video_output_file
-            video_output_file = f"{os.path.splitext(video_output_file)[0]}.mp4"
-            print(f"Changing output format from {original_output} to {video_output_file}")
-            
-        # Check for valid timestamps
-        if start_time < 0:
-            print(f"Warning: Negative start time {start_time} for {video_file}, setting to 0")
-            start_time = 0
-            
-        # Get video duration to validate end_time - FIXME: Remove this part---------------
+        # Probe video only once
+        print(f"Probing video file: {video_file}")
         probe = ffmpeg.probe(video_file)
         video_duration = float(probe['format']['duration'])
-        # ---------------------------------------------------------------------------------
         
-        if end_time > video_duration:
-            print(f"Warning: End time {end_time} exceeds video duration {video_duration} for {video_file}, truncating")
-            end_time = video_duration
-            
-        if start_time >= end_time:
-            print(f"Warning: Invalid video segment {start_time}-{end_time} for {video_file}")
-            return False, None
-            
-        # Calculate duration
-        duration = end_time - start_time
+        # Process each segment
+        for start_time, end_time, video_output_file in segments:
+            try:
+                # Ensure output is mp4
+                if not video_output_file.lower().endswith('.mp4'):
+                    original_output = video_output_file
+                    video_output_file = f"{os.path.splitext(video_output_file)[0]}.mp4"
+                    print(f"Changing output format from {original_output} to {video_output_file}")
+                
+                # Validate timestamps
+                if start_time < 0:
+                    print(f"Warning: Negative start time {start_time} for {video_file}, setting to 0")
+                    start_time = 0
+                    
+                if end_time > video_duration:
+                    print(f"Warning: End time {end_time} exceeds video duration {video_duration} for {video_file}, truncating")
+                    end_time = video_duration
+                    
+                if start_time >= end_time:
+                    print(f"Warning: Invalid video segment {start_time}-{end_time} for {video_file}")
+                    results.append((False, None))
+                    continue
+                    
+                # Calculate duration
+                duration = end_time - start_time
+                
+                # Use ffmpeg to segment the video with 25fps
+                (
+                    ffmpeg
+                    .input(video_file, ss=start_time, t=duration)
+                    .output(
+                        video_output_file, 
+                        r=25,                  # Set frame rate to 25fps
+                        vcodec='libx264',      # Video codec
+                        acodec='aac',          # Audio codec
+                        format='mp4',          # Ensure mp4 format
+                        **{'copyts': None}     # Preserve timestamps for better alignment
+                    )
+                    .overwrite_output()
+                    .run(quiet=True)
+                )
+                
+                # Verify the output video
+                if os.path.exists(video_output_file) and os.path.getsize(video_output_file) > 0:
+                    results.append((True, video_output_file))
+                else:
+                    print(f"Error: Output video file {video_output_file} is empty or doesn't exist")
+                    results.append((False, None))
+                    
+            except ffmpeg.Error as e:
+                print(f"Error segmenting video {video_file} at {start_time}-{end_time}: {e.stderr}")
+                results.append((False, None))
+            except Exception as e:
+                print(f"Unexpected error processing video segment {start_time}-{end_time} from {video_file}: {str(e)}")
+                results.append((False, None))
         
-        # Use ffmpeg to segment the video with 25fps
-        (
-            ffmpeg
-            .input(video_file, ss=start_time, t=duration)
-            .output(
-                video_output_file, 
-                r=25,                  # Set frame rate to 25fps
-                vcodec='libx264',      # Video codec
-                acodec='aac',          # Audio codec
-                format='mp4',          # Ensure mp4 format
-                **{'copyts': None}     # Preserve timestamps for better alignment
-            )
-            .overwrite_output()
-            .run(quiet=True)
-        )
-        
-        # Verify the output video
-        if os.path.exists(video_output_file) and os.path.getsize(video_output_file) > 0:
-            return True, video_output_file
-        else:
-            print(f"Error: Output video file {video_output_file} is empty or doesn't exist")
-            return False, None
-            
-    except ffmpeg.Error as e:
-        print(f"Error segmenting video {video_file}: {e.stderr}")
-        return False, None
     except Exception as e:
-        print(f"Unexpected error processing video {video_file}: {str(e)}")
-        return False, None
+        print(f"Error probing video {video_file}: {str(e)}")
+        # If we can't probe the video file, all segments fail
+        return [(False, None) for _ in segments]
+    
+    return results
 
 def load_video(video_path, to_grayscale=True):
     """
@@ -366,7 +403,6 @@ def save_lip_frames_to_video(lip_frames, output_path, fps=25):
         if not output_path.lower().endswith('.mp4'):
             original_output = output_path
             output_path = f"{os.path.splitext(output_path)[0]}.mp4"
-            print(f"Changing output format from {original_output} to {output_path}")
         
         # Check if frames are grayscale or RGB
         is_grayscale = len(lip_frames.shape) == 3  # [T, H, W]
@@ -439,7 +475,6 @@ def extract_and_save_lip_video(video_path, output_path,
             mean_face_path = MEAN_FACE_PATH
             
         print(f"Extracting lip frames from {video_path}")
-        print(f"Using {'grayscale' if to_grayscale else 'color'} mode")
         
         # Extract lip frames
         lip_frames = extract_lip_frames(
@@ -452,10 +487,7 @@ def extract_and_save_lip_video(video_path, output_path,
             to_grayscale=to_grayscale
         )
         
-        print(f"Lip frames extracted with shape: {lip_frames.shape}")
-        
         # Save to video
-        print(f"Saving video to {output_path}")
         return save_lip_frames_to_video(lip_frames, output_path, fps=fps)
         
     except Exception as e:

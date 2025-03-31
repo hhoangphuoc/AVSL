@@ -23,47 +23,89 @@ def segment_audio(audio_file, start_time, end_time, output_file):
     Returns:
         Tuple of (success_flag, output_file_path)
     """
-    try:
-        # Load audio with 16kHz sample rate
-        audio, sr = librosa.load(audio_file, sr=16000)
-        
-        # Check valid time range
-        max_time = len(audio) / sr
-        if start_time < 0:
-            print(f"Warning: Negative start time {start_time} for {audio_file}, setting to 0")
-            start_time = 0
-            
-        if end_time > max_time:
-            print(f"Warning: End time {end_time} exceeds audio duration {max_time:.2f}s for {audio_file}, truncating")
-            end_time = max_time
-            
-        if start_time >= end_time:
-            print(f"Warning: Invalid audio segment {start_time}-{end_time} for {audio_file}")
-            return False, None
-        
-        start_sample = int(start_time * sr)
-        end_sample = int(end_time * sr)
-        
-        # Check if the segment is too short
-        if end_sample <= start_sample:
-            print(f"Warning: Segment {start_time}-{end_time} is too short")
-            return False, None
-            
-        audio_segment = audio[start_sample:end_sample]
-        
-        # Save the audio segment
-        sf.write(output_file, audio_segment, sr)
-        
-        # Verify the output audio
-        if os.path.exists(output_file) and os.path.getsize(output_file) > 0:
-            return True, output_file
-        else:
-            print(f"Error: Output audio file {output_file} is empty or doesn't exist")
-            return False, None
+    # Call batch segmentation with a single segment
+    segments = [(start_time, end_time, output_file)]
+    results = batch_segment_audio(audio_file, segments)
     
+    # Return the result for the single segment
+    if results and len(results) > 0:
+        return results[0]
+    return False, None
+
+
+def batch_segment_audio(audio_file, segments):
+    """
+    Process multiple audio segments from the same source file in one pass.
+    Loads the audio file once and extracts all segments efficiently.
+    
+    Args:
+        audio_file: Path to the input audio file
+        segments: List of tuples (start_time, end_time, output_file)
+    
+    Returns:
+        List of tuples (success_flag, output_file_path) for each segment
+    """
+    if not segments:
+        return []
+        
+    results = []
+    
+    try:
+        # Load audio with 16kHz sample rate only once
+        print(f"Loading audio file: {audio_file}")
+        audio, sr = librosa.load(audio_file, sr=16000)
+        max_time = len(audio) / sr
+        
+        # Process each segment using the loaded audio
+        for start_time, end_time, output_file in segments:
+            try:
+                # Validate time range
+                if start_time < 0:
+                    print(f"Warning: Negative start time {start_time} for {audio_file}, setting to 0")
+                    start_time = 0
+                    
+                if end_time > max_time:
+                    print(f"Warning: End time {end_time} exceeds audio duration {max_time:.2f}s for {audio_file}, truncating")
+                    end_time = max_time
+                    
+                if start_time >= end_time:
+                    print(f"Warning: Invalid audio segment {start_time}-{end_time} for {audio_file}")
+                    results.append((False, None))
+                    continue
+                
+                # Convert time to samples
+                start_sample = int(start_time * sr)
+                end_sample = int(end_time * sr)
+                
+                # Check if the segment is too short
+                if end_sample <= start_sample:
+                    print(f"Warning: Segment {start_time}-{end_time} is too short")
+                    results.append((False, None))
+                    continue
+                    
+                # Extract segment
+                audio_segment = audio[start_sample:end_sample]
+                
+                # Save the audio segment
+                sf.write(output_file, audio_segment, sr)
+                
+                # Verify the output audio
+                if os.path.exists(output_file) and os.path.getsize(output_file) > 0:
+                    results.append((True, output_file))
+                else:
+                    print(f"Error: Output audio file {output_file} is empty or doesn't exist")
+                    results.append((False, None))
+                    
+            except Exception as e:
+                print(f"Error processing segment {start_time}-{end_time} from {audio_file}: {str(e)}")
+                results.append((False, None))
+        
     except Exception as e:
-        print(f"Error segmenting audio {audio_file}: {str(e)}")
-        return False, None
+        print(f"Error loading audio {audio_file}: {str(e)}")
+        # If we can't load the audio file, all segments fail
+        return [(False, None) for _ in segments]
+    
+    return results
 
 def add_noise(clean_wav, noise_wav, snr):
     """

@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=preprocess-full-AMI-Corpus-with-lip-videos                    # Job name
+#SBATCH --job-name=preprocess-disfluency-laughter-with-lip-videos                    # Job name
 #SBATCH -c 16                                               # Number of cores
 #SBATCH --mem=16G                                           # Request 16GB memory
 #SBATCH --time=24:00:00                                      # Set a walltime limit
