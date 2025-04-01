@@ -1,8 +1,9 @@
 #!/bin/bash
-#SBATCH --job-name=preprocess-disfluency-laughter-with-lip-videos                    # Job name
+#SBATCH --job-name=preprocess-dsfl-ami-dataset                    # Job name
 #SBATCH -c 16                                               # Number of cores
-#SBATCH --mem=16G                                           # Request 16GB memory
-#SBATCH --time=24:00:00                                      # Set a walltime limit
+#SBATCH --mem=16G                                           # Request 32GB memory
+#SBATCH --gres=gpu:ampere:1                                  # Request 1 GPU
+#SBATCH --time=72:00:00                                      # Set a walltime limit
 #SBATCH --mail-type=BEGIN,END,FAIL                          # Email status changes
 #SBATCH --mail-user=hohoangphuoc@student.utwente.nl  # Your email address
 
@@ -23,7 +24,22 @@ echo "Starting worker: "
 source activate .venv
 
 # RUNNING MODE: TRANSCRIPT SEGMENTATION ------------------------------------------------------------    
-# python dataset_process.py --mode transcript
+# python dataset_process.py \
+#     --transcript_segments_dir "/deepstore/datasets/hmi/speechlaugh-corpus/ami/transcript_segments" \
+#     --audio_segment_dir "/deepstore/datasets/hmi/speechlaugh-corpus/ami/av_segments/audio_segments" \
+#     --video_segment_dir "/deepstore/datasets/hmi/speechlaugh-corpus/ami/av_segments/video_segments" \
+#     --dataset_path "../data/ami_dataset" \
+#     --lip_video_dir "/deepstore/datasets/hmi/speechlaugh-corpus/ami/av_segments/lip_videos" \
+    # --use_gpu True \
+    # --use_parallel True \
+    # --batch_size 16 \
+    # --batch_process True
 
 # RUNNING MODE: DISFLUENCY/LAUGHTER SEGMENTATION ------------------------------------------------------------    
-python dataset_process.py --mode dsfl_laugh
+python dsfl_dataset_process.py \
+    --dsfl_laugh_dir "/deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl" \
+    --dataset_path "../data/dsfl/dataset" \
+    # --use_parallel True \
+    # --batch_size 16 \
+    # --batch_process True \
+    # --to_grayscale True
