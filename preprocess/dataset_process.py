@@ -571,6 +571,7 @@ def hf_dataset_from_existing_segments(source_dir=DATA_PATH,
     audio_segments_dir = os.path.join(source_dir, "audio_segments")
     video_segments_dir = os.path.join(source_dir, "video_segments")
     original_video_dir = os.path.join(video_segments_dir, "original_videos")
+    lip_video_dir = None
     if include_lip_videos:
         lip_video_dir = os.path.join(video_segments_dir, "lip_videos")
     
@@ -588,8 +589,7 @@ def hf_dataset_from_existing_segments(source_dir=DATA_PATH,
     # Find all audio, video, and lip video files
     audio_files = {}
     video_files = {}
-    if include_lip_videos:
-        lip_video_files = {}
+    lip_video_files = {}  # Initialize it regardless to avoid reference errors
     
     # Process audio files
     if os.path.exists(audio_segments_dir):
@@ -607,8 +607,8 @@ def hf_dataset_from_existing_segments(source_dir=DATA_PATH,
                 segment_id = file[:-10]
                 video_files[segment_id] = os.path.join(original_video_dir, file) # {segment_id: video_file} - eg. {"ES2001a-A-0.00-0.10": "video_segments/original_videos/ES2001a-A-0.00-0.10-video.mp4"}   
     
-    # Process lip video files
-    if include_lip_videos and os.path.exists(lip_video_dir):
+    # Process lip video files only if include_lip_videos is True
+    if include_lip_videos and lip_video_dir and os.path.exists(lip_video_dir):
         for file in tqdm(os.listdir(lip_video_dir), desc="Reading lip video files"):
             if file.endswith("-lip_video.mp4"):
                 # Extract segment_id by removing "-lip_video.mp4"
@@ -665,7 +665,7 @@ def hf_dataset_from_existing_segments(source_dir=DATA_PATH,
         # Check if we have either audio or video for this segment
         has_audio = segment_id in audio_files
         has_video = segment_id in video_files
-        has_lip_video = segment_id in lip_video_files
+        has_lip_video = include_lip_videos and segment_id in lip_video_files
         has_transcript = segment_id in transcript_info
         
         # Only include segments that have at least audio or video

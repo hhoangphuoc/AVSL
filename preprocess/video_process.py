@@ -545,6 +545,12 @@ def save_lip_frames_to_video(lip_frames, output_path, fps=25):
         # Check if frames are grayscale or RGB
         is_grayscale = len(lip_frames.shape) == 3  # [T, H, W]
         
+        # Get dimensions
+        if is_grayscale:
+            num_frames, height, width = lip_frames.shape
+        else:
+            num_frames, height, width, _ = lip_frames.shape
+        
         # Try to use GPU-accelerated saving if available
         if USE_GPU and torch.cuda.is_available():
             try:
@@ -552,21 +558,21 @@ def save_lip_frames_to_video(lip_frames, output_path, fps=25):
                 
                 # Convert frames to tensor
                 if is_grayscale:
-                    # Convert grayscale to RGB
-                    frames_rgb = np.stack([cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB) for frame in lip_frames])
+                    # Convert grayscale frames to [T, H, W, 3] by repeating the channel
+                    frames_rgb = np.zeros((num_frames, height, width, 3), dtype=np.uint8)
+                    for i, frame in enumerate(lip_frames):
+                        frames_rgb[i] = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
                 else:
                     frames_rgb = lip_frames
                 
-                # Convert to torch tensor [T, C, H, W]
-                frames_tensor = torch.from_numpy(
-                    frames_rgb.transpose(0, 3, 1, 2) if not is_grayscale else 
-                    frames_rgb.reshape(frames_rgb.shape[0], 1, frames_rgb.shape[1], frames_rgb.shape[2]).repeat(1, 3, 1, 1)
-                ).to('cuda')
+                # Convert to torch tensor [T, H, W, C]
+                # Ensure it's in the correct format before sending to GPU
+                frames_tensor = torch.from_numpy(frames_rgb).float().to('cuda')
                 
                 # Write video using GPU
                 torchvision.io.write_video(
                     output_path,
-                    frames_tensor.permute(0, 2, 3, 1).cpu(),  # [T, H, W, C]
+                    frames_tensor,  # [T, H, W, C]
                     fps=fps,
                     video_codec="libx264"
                 )
