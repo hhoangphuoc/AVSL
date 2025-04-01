@@ -43,4 +43,24 @@ def av_to_hf_dataset(recordings, dataset_path=None):
     print(f"HuggingFace dataset saved: {dataset}")
 
 
+# ================================================================================================================
+def push_dataset_to_hub(dataset_path, repo_name):
+    """
+    Push the dataset to the HuggingFace Hub.
+    """
+    dataset = Dataset.from_file(dataset_path)
+    dataset.push_to_hub(repo_name)
+
+
+# ================================================================================================================
+
+if __name__ == "__main__":
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='Push the dataset to the HuggingFace Hub')
+    parser.add_argument('--dataset_path', type=str, default='../data/hf_dataset', help='Path to the HuggingFace dataset')
+    parser.add_argument('--repo_name', type=str, default='ami-av', help='Name of the repository to push the dataset')
+    args = parser.parse_args()
+    
+    push_dataset_to_hub(args.dataset_path, args.repo_name)
 

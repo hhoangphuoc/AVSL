@@ -527,13 +527,18 @@ def segment_sources(transcript_segments_dir,
 
 #==========================================================================================================================
 
-def hf_dataset_from_paths(source_dir=None,
-                          transcript_segments_dir=None,
-                          dataset_path=None):
+def hf_dataset_from_existing_segments(source_dir=DATA_PATH,
+                          transcript_segments_dir=TRANS_SEG_PATH,
+                          dataset_path='../data/hf_dataset',
+                          include_lip_videos=False
+                          ):
     """
     Create a HuggingFace dataset from the processed segments (audio, video) which already exist
     in the `source_dir`. The function reads the metadata, including meeting id, speaker id, and transcript text from the `transcript_segments_dir`,
     and align it with the audio and video segments in the `source_dir`.
+
+    NOTE: This function work similar to `segment_sources` function, but it does not process the audio and video segments,
+    and only reads the existing segments in the `source_dir`.
 
     NOTE: The format of the `source_dir` is as follows:
 
@@ -547,16 +552,175 @@ def hf_dataset_from_paths(source_dir=None,
         source_dir: Path to the directory containing the processed segments (audio, video)
         transcript_segments_dir: Path to the directory containing the transcript segments
         dataset_path: Path to the HuggingFace dataset
+        include_lip_videos: Whether to include lip videos in the dataset (default: False)
     """
     print(f"Creating HuggingFace dataset from paths: {source_dir}")
+    
+    # Set default paths if not provided
+    if source_dir is None:
+        source_dir = os.path.dirname(DATA_PATH)
+    if transcript_segments_dir is None:
+        transcript_segments_dir = TRANS_SEG_PATH
+    if dataset_path is None:
+        dataset_path = DATASET_PATH
+        
+    # Create output directory if it doesn't exist
+    os.makedirs(dataset_path, exist_ok=True)
     
     # Load the audio and video segments
     audio_segments_dir = os.path.join(source_dir, "audio_segments")
     video_segments_dir = os.path.join(source_dir, "video_segments")
-
-    # Load the transcript segments to get the meeting id, speaker id, and transcript text
+    original_video_dir = os.path.join(video_segments_dir, "original_videos")
+    if include_lip_videos:
+        lip_video_dir = os.path.join(video_segments_dir, "lip_videos")
     
+    # Check if directories exist
+    if not os.path.exists(audio_segments_dir):
+        print(f"Warning: Audio segments directory not found: {audio_segments_dir}")
+    if not os.path.exists(original_video_dir):
+        print(f"Warning: Video segments directory not found: {original_video_dir}")
+    if include_lip_videos and not os.path.exists(lip_video_dir):
+        print(f"Warning: Lip video segments directory not found: {lip_video_dir}")
+    if not os.path.exists(transcript_segments_dir):
+        print(f"Error: Transcript segments directory not found: {transcript_segments_dir}")
+        return
 
+    # Find all audio, video, and lip video files
+    audio_files = {}
+    video_files = {}
+    if include_lip_videos:
+        lip_video_files = {}
+    
+    # Process audio files
+    if os.path.exists(audio_segments_dir):
+        for file in tqdm(os.listdir(audio_segments_dir), desc="Reading audio files"):
+            if file.endswith("-audio.wav"):
+                # Extract segment_id by removing "-audio.wav"
+                segment_id = file[:-10]
+                audio_files[segment_id] = os.path.join(audio_segments_dir, file) # {segment_id: audio_file} - eg. {"ES2001a-A-0.00-0.10": "audio_segments/ES2001a-A-0.00-0.10-audio.wav"}
+    
+    # Process video files
+    if os.path.exists(original_video_dir):
+        for file in tqdm(os.listdir(original_video_dir), desc="Reading video files"):
+            if file.endswith("-video.mp4"):
+                # Extract segment_id by removing "-video.mp4"
+                segment_id = file[:-10]
+                video_files[segment_id] = os.path.join(original_video_dir, file) # {segment_id: video_file} - eg. {"ES2001a-A-0.00-0.10": "video_segments/original_videos/ES2001a-A-0.00-0.10-video.mp4"}   
+    
+    # Process lip video files
+    if include_lip_videos and os.path.exists(lip_video_dir):
+        for file in tqdm(os.listdir(lip_video_dir), desc="Reading lip video files"):
+            if file.endswith("-lip_video.mp4"):
+                # Extract segment_id by removing "-lip_video.mp4"
+                segment_id = file[:-14]
+                lip_video_files[segment_id] = os.path.join(lip_video_dir, file) # {segment_id: lip_video_file} - eg. {"ES2001a-A-0.00-0.10": "video_segments/lip_videos/ES2001a-A-0.00-0.10-lip_video.mp4"}
+    
+    print(f"Found {len(audio_files)} audio files, {len(video_files)} video files, and {len(lip_video_files) if include_lip_videos else 0} lip video files")
+    
+    # Extract transcript information from transcript segment files
+    time_pattern = re.compile(r'\[(\d+\.\d+)-(\d+\.\d+)\]\s+(.*)') #format: [start_time-end_time] text
+    transcript_info = {}  # {segment_id: transcript_text} - eg. {"ES2001a-A-0.00-0.10": "This is a test transcript"}    
+    
+    for file in tqdm(os.listdir(transcript_segments_dir), desc="Reading transcript files"):
+        if file.endswith('.txt'):
+            meeting_id, ami_speaker_id = file.split('.')[0].split('-')
+            
+            # Skip if speaker not in mapping
+            if ami_speaker_id not in AMI_SPEAKERS:
+                print(f"Warning: Speaker {ami_speaker_id} not found in mapping. Skipping file {file}")
+                continue
+            
+            # Process each line in the transcript file
+            with open(os.path.join(transcript_segments_dir, file), 'r') as f:
+                for line in f:
+                    match = time_pattern.match(line.strip())
+                    if match:
+                        start_time = float(match.group(1))
+                        end_time = float(match.group(2))
+                        text = match.group(3)
+                        
+                        # Skip very short segments (less than 0.1 seconds)
+                        if end_time - start_time < 0.1:
+                            continue
+                        
+                        # Format times for filenames (2 decimal places)
+                        start_time_str = f"{start_time:.2f}"
+                        end_time_str = f"{end_time:.2f}"
+                        
+                        # Create segment_id
+                        segment_id = f"{meeting_id}-{ami_speaker_id}-{start_time_str}-{end_time_str}"
+                        transcript_info[segment_id] = text
+    
+    print(f"Found transcript information for {len(transcript_info)} segments")
+    
+    # Create dataset records by finding the intersection of transcript segments and media files
+    dataset_records = []
+    
+    # Group audio, video, and transcript by similar key (segment_id)
+    all_segment_ids = set(list(audio_files.keys()) + list(video_files.keys()) + list(transcript_info.keys()))
+    
+    print(f"Processing {len(all_segment_ids)} unique segment IDs")
+    
+    for segment_id in tqdm(all_segment_ids, desc="Creating dataset records"):
+        # Check if we have either audio or video for this segment
+        has_audio = segment_id in audio_files
+        has_video = segment_id in video_files
+        has_lip_video = segment_id in lip_video_files
+        has_transcript = segment_id in transcript_info
+        
+        # Only include segments that have at least audio or video
+        if has_audio or has_video:
+            # Parse segment_id to extract metadata
+            parts = segment_id.split('-')
+            if len(parts) >= 4:  # Ensure we have enough parts
+                meeting_id = parts[0]
+                speaker_id = parts[1]
+                start_time = float(parts[2])
+                end_time = float(parts[3])
+                
+                record = {
+                    "id": segment_id,
+                    "meeting_id": meeting_id,
+                    "speaker_id": speaker_id,
+                    "start_time": start_time,
+                    "end_time": end_time,
+                    "duration": end_time - start_time,
+                    "transcript": transcript_info.get(segment_id, ""),
+                    "has_audio": has_audio,
+                    "has_video": has_video,
+                    "has_lip_video": has_lip_video,
+                    "has_transcript": has_transcript
+                }
+                
+                if has_audio:
+                    record["audio"] = audio_files[segment_id]
+                    
+                if has_video:
+                    record["video"] = video_files[segment_id]
+                    
+                if has_lip_video:
+                    record["lip_video"] = lip_video_files[segment_id]
+                    
+                dataset_records.append(record)
+    
+    print(f"Created {len(dataset_records)} dataset records")
+
+    # Save the dataset records to a json file
+    dataset_records_path = os.path.join(dataset_path, "dataset_records.json")
+    with open(dataset_records_path, "w") as f:
+        json.dump(dataset_records, f)
+    
+    # Create and save the HuggingFace dataset
+    if dataset_records:
+        try:
+            av_to_hf_dataset(dataset_records, dataset_path=dataset_path)
+            print(f"Dataset successfully saved to {dataset_path}")
+        except Exception as e:
+            print(f"Error saving dataset: {str(e)}")
+    else:
+        print("No valid records found, dataset creation skipped.")
+    
+    return dataset_records
 
 # ================================================================================================================
 
@@ -564,32 +728,76 @@ if __name__ == "__main__":
     import argparse
     
     parser = argparse.ArgumentParser(description='Segment audio and video sources based on transcript timestamps')
+
+    parser.add_argument('--mode', choices=['segment_not_exist', 'segment_exist'], default='segment_not_exist', help='Mode to run the script in. `segment_not_exist` to segment audio and video sources from transcript segments. `segment_exist` to skip segmentation and process from existing segments.')
+
+    # Original segment directory parameters
+    parser.add_argument('--source_dir', type=str, default=DATA_PATH, help='Original audio and video source directory')
     parser.add_argument('--transcript_segments_dir', type=str, default=TRANS_SEG_PATH, help='Directory to save transcript segments')
     parser.add_argument('--audio_segment_dir', type=str, default=AUDIO_PATH, help='Directory to save audio segments')
     parser.add_argument('--video_segment_dir', type=str, default=VIDEO_PATH, help='Directory to save video segments')
+
+
     parser.add_argument('--dataset_path', type=str, default=DATASET_PATH, help='Path to save HuggingFace dataset')
-    parser.add_argument('--to_dataset', action='store_true', default=True, help='Create HuggingFace dataset')
-    parser.add_argument('--extract_lip_videos', action='store_true', default=True, help='Extract lip videos from video segments')
+    parser.add_argument('--to_dataset', type=bool, default=True, help='Create HuggingFace dataset')
+
+    # Lip video extraction configuration parameters
+    parser.add_argument('--extract_lip_videos', type=bool, default=True, help='Extract lip videos from video segments')
     parser.add_argument('--lip_video_dir', type=str, default=lip_video_dir, help='Directory to save lip videos')
-    parser.add_argument('--use_gpu', action='store_true', default=False, help='Use GPU acceleration if available')
-    parser.add_argument('--use_parallel', action='store_true', default=True, help='Use parallel processing for lip extraction')
+    parser.add_argument('--use_gpu', type=bool, default=True, help='Use GPU acceleration if available')
+    parser.add_argument('--use_parallel', type=bool, default=True, help='Use parallel processing for lip extraction')
     parser.add_argument('--batch_size', type=int, default=16, help='Batch size for processing frames in each video')
-    parser.add_argument('--batch_process', action='store_true', default=True, help='Process multiple videos in parallel batches')
+    parser.add_argument('--batch_process', type=bool, default=True, help='Process multiple videos in parallel batches')
     
     args = parser.parse_args()
+    # =============================================================================================================
+    # SEGMENT AUDIO AND VIDEO SOURCES WITHOUT EXISTING SEGMENTS
+    # =============================================================================================================
+
+    if args.mode == 'segment_not_exist':   
+        print(f"\nRunning mode: {args.mode.upper()}")
+        print(f"Source directory: {args.source_dir}")
+        print(f"Transcript segments directory: {args.transcript_segments_dir}")
+        print(f"Audio segment directory: {args.audio_segment_dir}")
+        print(f"Video segment directory: {args.video_segment_dir}")
+        print(f"Extract lip videos: {args.extract_lip_videos}")
+        print(f"Lip video directory: {args.lip_video_dir}")
+        print(f"Use GPU: {args.use_gpu}")
+        print(f"Use parallel: {args.use_parallel}")
+        print(f"Batch size: {args.batch_size}")
+        print(f"Batch process: {args.batch_process}")
+        print(f"To dataset: {args.to_dataset}")
+        print(f"Dataset path: {args.dataset_path}\n")
+
+        segment_sources(
+            transcript_segments_dir, 
+            audio_segment_dir, 
+            video_segment_dir, 
+            to_dataset=args.to_dataset,
+            extract_lip_videos=args.extract_lip_videos,
+            lip_video_dir=args.lip_video_dir,
+            use_gpu=args.use_gpu,
+            use_parallel=args.use_parallel,
+            batch_size=args.batch_size,
+            batch_process=args.batch_process
+        )
     
-    segment_sources(
-        transcript_segments_dir, 
-        audio_segment_dir, 
-        video_segment_dir, 
-        to_dataset=args.to_dataset,
-        extract_lip_videos=args.extract_lip_videos,
-        lip_video_dir=args.lip_video_dir,
-        use_gpu=args.use_gpu,
-        use_parallel=args.use_parallel,
-        batch_size=args.batch_size,
-        batch_process=args.batch_process
-    )
+    # =============================================================================================================
+    # CREATE HUGGINGFACE DATASET FROM EXISTING SEGMENTS
+    # ============================================================================================================= 
+    elif args.mode == 'segment_exist':
+        print(f"\nRunning mode: {args.mode.upper()}")
+        print(f"Source directory: {args.source_dir}")
+        print(f"Transcript segments directory: {args.transcript_segments_dir}")
+        print(f"Dataset path: {args.dataset_path}\n")
+
+        hf_dataset_from_existing_segments(
+            source_dir=args.source_dir,
+            transcript_segments_dir=args.transcript_segments_dir,
+            dataset_path=args.dataset_path,
+            include_lip_videos=False
+        )
+    # =============================================================================================================
 
 
 
