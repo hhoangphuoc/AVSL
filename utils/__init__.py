@@ -6,6 +6,7 @@ from .lips_cropping import (
     apply_transform, 
     cut_patch
 )
+from .huggingface_utils import av_to_hf_dataset
 
 
 __all__ = [
@@ -14,5 +15,6 @@ __all__ = [
     "landmarks_interpolate",
     "warp_img",
     "apply_transform",
-    "cut_patch"
+    "cut_patch",
+    "av_to_hf_dataset"
 ]
