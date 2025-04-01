@@ -1,0 +1,828 @@
+	Adding nVidia Cuda Toolkit 11.8
+	Adding nvtop
+Date              = Mon Mar 31 04:49:25 PM CEST 2025
+Hostname          = ctit082
+Working Directory = /home/s2587130/AVSL/preprocess
+Name of nodes used          : ctit082
+Gpu devices                 : 
+Starting worker: 
+Processing transcript files:   0%|          | 0/5 [00:00<?, ?it/s]
+Processing EN2001a-A.txt: 0it [00:00, ?it/s][A
+Processing EN2001a-A.txt: 1it [00:32, 32.76s/it][A
+Processing EN2001a-A.txt: 2it [01:31, 48.12s/it][A
+Processing EN2001a-A.txt: 3it [01:42, 31.10s/it][A
+Processing EN2001a-A.txt: 4it [02:21, 34.33s/it][A
+Processing EN2001a-A.txt: 5it [03:17, 42.20s/it][A
+Processing EN2001a-A.txt: 6it [03:46, 37.58s/it][A
+Processing EN2001a-A.txt: 7it [03:56, 28.46s/it][A
+Processing EN2001a-A.txt: 8it [04:06, 22.56s/it][A
+Processing EN2001a-A.txt: 9it [04:15, 18.31s/it][A
+Processing EN2001a-A.txt: 10it [04:47, 22.57s/it][A
+Processing EN2001a-A.txt: 11it [04:58, 19.15s/it][A
+Processing EN2001a-A.txt: 12it [05:27, 21.98s/it][A
+Processing EN2001a-A.txt: 13it [05:36, 18.24s/it][A
+Processing EN2001a-A.txt: 14it [05:46, 15.59s/it][A
+Processing EN2001a-A.txt: 15it [05:57, 14.25s/it][A
+Processing EN2001a-A.txt: 16it [06:06, 12.86s/it][A
+Processing EN2001a-A.txt: 17it [06:16, 11.86s/it][A
+Processing EN2001a-A.txt: 18it [06:31, 12.91s/it][A
+Processing EN2001a-A.txt: 19it [06:41, 11.97s/it][A
+Processing EN2001a-A.txt: 20it [06:50, 11.18s/it][A
+Processing EN2001a-A.txt: 21it [07:29, 19.31s/it][A
+Processing EN2001a-A.txt: 22it [07:51, 20.18s/it][A
+Processing EN2001a-A.txt: 23it [08:10, 19.80s/it][A
+Processing EN2001a-A.txt: 24it [08:20, 16.84s/it][A
+Processing EN2001a-A.txt: 25it [08:29, 14.55s/it][A
+Processing EN2001a-A.txt: 26it [08:38, 12.94s/it][A
+Processing EN2001a-A.txt: 27it [09:01, 15.77s/it][A
+Processing EN2001a-A.txt: 28it [09:17, 15.83s/it][A
+Processing EN2001a-A.txt: 29it [09:30, 15.13s/it][A
+Processing EN2001a-A.txt: 30it [09:40, 13.54s/it][A
+Processing EN2001a-A.txt: 31it [09:49, 12.37s/it][A
+Processing EN2001a-A.txt: 32it [10:14, 15.97s/it][A
+Processing EN2001a-A.txt: 33it [10:24, 14.32s/it][A
+Processing EN2001a-A.txt: 34it [10:54, 18.85s/it][A
+Processing EN2001a-A.txt: 35it [11:03, 16.05s/it][A
+Processing EN2001a-A.txt: 36it [11:14, 14.47s/it][A
+Processing EN2001a-A.txt: 37it [11:30, 14.91s/it][A
+Processing EN2001a-A.txt: 38it [11:39, 13.28s/it][A
+Processing EN2001a-A.txt: 39it [11:49, 12.06s/it][A
+Processing EN2001a-A.txt: 40it [11:58, 11.24s/it][A
+Processing EN2001a-A.txt: 41it [12:09, 11.10s/it][A
+Processing EN2001a-A.txt: 42it [12:18, 10.61s/it][A
+Processing EN2001a-A.txt: 43it [12:28, 10.41s/it][A
+Processing EN2001a-A.txt: 44it [12:39, 10.66s/it][A
+Processing EN2001a-A.txt: 45it [12:51, 10.97s/it][A
+Processing EN2001a-A.txt: 46it [13:00, 10.48s/it][A
+Processing EN2001a-A.txt: 47it [13:10, 10.16s/it][A
+Processing EN2001a-A.txt: 48it [13:20, 10.09s/it][A
+Processing EN2001a-A.txt: 49it [13:30, 10.05s/it][A
+Processing EN2001a-A.txt: 50it [13:39,  9.87s/it][A
+Processing EN2001a-A.txt: 51it [13:55, 11.56s/it][A
+Processing EN2001a-A.txt: 52it [14:05, 11.11s/it][A
+Processing EN2001a-A.txt: 53it [14:15, 10.76s/it][A
+Processing EN2001a-A.txt: 54it [14:28, 11.61s/it][A
+Processing EN2001a-A.txt: 55it [14:38, 10.96s/it][A
+Processing EN2001a-A.txt: 56it [14:47, 10.33s/it][A
+Processing EN2001a-A.txt: 57it [14:57, 10.27s/it][A
+Processing EN2001a-A.txt: 58it [16:06, 28.05s/it][A
+Processing EN2001a-A.txt: 59it [16:24, 24.87s/it][A
+Processing EN2001a-A.txt: 60it [16:38, 21.62s/it][A
+Processing EN2001a-A.txt: 61it [17:28, 30.09s/it][A
+Processing EN2001a-A.txt: 62it [17:46, 26.49s/it][A
+Processing EN2001a-A.txt: 63it [17:56, 21.55s/it][A
+Processing EN2001a-A.txt: 64it [18:14, 20.48s/it][A
+Processing EN2001a-A.txt: 65it [18:24, 17.38s/it][A
+Processing EN2001a-A.txt: 66it [18:34, 15.31s/it][A
+Processing EN2001a-A.txt: 67it [18:46, 14.37s/it][A
+Processing EN2001a-A.txt: 68it [19:01, 14.49s/it][A
+Processing EN2001a-A.txt: 69it [19:11, 13.18s/it][A
+Processing EN2001a-A.txt: 70it [19:37, 16.91s/it][A
+Processing EN2001a-A.txt: 71it [19:49, 15.58s/it][A
+Processing EN2001a-A.txt: 72it [20:01, 14.49s/it][A
+Processing EN2001a-A.txt: 73it [20:30, 18.60s/it][A
+Processing EN2001a-A.txt: 74it [20:39, 15.95s/it][A
+Processing EN2001a-A.txt: 75it [20:50, 14.47s/it][A
+Processing EN2001a-A.txt: 76it [21:01, 13.18s/it][A
+Processing EN2001a-A.txt: 77it [21:30, 18.19s/it][A
+Processing EN2001a-A.txt: 78it [21:51, 18.94s/it][A
+Processing EN2001a-A.txt: 79it [23:07, 36.14s/it][A
+Processing EN2001a-A.txt: 80it [23:17, 28.16s/it][A
+Processing EN2001a-A.txt: 81it [23:28, 23.06s/it][A
+Processing EN2001a-A.txt: 82it [24:02, 26.32s/it][A
+Processing EN2001a-A.txt: 83it [24:14, 21.92s/it][A
+Processing EN2001a-A.txt: 84it [24:28, 19.72s/it][A
+Processing EN2001a-A.txt: 85it [24:38, 16.72s/it][A
+Processing EN2001a-A.txt: 86it [24:47, 14.50s/it][A
+Processing EN2001a-A.txt: 87it [24:57, 12.96s/it][A
+Processing EN2001a-A.txt: 88it [25:16, 14.80s/it][A
+Processing EN2001a-A.txt: 89it [25:25, 13.01s/it][A
+Processing EN2001a-A.txt: 90it [25:27,  9.88s/it][A
+Processing EN2001a-A.txt: 91it [25:30,  7.69s/it][A
+Processing EN2001a-A.txt: 92it [25:32,  6.13s/it][A
+Processing EN2001a-A.txt: 93it [25:35,  5.03s/it][A
+Processing EN2001a-A.txt: 94it [25:37,  4.30s/it][A
+Processing EN2001a-A.txt: 95it [25:40,  3.74s/it][A
+Processing EN2001a-A.txt: 96it [25:42,  3.38s/it][A
+Processing EN2001a-A.txt: 97it [25:45,  3.11s/it][A
+Processing EN2001a-A.txt: 98it [25:47,  2.91s/it][A
+Processing EN2001a-A.txt: 99it [25:50,  2.79s/it][A
+Processing EN2001a-A.txt: 100it [25:52,  2.69s/it][A
+Processing EN2001a-A.txt: 101it [25:55,  2.68s/it][A
+Processing EN2001a-A.txt: 102it [25:57,  2.66s/it][A
+Processing EN2001a-A.txt: 103it [26:00,  2.58s/it][A
+Processing EN2001a-A.txt: 104it [26:02,  2.57s/it][A
+Processing EN2001a-A.txt: 105it [26:05,  2.56s/it][A
+Processing EN2001a-A.txt: 106it [26:08,  2.58s/it][A
+Processing EN2001a-A.txt: 107it [26:10,  2.59s/it][A
+Processing EN2001a-A.txt: 108it [26:13,  2.61s/it][A
+Processing EN2001a-A.txt: 109it [26:15,  2.62s/it][A
+Processing EN2001a-A.txt: 110it [26:18,  2.57s/it][A
+Processing EN2001a-A.txt: 111it [26:20,  2.56s/it][A
+Processing EN2001a-A.txt: 112it [26:23,  2.55s/it][A
+Processing EN2001a-A.txt: 113it [26:26,  2.55s/it][A
+Processing EN2001a-A.txt: 114it [26:28,  2.56s/it][A
+Processing EN2001a-A.txt: 115it [26:31,  2.52s/it][A
+Processing EN2001a-A.txt: 116it [26:33,  2.53s/it][A
+Processing EN2001a-A.txt: 117it [26:36,  2.51s/it][A
+Processing EN2001a-A.txt: 118it [26:38,  2.54s/it][A
+Processing EN2001a-A.txt: 119it [26:41,  2.55s/it][A
+Processing EN2001a-A.txt: 120it [26:43,  2.53s/it][A
+Processing EN2001a-A.txt: 121it [26:46,  2.52s/it][A
+Processing EN2001a-A.txt: 122it [26:48,  2.51s/it][A
+                                                  [AProcessing transcript files:  20%|██        | 1/5 [26:48<1:47:14, 1608.70s/it]Processing transcript files: 100%|██████████| 5/5 [26:48<00:00, 321.74s/it]   
+Extracting lip video for EN2001a-A-5.50-6.07
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-5.50-6.07-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (14, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-5.50-6.07-lip_video.mp4
+Record:  {'id': 'EN2001a-A-5.50-6.07', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 5.496, 'end_time': 6.07, 'duration': 0.5739999999999998, 'transcript': 'Okay.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-5.50-6.07-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-5.50-6.07-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-5.50-6.07-lip_video.mp4'}
+Extracting lip video for EN2001a-A-11.04-15.63
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-11.04-15.63-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (115, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-11.04-15.63-lip_video.mp4
+Record:  {'id': 'EN2001a-A-11.04-15.63', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 11.04, 'end_time': 15.632, 'duration': 4.5920000000000005, 'transcript': "Does anyone want to see uh Steve's feedback from the specification?", 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-11.04-15.63-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-11.04-15.63-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-11.04-15.63-lip_video.mp4'}
+Extracting lip video for EN2001a-A-18.88-19.37
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-18.88-19.37-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (12, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-18.88-19.37-lip_video.mp4
+Record:  {'id': 'EN2001a-A-18.88-19.37', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 18.883, 'end_time': 19.373, 'duration': 0.490000000000002, 'transcript': 'Right.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-18.88-19.37-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-18.88-19.37-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-18.88-19.37-lip_video.mp4'}
+Extracting lip video for EN2001a-A-21.39-25.86
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-21.39-25.86-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (112, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-21.39-25.86-lip_video.mp4
+Record:  {'id': 'EN2001a-A-21.39-25.86', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 21.392, 'end_time': 25.857, 'duration': 4.465, 'transcript': "Not really, um just what he's talking about, like duplication of effort and", 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-21.39-25.86-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-21.39-25.86-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-21.39-25.86-lip_video.mp4'}
+Extracting lip video for EN2001a-A-28.03-40.15
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-28.03-40.15-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (303, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-28.03-40.15-lip_video.mp4
+Record:  {'id': 'EN2001a-A-28.03-40.15', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 28.033, 'end_time': 40.152, 'duration': 12.119, 'transcript': 'Like duplication of effort and stuff, and um yeah, he was saying that we should maybe uh think about having a prototype for week six, which is next week. Yeah.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-28.03-40.15-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-28.03-40.15-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-28.03-40.15-lip_video.mp4'}
+Extracting lip video for EN2001a-A-42.22-47.62
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-42.22-47.62-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (135, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-42.22-47.62-lip_video.mp4
+Record:  {'id': 'EN2001a-A-42.22-47.62', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 42.224, 'end_time': 47.618, 'duration': 5.3940000000000055, 'transcript': 'So we should probably prioritize our packages.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-42.22-47.62-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-42.22-47.62-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-42.22-47.62-lip_video.mp4'}
+Extracting lip video for EN2001a-A-56.53-57.03
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-56.53-57.03-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (12, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-56.53-57.03-lip_video.mp4
+Record:  {'id': 'EN2001a-A-56.53-57.03', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 56.535, 'end_time': 57.029, 'duration': 0.4940000000000069, 'transcript': 'Mm.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-56.53-57.03-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-56.53-57.03-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-56.53-57.03-lip_video.mp4'}
+Extracting lip video for EN2001a-A-79.97-80.54
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-79.97-80.54-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (14, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-79.97-80.54-lip_video.mp4
+Record:  {'id': 'EN2001a-A-79.97-80.54', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 79.967, 'end_time': 80.541, 'duration': 0.5739999999999981, 'transcript': 'Yeah.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-79.97-80.54-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-79.97-80.54-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-79.97-80.54-lip_video.mp4'}
+Extracting lip video for EN2001a-A-121.85-122.23
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-121.85-122.23-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (10, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-121.85-122.23-lip_video.mp4
+Record:  {'id': 'EN2001a-A-121.85-122.23', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 121.848, 'end_time': 122.231, 'duration': 0.38299999999999557, 'transcript': 'Yeah.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-121.85-122.23-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-121.85-122.23-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-121.85-122.23-lip_video.mp4'}
+Extracting lip video for EN2001a-A-155.46-161.80
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-155.46-161.80-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (159, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-155.46-161.80-lip_video.mp4
+Record:  {'id': 'EN2001a-A-155.46-161.80', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 155.456, 'end_time': 161.802, 'duration': 6.346000000000004, 'transcript': 'Hmm. Has has anyone actually looked at the Java code for the, huh? Hmm.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-155.46-161.80-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-155.46-161.80-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-155.46-161.80-lip_video.mp4'}
+Extracting lip video for EN2001a-A-186.78-187.69
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-186.78-187.69-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (23, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-186.78-187.69-lip_video.mp4
+Record:  {'id': 'EN2001a-A-186.78-187.69', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 186.784, 'end_time': 187.692, 'duration': 0.9080000000000155, 'transcript': 'Yeah, I think so.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-186.78-187.69-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-186.78-187.69-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-186.78-187.69-lip_video.mp4'}
+Extracting lip video for EN2001a-A-252.23-257.62
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-252.23-257.62-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (135, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-252.23-257.62-lip_video.mp4
+Record:  {'id': 'EN2001a-A-252.23-257.62', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 252.231, 'end_time': 257.619, 'duration': 5.388000000000034, 'transcript': "Yeah, I I don't know about the search functionality, that might be online. Depends how it's gonna work.", 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-252.23-257.62-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-252.23-257.62-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-252.23-257.62-lip_video.mp4'}
+Extracting lip video for EN2001a-A-265.75-266.31
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-265.75-266.31-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (14, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-265.75-266.31-lip_video.mp4
+Record:  {'id': 'EN2001a-A-265.75-266.31', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 265.748, 'end_time': 266.307, 'duration': 0.5590000000000259, 'transcript': 'Yeah.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-265.75-266.31-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-265.75-266.31-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-265.75-266.31-lip_video.mp4'}
+Extracting lip video for EN2001a-A-460.93-461.35
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-460.93-461.35-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (10, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-460.93-461.35-lip_video.mp4
+Record:  {'id': 'EN2001a-A-460.93-461.35', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 460.928, 'end_time': 461.345, 'duration': 0.41700000000003, 'transcript': 'Mm-hmm.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-460.93-461.35-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-460.93-461.35-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-460.93-461.35-lip_video.mp4'}
+Extracting lip video for EN2001a-A-479.60-480.44
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-479.60-480.44-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (21, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-479.60-480.44-lip_video.mp4
+Record:  {'id': 'EN2001a-A-479.60-480.44', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 479.6, 'end_time': 480.439, 'duration': 0.8389999999999986, 'transcript': 'Yeah, that makes sense.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-479.60-480.44-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-479.60-480.44-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-479.60-480.44-lip_video.mp4'}
+Extracting lip video for EN2001a-A-578.27-578.76
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-578.27-578.76-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (12, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-578.27-578.76-lip_video.mp4
+Record:  {'id': 'EN2001a-A-578.27-578.76', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 578.272, 'end_time': 578.764, 'duration': 0.4919999999999618, 'transcript': 'Hmm.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-578.27-578.76-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-578.27-578.76-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-578.27-578.76-lip_video.mp4'}
+Extracting lip video for EN2001a-A-655.37-655.85
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-655.37-655.85-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (12, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-655.37-655.85-lip_video.mp4
+Record:  {'id': 'EN2001a-A-655.37-655.85', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 655.366, 'end_time': 655.85, 'duration': 0.4840000000000373, 'transcript': 'Hmm.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-655.37-655.85-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-655.37-655.85-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-655.37-655.85-lip_video.mp4'}
+Extracting lip video for EN2001a-A-970.58-972.49
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-970.58-972.49-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (48, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-970.58-972.49-lip_video.mp4
+Record:  {'id': 'EN2001a-A-970.58-972.49', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 970.576, 'end_time': 972.493, 'duration': 1.91700000000003, 'transcript': 'Yeah, you just concatenate them together.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-970.58-972.49-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-970.58-972.49-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-970.58-972.49-lip_video.mp4'}
+Extracting lip video for EN2001a-A-1105.93-1106.40
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-1105.93-1106.40-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (12, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-1105.93-1106.40-lip_video.mp4
+Record:  {'id': 'EN2001a-A-1105.93-1106.40', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 1105.927, 'end_time': 1106.397, 'duration': 0.4700000000000273, 'transcript': 'Hmm.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-1105.93-1106.40-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-1105.93-1106.40-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-1105.93-1106.40-lip_video.mp4'}
+Extracting lip video for EN2001a-A-1131.44-1131.82
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-1131.44-1131.82-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (9, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-1131.44-1131.82-lip_video.mp4
+Record:  {'id': 'EN2001a-A-1131.44-1131.82', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 1131.44, 'end_time': 1131.818, 'duration': 0.37799999999992906, 'transcript': 'Yeah.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-1131.44-1131.82-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-1131.44-1131.82-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-1131.44-1131.82-lip_video.mp4'}
+Extracting lip video for EN2001a-A-1134.41-1142.26
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-1134.41-1142.26-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (196, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-1134.41-1142.26-lip_video.mp4
+Record:  {'id': 'EN2001a-A-1134.41-1142.26', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 1134.406, 'end_time': 1142.255, 'duration': 7.84900000000016, 'transcript': "It just means it loads on demand. It only loads when it needs a particular type of file. Like when it's being accessed.", 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-1134.41-1142.26-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-1134.41-1142.26-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-1134.41-1142.26-lip_video.mp4'}
+Extracting lip video for EN2001a-A-1160.74-1164.42
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-1160.74-1164.42-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (92, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-1160.74-1164.42-lip_video.mp4
+Record:  {'id': 'EN2001a-A-1160.74-1164.42', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 1160.736, 'end_time': 1164.42, 'duration': 3.683999999999969, 'transcript': "Yeah, I think that's the idea, it just loads the particular ones it needs.", 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-1160.74-1164.42-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-1160.74-1164.42-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-1160.74-1164.42-lip_video.mp4'}
+Extracting lip video for EN2001a-A-1167.46-1170.31
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-1167.46-1170.31-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (71, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-1167.46-1170.31-lip_video.mp4
+Record:  {'id': 'EN2001a-A-1167.46-1170.31', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 1167.464, 'end_time': 1170.307, 'duration': 2.8430000000000746, 'transcript': "But if you were doing a search over the whole corpus you'd have to load them all.", 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-1167.46-1170.31-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-1167.46-1170.31-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-1167.46-1170.31-lip_video.mp4'}
+Extracting lip video for EN2001a-A-1179.17-1179.63
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-1179.17-1179.63-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (12, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-1179.17-1179.63-lip_video.mp4
+Record:  {'id': 'EN2001a-A-1179.17-1179.63', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 1179.168, 'end_time': 1179.635, 'duration': 0.4670000000000982, 'transcript': 'Hmm.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-1179.17-1179.63-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-1179.17-1179.63-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-1179.17-1179.63-lip_video.mp4'}
+Extracting lip video for EN2001a-A-1322.72-1323.03
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-1322.72-1323.03-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (8, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-1322.72-1323.03-lip_video.mp4
+Record:  {'id': 'EN2001a-A-1322.72-1323.03', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 1322.72, 'end_time': 1323.029, 'duration': 0.3089999999999691, 'transcript': 'Mm.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-1322.72-1323.03-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-1322.72-1323.03-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-1322.72-1323.03-lip_video.mp4'}
+Extracting lip video for EN2001a-A-1490.18-1490.55
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-1490.18-1490.55-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (9, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-1490.18-1490.55-lip_video.mp4
+Record:  {'id': 'EN2001a-A-1490.18-1490.55', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 1490.178, 'end_time': 1490.553, 'duration': 0.375, 'transcript': 'Hmm.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-1490.18-1490.55-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-1490.18-1490.55-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-1490.18-1490.55-lip_video.mp4'}
+Extracting lip video for EN2001a-A-1491.60-1495.24
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-1491.60-1495.24-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (91, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-1491.60-1495.24-lip_video.mp4
+Record:  {'id': 'EN2001a-A-1491.60-1495.24', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 1491.599, 'end_time': 1495.244, 'duration': 3.644999999999982, 'transcript': 'Yeah, we do not want it in to develop a little tree display as well for multiple results.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-1491.60-1495.24-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-1491.60-1495.24-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-1491.60-1495.24-lip_video.mp4'}
+Extracting lip video for EN2001a-A-1497.02-1498.81
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-1497.02-1498.81-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (45, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-1497.02-1498.81-lip_video.mp4
+Record:  {'id': 'EN2001a-A-1497.02-1498.81', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 1497.024, 'end_time': 1498.813, 'duration': 1.7890000000002146, 'transcript': "Yeah, but that'd be quite easy to do.", 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-1497.02-1498.81-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-1497.02-1498.81-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-1497.02-1498.81-lip_video.mp4'}
+Extracting lip video for EN2001a-A-1503.50-1504.94
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-1503.50-1504.94-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (36, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-1503.50-1504.94-lip_video.mp4
+Record:  {'id': 'EN2001a-A-1503.50-1504.94', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 1503.504, 'end_time': 1504.944, 'duration': 1.4400000000000546, 'transcript': 'You just need to find the time stamp.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-1503.50-1504.94-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-1503.50-1504.94-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-1503.50-1504.94-lip_video.mp4'}
+Extracting lip video for EN2001a-A-1510.21-1510.72
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-1510.21-1510.72-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (13, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-1510.21-1510.72-lip_video.mp4
+Record:  {'id': 'EN2001a-A-1510.21-1510.72', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 1510.209, 'end_time': 1510.716, 'duration': 0.5069999999998345, 'transcript': 'Yeah.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-1510.21-1510.72-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-1510.21-1510.72-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-1510.21-1510.72-lip_video.mp4'}
+Extracting lip video for EN2001a-A-1549.10-1549.55
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-1549.10-1549.55-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (11, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-1549.10-1549.55-lip_video.mp4
+Record:  {'id': 'EN2001a-A-1549.10-1549.55', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 1549.104, 'end_time': 1549.546, 'duration': 0.4420000000000073, 'transcript': 'Yeah.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-1549.10-1549.55-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-1549.10-1549.55-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-1549.10-1549.55-lip_video.mp4'}
+Extracting lip video for EN2001a-A-1638.81-1643.01
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-1638.81-1643.01-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (105, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-1638.81-1643.01-lip_video.mp4
+Record:  {'id': 'EN2001a-A-1638.81-1643.01', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 1638.807, 'end_time': 1643.008, 'duration': 4.201000000000022, 'transcript': 'Yeah, I think I think those segments for each utterance are split up.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-1638.81-1643.01-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-1638.81-1643.01-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-1638.81-1643.01-lip_video.mp4'}
+Extracting lip video for EN2001a-A-1644.14-1644.74
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-1644.14-1644.74-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (15, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-1644.14-1644.74-lip_video.mp4
+Record:  {'id': 'EN2001a-A-1644.14-1644.74', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 1644.144, 'end_time': 1644.744, 'duration': 0.599999999999909, 'transcript': 'Think so.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-1644.14-1644.74-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-1644.14-1644.74-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-1644.14-1644.74-lip_video.mp4'}
+Extracting lip video for EN2001a-A-1663.44-1668.99
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-1663.44-1668.99-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (139, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-1663.44-1668.99-lip_video.mp4
+Record:  {'id': 'EN2001a-A-1663.44-1668.99', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 1663.44, 'end_time': 1668.992, 'duration': 5.551999999999907, 'transcript': "Yeah, I'm pretty sure it's already there. Pretty sure that's already there. The the utterances are numbered.", 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-1663.44-1668.99-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-1663.44-1668.99-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-1663.44-1668.99-lip_video.mp4'}
+Extracting lip video for EN2001a-A-1704.77-1705.16
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-1704.77-1705.16-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (10, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-1704.77-1705.16-lip_video.mp4
+Record:  {'id': 'EN2001a-A-1704.77-1705.16', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 1704.768, 'end_time': 1705.159, 'duration': 0.3910000000000764, 'transcript': 'Hmm.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-1704.77-1705.16-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-1704.77-1705.16-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-1704.77-1705.16-lip_video.mp4'}
+Extracting lip video for EN2001a-A-1711.53-1712.28
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-1711.53-1712.28-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (19, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-1711.53-1712.28-lip_video.mp4
+Record:  {'id': 'EN2001a-A-1711.53-1712.28', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 1711.529, 'end_time': 1712.277, 'duration': 0.7480000000000473, 'transcript': 'Yeah, I think so.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-1711.53-1712.28-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-1711.53-1712.28-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-1711.53-1712.28-lip_video.mp4'}
+Extracting lip video for EN2001a-A-1745.59-1747.70
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-1745.59-1747.70-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (53, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-1745.59-1747.70-lip_video.mp4
+Record:  {'id': 'EN2001a-A-1745.59-1747.70', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 1745.59, 'end_time': 1747.702, 'duration': 2.11200000000008, 'transcript': "that's the impression I get, yeah.", 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-1745.59-1747.70-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-1745.59-1747.70-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-1745.59-1747.70-lip_video.mp4'}
+Extracting lip video for EN2001a-A-1752.19-1752.57
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-1752.19-1752.57-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (9, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-1752.19-1752.57-lip_video.mp4
+Record:  {'id': 'EN2001a-A-1752.19-1752.57', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 1752.192, 'end_time': 1752.568, 'duration': 0.37599999999997635, 'transcript': 'Oh.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-1752.19-1752.57-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-1752.19-1752.57-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-1752.19-1752.57-lip_video.mp4'}
+Extracting lip video for EN2001a-A-1783.62-1783.98
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-1783.62-1783.98-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (9, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-1783.62-1783.98-lip_video.mp4
+Record:  {'id': 'EN2001a-A-1783.62-1783.98', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 1783.616, 'end_time': 1783.984, 'duration': 0.36799999999993815, 'transcript': 'Hmm.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-1783.62-1783.98-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-1783.62-1783.98-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-1783.62-1783.98-lip_video.mp4'}
+Extracting lip video for EN2001a-A-1787.13-1787.51
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-1787.13-1787.51-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (9, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-1787.13-1787.51-lip_video.mp4
+Record:  {'id': 'EN2001a-A-1787.13-1787.51', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 1787.135, 'end_time': 1787.509, 'duration': 0.37400000000002365, 'transcript': 'Mm.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-1787.13-1787.51-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-1787.13-1787.51-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-1787.13-1787.51-lip_video.mp4'}
+Extracting lip video for EN2001a-A-1790.93-1791.75
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-1790.93-1791.75-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (20, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-1790.93-1791.75-lip_video.mp4
+Record:  {'id': 'EN2001a-A-1790.93-1791.75', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 1790.935, 'end_time': 1791.75, 'duration': 0.8150000000000546, 'transcript': 'Yeah, uh', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-1790.93-1791.75-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-1790.93-1791.75-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-1790.93-1791.75-lip_video.mp4'}
+Extracting lip video for EN2001a-A-1814.11-1814.50
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-1814.11-1814.50-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (10, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-1814.11-1814.50-lip_video.mp4
+Record:  {'id': 'EN2001a-A-1814.11-1814.50', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 1814.109, 'end_time': 1814.499, 'duration': 0.39000000000010004, 'transcript': 'Right.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-1814.11-1814.50-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-1814.11-1814.50-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-1814.11-1814.50-lip_video.mp4'}
+Extracting lip video for EN2001a-A-1840.69-1841.19
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-1840.69-1841.19-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (13, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-1840.69-1841.19-lip_video.mp4
+Record:  {'id': 'EN2001a-A-1840.69-1841.19', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 1840.688, 'end_time': 1841.189, 'duration': 0.5009999999999764, 'transcript': 'Okay.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-1840.69-1841.19-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-1840.69-1841.19-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-1840.69-1841.19-lip_video.mp4'}
+Extracting lip video for EN2001a-A-1850.33-1851.18
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-1850.33-1851.18-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (21, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-1850.33-1851.18-lip_video.mp4
+Record:  {'id': 'EN2001a-A-1850.33-1851.18', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 1850.334, 'end_time': 1851.182, 'duration': 0.8479999999999563, 'transcript': 'Topics, yeah.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-1850.33-1851.18-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-1850.33-1851.18-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-1850.33-1851.18-lip_video.mp4'}
+Extracting lip video for EN2001a-A-1858.94-1859.95
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-1858.94-1859.95-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (25, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-1858.94-1859.95-lip_video.mp4
+Record:  {'id': 'EN2001a-A-1858.94-1859.95', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 1858.944, 'end_time': 1859.954, 'duration': 1.009999999999991, 'transcript': "Yeah, I think that's the right one.", 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-1858.94-1859.95-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-1858.94-1859.95-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-1858.94-1859.95-lip_video.mp4'}
+Extracting lip video for EN2001a-A-1870.76-1871.15
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-1870.76-1871.15-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (10, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-1870.76-1871.15-lip_video.mp4
+Record:  {'id': 'EN2001a-A-1870.76-1871.15', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 1870.761, 'end_time': 1871.152, 'duration': 0.3910000000000764, 'transcript': 'Hmm.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-1870.76-1871.15-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-1870.76-1871.15-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-1870.76-1871.15-lip_video.mp4'}
+Extracting lip video for EN2001a-A-1887.94-1888.35
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-1887.94-1888.35-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (10, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-1887.94-1888.35-lip_video.mp4
+Record:  {'id': 'EN2001a-A-1887.94-1888.35', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 1887.937, 'end_time': 1888.347, 'duration': 0.41000000000008185, 'transcript': 'Hmm.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-1887.94-1888.35-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-1887.94-1888.35-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-1887.94-1888.35-lip_video.mp4'}
+Extracting lip video for EN2001a-A-1892.23-1892.76
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-1892.23-1892.76-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (13, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-1892.23-1892.76-lip_video.mp4
+Record:  {'id': 'EN2001a-A-1892.23-1892.76', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 1892.233, 'end_time': 1892.755, 'duration': 0.5220000000001619, 'transcript': 'Mm-hmm.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-1892.23-1892.76-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-1892.23-1892.76-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-1892.23-1892.76-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2026.43-2026.92
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2026.43-2026.92-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (12, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2026.43-2026.92-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2026.43-2026.92', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2026.432, 'end_time': 2026.917, 'duration': 0.48499999999989996, 'transcript': 'Mm.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2026.43-2026.92-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2026.43-2026.92-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2026.43-2026.92-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2059.89-2060.26
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2059.89-2060.26-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (9, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2059.89-2060.26-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2059.89-2060.26', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2059.889, 'end_time': 2060.262, 'duration': 0.3730000000000473, 'transcript': 'Hmm.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2059.89-2060.26-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2059.89-2060.26-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2059.89-2060.26-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2101.63-2103.62
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2101.63-2103.62-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (50, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2101.63-2103.62-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2101.63-2103.62', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2101.632, 'end_time': 2103.616, 'duration': 1.9839999999999236, 'transcript': "Yeah, that'd be much more efficient to do that. Yeah.", 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2101.63-2103.62-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2101.63-2103.62-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2101.63-2103.62-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2169.54-2170.06
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2169.54-2170.06-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (13, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2169.54-2170.06-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2169.54-2170.06', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2169.538, 'end_time': 2170.06, 'duration': 0.5219999999999345, 'transcript': 'Hmm.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2169.54-2170.06-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2169.54-2170.06-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2169.54-2170.06-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2187.90-2188.42
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2187.90-2188.42-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (13, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2187.90-2188.42-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2187.90-2188.42', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2187.902, 'end_time': 2188.424, 'duration': 0.5219999999999345, 'transcript': 'Hmm.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2187.90-2188.42-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2187.90-2188.42-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2187.90-2188.42-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2252.58-2254.00
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2252.58-2254.00-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (36, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2252.58-2254.00-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2252.58-2254.00', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2252.576, 'end_time': 2254.001, 'duration': 1.425000000000182, 'transcript': "Yeah, you're able to do that in Java, yeah?", 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2252.58-2254.00-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2252.58-2254.00-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2252.58-2254.00-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2255.65-2256.05
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2255.65-2256.05-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (10, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2255.65-2256.05-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2255.65-2256.05', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2255.646, 'end_time': 2256.053, 'duration': 0.40699999999969805, 'transcript': 'Yeah.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2255.65-2256.05-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2255.65-2256.05-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2255.65-2256.05-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2278.03-2278.29
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2278.03-2278.29-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (7, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2278.03-2278.29-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2278.03-2278.29', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2278.033, 'end_time': 2278.294, 'duration': 0.26099999999996726, 'transcript': 'Huh.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2278.03-2278.29-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2278.03-2278.29-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2278.03-2278.29-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2311.15-2311.72
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2311.15-2311.72-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (14, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2311.15-2311.72-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2311.15-2311.72', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2311.152, 'end_time': 2311.719, 'duration': 0.5670000000000073, 'transcript': 'Hmm.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2311.15-2311.72-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2311.15-2311.72-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2311.15-2311.72-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2328.27-2344.29
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2328.27-2344.29-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (400, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2328.27-2344.29-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2328.27-2344.29', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2328.272, 'end_time': 2344.288, 'duration': 16.016000000000076, 'transcript': "Yeah, I've had a I've had a look at the the topic segments, how it's stored. And then yeah, those are few per meeting, and it um well, it gives a time stamp and inside each one there's uh the actual like utterance segments.", 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2328.27-2344.29-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2328.27-2344.29-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2328.27-2344.29-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2345.33-2347.79
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2345.33-2347.79-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (62, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2345.33-2347.79-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2345.33-2347.79', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2345.328, 'end_time': 2347.792, 'duration': 2.463999999999942, 'transcript': "And the list of them that occurred. And they're all numbered.", 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2345.33-2347.79-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2345.33-2347.79-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2345.33-2347.79-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2349.20-2350.82
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2349.20-2350.82-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (40, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2349.20-2350.82-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2349.20-2350.82', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2349.2, 'end_time': 2350.815, 'duration': 1.6150000000002365, 'transcript': "Um so that's where that's stored.", 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2349.20-2350.82-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2349.20-2350.82-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2349.20-2350.82-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2358.30-2369.36
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2358.30-2369.36-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (276, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2358.30-2369.36-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2358.30-2369.36', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2358.304, 'end_time': 2369.36, 'duration': 11.05600000000004, 'transcript': "Yeah, so I guess um if I'm gonna be segmenting it with a L_C_ seg then that's like same format I'd want to um put it back out in so it'd be equivalent.", 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2358.30-2369.36-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2358.30-2369.36-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2358.30-2369.36-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2380.70-2383.39
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2380.70-2383.39-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (67, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2380.70-2383.39-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2380.70-2383.39', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2380.704, 'end_time': 2383.392, 'duration': 2.687999999999647, 'transcript': 'Well, like the integration. What do you mean, integration?', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2380.70-2383.39-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2380.70-2383.39-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2380.70-2383.39-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2387.71-2388.30
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2387.71-2388.30-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (15, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2387.71-2388.30-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2387.71-2388.30', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2387.709, 'end_time': 2388.3, 'duration': 0.5910000000003492, 'transcript': 'Hmm.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2387.71-2388.30-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2387.71-2388.30-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2387.71-2388.30-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2391.46-2394.02
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2391.46-2394.02-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (64, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2391.46-2394.02-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2391.46-2394.02', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2391.456, 'end_time': 2394.024, 'duration': 2.5679999999997563, 'transcript': "I don't know. I don't think anyone's been allocated to do that yet. <laugh>", 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2391.46-2394.02-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2391.46-2394.02-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2391.46-2394.02-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2400.94-2401.48
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2400.94-2401.48-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (14, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2400.94-2401.48-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2400.94-2401.48', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2400.937, 'end_time': 2401.478, 'duration': 0.5410000000001673, 'transcript': 'Yeah, yeah.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2400.94-2401.48-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2400.94-2401.48-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2400.94-2401.48-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2403.23-2403.91
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2403.23-2403.91-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (17, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2403.23-2403.91-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2403.23-2403.91', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2403.232, 'end_time': 2403.913, 'duration': 0.68100000000004, 'transcript': 'Yeah, definitely.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2403.23-2403.91-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2403.23-2403.91-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2403.23-2403.91-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2420.19-2421.26
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2420.19-2421.26-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (27, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2420.19-2421.26-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2420.19-2421.26', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2420.192, 'end_time': 2421.26, 'duration': 1.068000000000211, 'transcript': 'Hmm, yeah.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2420.19-2421.26-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2420.19-2421.26-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2420.19-2421.26-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2431.56-2433.36
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2431.56-2433.36-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (45, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2431.56-2433.36-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2431.56-2433.36', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2431.556, 'end_time': 2433.361, 'duration': 1.8049999999998363, 'transcript': 'Yeah, it could be difficult, yeah.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2431.56-2433.36-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2431.56-2433.36-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2431.56-2433.36-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2447.58-2448.12
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2447.58-2448.12-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (13, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2447.58-2448.12-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2447.58-2448.12', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2447.584, 'end_time': 2448.117, 'duration': 0.5330000000003565, 'transcript': 'Yeah.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2447.58-2448.12-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2447.58-2448.12-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2447.58-2448.12-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2449.17-2453.79
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2449.17-2453.79-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (115, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2449.17-2453.79-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2449.17-2453.79', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2449.168, 'end_time': 2453.786, 'duration': 4.617999999999938, 'transcript': 'Well I guess the important thing is to get the crucial modules built.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2449.17-2453.79-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2449.17-2453.79-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2449.17-2453.79-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2454.91-2456.09
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2454.91-2456.09-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (29, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2454.91-2456.09-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2454.91-2456.09', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2454.909, 'end_time': 2456.086, 'duration': 1.1769999999996799, 'transcript': 'yeah.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2454.91-2456.09-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2454.91-2456.09-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2454.91-2456.09-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2457.58-2458.63
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2457.58-2458.63-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (26, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2457.58-2458.63-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2457.58-2458.63', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2457.578, 'end_time': 2458.634, 'duration': 1.05600000000004, 'transcript': 'Yeah, and then', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2457.58-2458.63-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2457.58-2458.63-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2457.58-2458.63-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2460.66-2465.90
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2460.66-2465.90-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (131, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2460.66-2465.90-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2460.66-2465.90', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2460.656, 'end_time': 2465.904, 'duration': 5.248000000000047, 'transcript': "Yeah, and then we'll maybe have to prioritize somebody into just integrating it.", 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2460.66-2465.90-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2460.66-2465.90-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2460.66-2465.90-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2617.10-2617.52
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2617.10-2617.52-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (11, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2617.10-2617.52-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2617.10-2617.52', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2617.1, 'end_time': 2617.524, 'duration': 0.42399999999997817, 'transcript': 'Mm-hmm.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2617.10-2617.52-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2617.10-2617.52-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2617.10-2617.52-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2627.58-2628.33
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2627.58-2628.33-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (19, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2627.58-2628.33-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2627.58-2628.33', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2627.584, 'end_time': 2628.334, 'duration': 0.75, 'transcript': 'Yeah, I think so.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2627.58-2628.33-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2627.58-2628.33-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2627.58-2628.33-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2641.16-2641.76
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2641.16-2641.76-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (15, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2641.16-2641.76-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2641.16-2641.76', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2641.159, 'end_time': 2641.762, 'duration': 0.6030000000000655, 'transcript': 'Uh yeah.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2641.16-2641.76-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2641.16-2641.76-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2641.16-2641.76-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2649.23-2654.96
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2649.23-2654.96-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (143, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2649.23-2654.96-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2649.23-2654.96', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2649.231, 'end_time': 2654.958, 'duration': 5.726999999999862, 'transcript': "Hmm. Yeah, yeah. Jasmine, I thought you just said that you'd uh looked at extracting the text.", 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2649.23-2654.96-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2649.23-2654.96-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2649.23-2654.96-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2663.47-2666.77
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2663.47-2666.77-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (82, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2663.47-2666.77-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2663.47-2666.77', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2663.472, 'end_time': 2666.766, 'duration': 3.293999999999869, 'transcript': 'Yeah. So you you said you did it in Python, yeah?', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2663.47-2666.77-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2663.47-2666.77-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2663.47-2666.77-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2668.77-2686.53
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2668.77-2686.53-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (444, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2668.77-2686.53-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2668.77-2686.53', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2668.768, 'end_time': 2686.534, 'duration': 17.766000000000076, 'transcript': "Yeah, did you use uh the X_L_ uh X_M_L_ parser in Python? Right. Yeah, sounds pretty good. So um 'cause, yeah, I was having a look in it a look at it as well and I noticed the um the speakers are all in that separate file? So did did you have to combine them all and and then re-order them?", 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2668.77-2686.53-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2668.77-2686.53-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2668.77-2686.53-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2689.71-2690.13
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2689.71-2690.13-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (10, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2689.71-2690.13-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2689.71-2690.13', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2689.712, 'end_time': 2690.129, 'duration': 0.4169999999999163, 'transcript': 'Yeah.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2689.71-2690.13-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2689.71-2690.13-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2689.71-2690.13-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2691.16-2691.87
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2691.16-2691.87-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (18, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2691.16-2691.87-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2691.16-2691.87', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2691.164, 'end_time': 2691.867, 'duration': 0.7029999999999745, 'transcript': 'yeah,', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2691.16-2691.87-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2691.16-2691.87-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2691.16-2691.87-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2693.01-2699.82
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2693.01-2699.82-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (170, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2693.01-2699.82-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2693.01-2699.82', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2693.008, 'end_time': 2699.824, 'duration': 6.816000000000258, 'transcript': "Right. Yeah, so that's approach um well, I was going to do. So yeah, we may as well collaborate.", 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2693.01-2699.82-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2693.01-2699.82-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2693.01-2699.82-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2708.53-2709.44
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2708.53-2709.44-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (23, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2708.53-2709.44-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2708.53-2709.44', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2708.527, 'end_time': 2709.442, 'duration': 0.9149999999999636, 'transcript': 'In the word files?', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2708.53-2709.44-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2708.53-2709.44-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2708.53-2709.44-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2728.77-2730.48
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2728.77-2730.48-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (43, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2728.77-2730.48-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2728.77-2730.48', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2728.768, 'end_time': 2730.481, 'duration': 1.7130000000001928, 'transcript': "I'm not sure I what you mean.", 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2728.77-2730.48-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2728.77-2730.48-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2728.77-2730.48-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2765.66-2766.14
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2765.66-2766.14-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (12, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2765.66-2766.14-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2765.66-2766.14', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2765.664, 'end_time': 2766.138, 'duration': 0.4739999999997053, 'transcript': 'Oh right.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2765.66-2766.14-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2765.66-2766.14-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2765.66-2766.14-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2776.34-2776.72
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2776.34-2776.72-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (10, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2776.34-2776.72-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2776.34-2776.72', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2776.336, 'end_time': 2776.72, 'duration': 0.38400000000001455, 'transcript': 'Hmm.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2776.34-2776.72-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2776.34-2776.72-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2776.34-2776.72-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2838.24-2838.61
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2838.24-2838.61-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (9, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2838.24-2838.61-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2838.24-2838.61', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2838.24, 'end_time': 2838.608, 'duration': 0.3680000000003929, 'transcript': 'Hmm.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2838.24-2838.61-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2838.24-2838.61-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2838.24-2838.61-lip_video.mp4'}
+Extracting lip video for EN2001a-A-2859.06-2862.02
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-2859.06-2862.02-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (74, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-2859.06-2862.02-lip_video.mp4
+Record:  {'id': 'EN2001a-A-2859.06-2862.02', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 2859.056, 'end_time': 2862.018, 'duration': 2.961999999999989, 'transcript': 'Mm I thought they were local to a particular meeting.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-2859.06-2862.02-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-2859.06-2862.02-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-2859.06-2862.02-lip_video.mp4'}
+Extracting lip video for EN2001a-A-3446.78-3447.05
+Extracting lip frames from ../data/video_segments/original_videos/EN2001a-A-3446.78-3447.05-video.mp4
+Using grayscale mode
+Lip frames extracted with shape: (7, 96, 96)
+Saving video to ../data/video_segments/lip_videos/EN2001a-A-3446.78-3447.05-lip_video.mp4
+Record:  {'id': 'EN2001a-A-3446.78-3447.05', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 3446.785, 'end_time': 3447.046, 'duration': 0.26099999999996726, 'transcript': 'Hmm.', 'has_audio': True, 'has_video': True, 'has_lip_video': True, 'audio': '../data/audio_segments/EN2001a-A-3446.78-3447.05-audio.wav', 'video': '../data/video_segments/original_videos/EN2001a-A-3446.78-3447.05-video.mp4', 'lip_video': '../data/video_segments/lip_videos/EN2001a-A-3446.78-3447.05-lip_video.mp4'}
+Warning: End time 4101.347 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 4099.36-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-4099.36-4101.35: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-4099.36-4101.35', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 4099.36, 'end_time': 4101.347, 'duration': 1.98700000000008, 'transcript': 'Mm is there anything else we should discuss?', 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-4099.36-4101.35-audio.wav'}
+Warning: End time 4133.041 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 4127.28-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-4127.28-4133.04: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-4127.28-4133.04', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 4127.28, 'end_time': 4133.041, 'duration': 5.761000000000422, 'transcript': 'Yeah, should we not have like a group directory or something where we can put all our code in and that kinda thing?', 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-4127.28-4133.04-audio.wav'}
+Warning: End time 4137.085 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 4136.608-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-4136.61-4137.09: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-4136.61-4137.09', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 4136.608, 'end_time': 4137.085, 'duration': 0.47699999999986176, 'transcript': 'Hmm.', 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-4136.61-4137.09-audio.wav'}
+Warning: End time 4150.931 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 4149.152-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-4149.15-4150.93: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-4149.15-4150.93', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 4149.152, 'end_time': 4150.931, 'duration': 1.7789999999995416, 'transcript': "<laugh> I've gotten mm hardly any", 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-4149.15-4150.93-audio.wav'}
+Warning: End time 4162.804 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 4162.288-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-4162.29-4162.80: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-4162.29-4162.80', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 4162.288, 'end_time': 4162.804, 'duration': 0.5160000000005311, 'transcript': 'Hmm.', 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-4162.29-4162.80-audio.wav'}
+Warning: End time 4179.761 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 4176.864-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-4176.86-4179.76: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-4176.86-4179.76', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 4176.864, 'end_time': 4179.761, 'duration': 2.897000000000844, 'transcript': 'Yeah, we can ask Steve if um we can get space.', 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-4176.86-4179.76-audio.wav'}
+Warning: End time 4187.105 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 4185.632-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-4185.63-4187.10: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-4185.63-4187.10', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 4185.632, 'end_time': 4187.105, 'duration': 1.4729999999999563, 'transcript': 'Yeah, uh we could do that.', 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-4185.63-4187.10-audio.wav'}
+Warning: End time 4195.797 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 4193.76-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-4193.76-4195.80: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-4193.76-4195.80', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 4193.76, 'end_time': 4195.797, 'duration': 2.0369999999993524, 'transcript': "Yeah, I'm sure he had to deal with that last year.", 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-4193.76-4195.80-audio.wav'}
+Warning: End time 4255.389 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 4254.84-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-4254.84-4255.39: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-4254.84-4255.39', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 4254.84, 'end_time': 4255.389, 'duration': 0.5489999999999782, 'transcript': 'Yeah.', 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-4254.84-4255.39-audio.wav'}
+Warning: End time 4387.808 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 4387.44-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-4387.44-4387.81: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-4387.44-4387.81', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 4387.44, 'end_time': 4387.808, 'duration': 0.3680000000003929, 'transcript': 'Hmm.', 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-4387.44-4387.81-audio.wav'}
+Warning: End time 4439.569 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 4437.668-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-4437.67-4439.57: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-4437.67-4439.57', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 4437.668, 'end_time': 4439.569, 'duration': 1.9010000000007494, 'transcript': 'That sounds good. <laugh>', 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-4437.67-4439.57-audio.wav'}
+Warning: End time 4471.143 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 4470.636-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-4470.64-4471.14: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-4470.64-4471.14', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 4470.636, 'end_time': 4471.143, 'duration': 0.5069999999996071, 'transcript': 'Hmm.', 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-4470.64-4471.14-audio.wav'}
+Warning: End time 4526.632 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 4526.183-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-4526.18-4526.63: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-4526.18-4526.63', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 4526.183, 'end_time': 4526.632, 'duration': 0.4489999999996144, 'transcript': 'Hmm.', 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-4526.18-4526.63-audio.wav'}
+Warning: End time 4536.784 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 4534.695-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-4534.69-4536.78: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-4534.69-4536.78', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 4534.695, 'end_time': 4536.784, 'duration': 2.088999999999942, 'transcript': "Yeah, that's what I'm gonna need.", 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-4534.69-4536.78-audio.wav'}
+Warning: End time 4543.527 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 4543.003-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-4543.00-4543.53: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-4543.00-4543.53', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 4543.003, 'end_time': 4543.527, 'duration': 0.524000000000342, 'transcript': 'Yes.', 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-4543.00-4543.53-audio.wav'}
+Warning: End time 4546.218 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 4544.503-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-4544.50-4546.22: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-4544.50-4546.22', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 4544.503, 'end_time': 4546.218, 'duration': 1.7150000000001455, 'transcript': "Yeah, it's just changing it a bit.", 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-4544.50-4546.22-audio.wav'}
+Warning: End time 4556.112 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 4555.702-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-4555.70-4556.11: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-4555.70-4556.11', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 4555.702, 'end_time': 4556.112, 'duration': 0.4099999999998545, 'transcript': 'Yeah.', 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-4555.70-4556.11-audio.wav'}
+Warning: End time 4592.068 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 4587.004-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-4587.00-4592.07: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-4587.00-4592.07', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 4587.004, 'end_time': 4592.068, 'duration': 5.064000000000306, 'transcript': "No, but uh that's what M_L_C_ seg does. It it marks the end of each segment.", 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-4587.00-4592.07-audio.wav'}
+Warning: End time 4594.822 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 4594.506-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-4594.51-4594.82: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-4594.51-4594.82', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 4594.506, 'end_time': 4594.822, 'duration': 0.31599999999980355, 'transcript': 'Yeah.', 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-4594.51-4594.82-audio.wav'}
+Warning: End time 4604.488 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 4604.112-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-4604.11-4604.49: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-4604.11-4604.49', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 4604.112, 'end_time': 4604.488, 'duration': 0.3760000000002037, 'transcript': 'Yeah.', 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-4604.11-4604.49-audio.wav'}
+Warning: End time 4626.975 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 4626.491-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-4626.49-4626.98: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-4626.49-4626.98', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 4626.491, 'end_time': 4626.975, 'duration': 0.48400000000037835, 'transcript': 'Oh.', 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-4626.49-4626.98-audio.wav'}
+Warning: End time 4636.816 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 4636.493-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-4636.49-4636.82: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-4636.49-4636.82', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 4636.493, 'end_time': 4636.816, 'duration': 0.32299999999941065, 'transcript': 'Yeah.', 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-4636.49-4636.82-audio.wav'}
+Warning: End time 4640.414 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 4638.176-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-4638.18-4640.41: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-4638.18-4640.41', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 4638.176, 'end_time': 4640.414, 'duration': 2.2379999999993743, 'transcript': "Yeah, for me it's better if they're by meeting.", 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-4638.18-4640.41-audio.wav'}
+Warning: End time 4721.377 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 4715.712-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-4715.71-4721.38: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-4715.71-4721.38', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 4715.712, 'end_time': 4721.377, 'duration': 5.664999999999964, 'transcript': "Then that'll be really easy to do once they've got the raw text. It's just a case of running the script.", 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-4715.71-4721.38-audio.wav'}
+Warning: End time 4726.525 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 4724.815-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-4724.81-4726.52: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-4724.81-4726.52', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 4724.815, 'end_time': 4726.525, 'duration': 1.7100000000000364, 'transcript': 'Yeah, I mean hopefully this week.', 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-4724.81-4726.52-audio.wav'}
+Warning: End time 4747.187 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 4746.736-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-4746.74-4747.19: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-4746.74-4747.19', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 4746.736, 'end_time': 4747.187, 'duration': 0.45100000000002183, 'transcript': 'Alright.', 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-4746.74-4747.19-audio.wav'}
+Warning: End time 4768.358 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 4767.687-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-4767.69-4768.36: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-4767.69-4768.36', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 4767.687, 'end_time': 4768.358, 'duration': 0.6710000000002765, 'transcript': 'And we could', 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-4767.69-4768.36-audio.wav'}
+Warning: End time 5041.36 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 5039.58-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-5039.58-5041.36: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-5039.58-5041.36', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 5039.58, 'end_time': 5041.36, 'duration': 1.7799999999997453, 'transcript': "Don't know. Suppose we're just getting on with all our", 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-5039.58-5041.36-audio.wav'}
+Warning: End time 5043.472 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 5042.432-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-5042.43-5043.47: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-5042.43-5043.47', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 5042.432, 'end_time': 5043.472, 'duration': 1.0399999999999636, 'transcript': 'components. So', 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-5042.43-5043.47-audio.wav'}
+Warning: End time 5049.192 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 5047.221-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-5047.22-5049.19: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-5047.22-5049.19', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 5047.221, 'end_time': 5049.192, 'duration': 1.9710000000004584, 'transcript': 'I know. <laugh>', 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-5047.22-5049.19-audio.wav'}
+Warning: End time 5063.063 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 5059.413-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-5059.41-5063.06: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-5059.41-5063.06', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 5059.413, 'end_time': 5063.063, 'duration': 3.6500000000005457, 'transcript': 'Yeah. Yeah, he suggested that we could have an uh initial prototype.', 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-5059.41-5063.06-audio.wav'}
+Warning: End time 5072.336 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 5066.639-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-5066.64-5072.34: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-5066.64-5072.34', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 5066.639, 'end_time': 5072.336, 'duration': 5.697000000000116, 'transcript': "I know, I'd I'd be surprised if we can get anything working by next week.", 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-5066.64-5072.34-audio.wav'}
+Warning: End time 5081.311 exceeds video duration 3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi, truncating
+Warning: Invalid video segment 5081.05-3586.88 for ../data/amicorpus/EN2001a/video/EN2001a.Closeup1.avi
+Alignment issue for segment EN2001a-A-5081.05-5081.31: audio_success=True, video_success=False
+Record:  {'id': 'EN2001a-A-5081.05-5081.31', 'meeting_id': 'EN2001a', 'speaker_id': 'A', 'start_time': 5081.05, 'end_time': 5081.311, 'duration': 0.2609999999995125, 'transcript': 'Alright.', 'has_audio': True, 'has_video': False, 'has_lip_video': False, 'audio': '../data/audio_segments/EN2001a-A-5081.05-5081.31-audio.wav'}
+Warning: Audio file ../data/amicorpus/EN2001a/audio/EN2001a.Headset-1.wav not found. Skipping audio processing for EN2001a-B.txt
+Warning: Video file ../data/amicorpus/EN2001a/video/EN2001a.Closeup2.avi not found. Skipping video processing for EN2001a-B.txt
+Skipping file EN2001a-B.txt as neither audio nor video source exists
+Warning: Audio file ../data/amicorpus/EN2001a/audio/EN2001a.Headset-4.wav not found. Skipping audio processing for EN2001a-E.txt
+Warning: Video file ../data/amicorpus/EN2001a/video/EN2001a.Closeup5.avi not found. Skipping video processing for EN2001a-E.txt
+Skipping file EN2001a-E.txt as neither audio nor video source exists
+Warning: Audio file ../data/amicorpus/EN2001a/audio/EN2001a.Headset-3.wav not found. Skipping audio processing for EN2001a-D.txt
+Warning: Video file ../data/amicorpus/EN2001a/video/EN2001a.Closeup4.avi not found. Skipping video processing for EN2001a-D.txt
+Skipping file EN2001a-D.txt as neither audio nor video source exists
+Warning: Audio file ../data/amicorpus/EN2001a/audio/EN2001a.Headset-2.wav not found. Skipping audio processing for EN2001a-C.txt
+Warning: Video file ../data/amicorpus/EN2001a/video/EN2001a.Closeup3.avi not found. Skipping video processing for EN2001a-C.txt
+Skipping file EN2001a-C.txt as neither audio nor video source exists
+
+Found 33 segments with potential alignment issues
+Creating HuggingFace dataset with 122 records
+Saving dataframe to csv file: ../data/dataset/ami-segmented-recordings.csv
+Saving dataset to ../data/dataset
+Saving the dataset (0/1 shards):   0%|          | 0/122 [00:00<?, ? examples/s]Saving the dataset (0/1 shards): 100%|██████████| 122/122 [00:00<00:00, 407.13 examples/s]Saving the dataset (1/1 shards): 100%|██████████| 122/122 [00:00<00:00, 407.13 examples/s]Saving the dataset (1/1 shards): 100%|██████████| 122/122 [00:00<00:00, 373.50 examples/s]
+HuggingFace dataset saved: Dataset({
+    features: ['id', 'meeting_id', 'speaker_id', 'start_time', 'end_time', 'duration', 'transcript', 'has_audio', 'has_video', 'has_lip_video', 'audio', 'video', 'lip_video'],
+    num_rows: 122
+})
+
+Segmentation Statistics:
+Total segments processed: 122
+Audio segments: 122 (100.0%)
+Video segments: 89 (73.0%)
+Lip video segments: 89 (73.0%)
+Source segmentation completed.

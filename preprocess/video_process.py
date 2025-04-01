@@ -443,7 +443,7 @@ def extract_lip_frames(video_path,
     else:
         # Process frames sequentially
         landmarks = []
-        for frame in tqdm(frames, desc="Detecting landmarks"):
+        for frame in frames:
             # If frames are RGB, convert to grayscale temporarily for landmark detection
             if not to_grayscale:
                 gray_frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
@@ -526,7 +526,8 @@ def extract_lip_frames(video_path,
 
 def save_lip_frames_to_video(lip_frames, output_path, fps=25):
     """
-    Save lip-cropped frames as an MP4 video.
+    Save lip-cropped frames as an MP4 video. 
+    This function exporting the lip-cropped frames as a video file.
     
     Args:
         lip_frames: numpy.ndarray of shape [T, H, W] for grayscale or [T, H, W, 3] for RGB
@@ -549,47 +550,54 @@ def save_lip_frames_to_video(lip_frames, output_path, fps=25):
         if is_grayscale:
             num_frames, height, width = lip_frames.shape
         else:
-            num_frames, height, width, _ = lip_frames.shape
+            num_frames, height, width, channels = lip_frames.shape
+
         
         # Try to use GPU-accelerated saving if available
+        # FIXME: THIS IS NOT WORKING AS EXPECTED, FALLBACK TO OPENCV INSTEAD --------------------------------
         if USE_GPU and torch.cuda.is_available():
             try:
                 import torchvision
                 
-                # Convert frames to tensor
+                # Convert frames to tensor for GPU processing
                 if is_grayscale:
-                    # Convert grayscale frames to [T, H, W, 3] by repeating the channel
-                    frames_rgb = np.zeros((num_frames, height, width, 3), dtype=np.uint8)
-                    for i, frame in enumerate(lip_frames):
-                        frames_rgb[i] = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
+                    # For grayscale frames, we need to convert to RGB for video writing
+                    print("Converting grayscale frames to RGB for GPU video writing")
+                    rgb_frames = np.zeros((num_frames, height, width, 3), dtype=np.uint8)
+                    for i in range(num_frames):
+                        # Convert each frame from grayscale to RGB
+                        rgb_frames[i] = cv2.cvtColor(lip_frames[i], cv2.COLOR_GRAY2RGB)
+                    
+                    # Convert to torch tensor format for torchvision
+                    frames_tensor = torch.from_numpy(rgb_frames).permute(0, 3, 1, 2).float().to('cuda')
                 else:
-                    frames_rgb = lip_frames
+                    # For RGB frames, convert to torch tensor directly
+                    frames_tensor = torch.from_numpy(lip_frames).permute(0, 3, 1, 2).float().to('cuda')
                 
-                # Convert to torch tensor [T, H, W, C]
-                # Ensure it's in the correct format before sending to GPU
-                frames_tensor = torch.from_numpy(frames_rgb).float().to('cuda')
-                
-                # Write video using GPU
+                # Write video using torchvision (requires TCHW format)
+                print(f"Writing video to {output_path} using GPU acceleration")
                 torchvision.io.write_video(
                     output_path,
-                    frames_tensor,  # [T, H, W, C]
+                    frames_tensor.permute(0, 2, 3, 1).cpu(),  # Convert back to THWC for write_video
                     fps=fps,
                     video_codec="libx264"
                 )
                 
                 # If video was successfully written, return
                 if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                    print(f"Successfully wrote video to {output_path} using GPU")
                     return True, output_path
                 
                 # Otherwise fall back to OpenCV
                 print("GPU video writing failed, falling back to OpenCV")
             except Exception as e:
-                print(f"Error using GPU for video writing: {str(e)}, falling back to OpenCV")
+                print(f"Error using GPU for video writing: {str(e)}")
+                print("Falling back to OpenCV")
         
         # Fallback to OpenCV
-        h, w = lip_frames[0].shape[:2]
+        print(f"Writing video to {output_path} using OpenCV")
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # mp4 codec
-        out = cv2.VideoWriter(output_path, fourcc, fps, (w, h))
+        out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
         
         for frame in lip_frames:
             if is_grayscale:
@@ -599,10 +607,12 @@ def save_lip_frames_to_video(lip_frames, output_path, fps=25):
                 # Convert RGB to BGR (OpenCV expects BGR for writing)
                 frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
             out.write(frame_bgr)
+        
         out.release()
         
         # Verify the output video
         if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+            print(f"Successfully wrote video to {output_path} using OpenCV")
             return True, output_path
         else:
             print(f"Error: Output video file {output_path} is empty or doesn't exist")
@@ -626,7 +636,8 @@ def extract_and_save_lip_video(video_path, output_path,
                               fps=25,
                               to_grayscale=False,
                               batch_size=16,
-                              use_parallel=True):  # Default to color for visualization
+                              use_parallel=True,
+                              use_gpu=None):  # Added use_gpu parameter
     """
     Extract lip regions from a video file and save them as a new video.
     This is the combined function of `extract_lip_frames` and `save_lip_frames_to_video`.
@@ -649,6 +660,7 @@ def extract_and_save_lip_video(video_path, output_path,
         to_grayscale: Whether to process frames in grayscale (True) or color (False)
         batch_size: Size of frame batches for parallel processing
         use_parallel: Whether to use parallel processing
+        use_gpu: Whether to use GPU acceleration (overrides global setting if provided)
         
     Returns:
         Tuple of (success_flag, output_file_path)
@@ -661,8 +673,15 @@ def extract_and_save_lip_video(video_path, output_path,
             cnn_detector_path = CNN_DETECTOR_PATH
         if mean_face_path is None:
             mean_face_path = MEAN_FACE_PATH
+        
+        # Override the global USE_GPU setting if a value is provided
+        global USE_GPU
+        original_use_gpu = USE_GPU
+        if use_gpu is not None:
+            USE_GPU = use_gpu and torch.cuda.is_available()
             
         print(f"Extracting lip frames from {video_path} using {'parallel' if use_parallel else 'sequential'} processing")
+        print(f"GPU acceleration: {'enabled' if USE_GPU else 'disabled'}")
         
         # Extract lip frames
         lip_frames = extract_lip_frames(
@@ -679,15 +698,28 @@ def extract_and_save_lip_video(video_path, output_path,
         
         # Save to video
         print(f"Saving video to {output_path}")
-        return save_lip_frames_to_video(lip_frames, output_path, fps=fps)
+        result = save_lip_frames_to_video(lip_frames, output_path, fps=fps)
+        
+        # Restore original USE_GPU setting
+        if use_gpu is not None:
+            USE_GPU = original_use_gpu
+            
+        return result
         
     except Exception as e:
+        # Restore original USE_GPU setting in case of error
+        if use_gpu is not None:
+            USE_GPU = original_use_gpu
         print(f"Error extracting and saving lip video from {video_path}: {str(e)}")
         return False, None
 
 def process_videos_in_parallel(video_paths, output_paths, extract_func, **kwargs):
     """
-    Process multiple videos in parallel
+    Process multiple videos in parallel. 
+    by executing the `extract_func` for multiple workers in parallel, each handling a `batch_size` of videos.
+    This is a inner function for `batch_process_lip_videos`, which created multiple thread processes.
+    
+    For direct use, using `batch_process_lip_videos` instead.
     
     Args:
         video_paths: List of video paths to process
@@ -700,6 +732,20 @@ def process_videos_in_parallel(video_paths, output_paths, extract_func, **kwargs
     """
     results = []
     
+    # If number of videos is small, simply process them with a thread pool instead
+    if len(video_paths) < 5:
+        with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:
+            futures = []
+            for video_path, output_path in zip(video_paths, output_paths):
+                future = executor.submit(extract_func, video_path, output_path, **kwargs)
+                futures.append(future)
+            
+            for future in tqdm(futures, desc="Processing videos", total=len(futures)):
+                result = future.result()
+                results.append(result)
+        return results
+    
+    # For larger datasets, use process pool for better parallelism
     with ProcessPoolExecutor(max_workers=NUM_WORKERS) as executor:
         futures = []
         for video_path, output_path in zip(video_paths, output_paths):
@@ -707,23 +753,63 @@ def process_videos_in_parallel(video_paths, output_paths, extract_func, **kwargs
             futures.append(future)
         
         for future in tqdm(futures, desc="Processing videos", total=len(futures)):
-            result = future.result()
-            results.append(result)
+            try:
+                result = future.result()
+                results.append(result)
+            except Exception as e:
+                print(f"Error in video processing worker: {str(e)}")
+                results.append((False, None))
     
     return results
-def batch_process_lip_videos(video_paths, output_paths, **kwargs):
+
+# MAIN FUNCTION CALL
+def batch_process_lip_videos(video_paths, output_paths, use_gpu=False, **kwargs):
     """
-    Process multiple videos in parallel to extract lip videos
+    Process multiple videos in parallel to extract lip videos.
+    This function is a wrapper of `process_videos_in_parallel`, 
+    which created multiple thread processes that handling extraction of multiple videos (`extract_and_save_lip_video`) in parallel.
     
     Args:
         video_paths: List of video paths to process
         output_paths: List of output paths to save lip videos
+        use_gpu: Whether to use GPU acceleration
         **kwargs: Additional arguments to pass to extract_and_save_lip_video
         
     Returns:
         List of tuples (success_flag, output_file_path) for each video
     """
-    return process_videos_in_parallel(video_paths, output_paths, extract_and_save_lip_video, **kwargs)
+    # Explicitly add use_gpu to kwargs to ensure it's passed to extract_and_save_lip_video
+    kwargs['use_gpu'] = use_gpu
+    
+    print(f"Batch processing {len(video_paths)} videos with use_gpu={use_gpu}")
+    
+    # Verification step to ensure all paths are valid
+    valid_pairs = []
+    valid_indices = []
+    
+    for i, (video_path, output_path) in enumerate(zip(video_paths, output_paths)):
+        if os.path.exists(video_path):
+            valid_pairs.append((video_path, output_path))
+            valid_indices.append(i)
+        else:
+            print(f"Warning: Video path does not exist: {video_path}")
+    
+    # Process only valid pairs
+    if valid_pairs:
+        valid_video_paths = [p[0] for p in valid_pairs]
+        valid_output_paths = [p[1] for p in valid_pairs]
+        
+        results = process_videos_in_parallel(valid_video_paths, valid_output_paths, extract_and_save_lip_video, **kwargs)
+        
+        # Create full results list with failed entries for invalid paths
+        full_results = [(False, None)] * len(video_paths)
+        for idx, result in zip(valid_indices, results):
+            full_results[idx] = result
+            
+        return full_results
+    else:
+        print("No valid video paths found. Skipping batch processing.")
+        return [(False, None)] * len(video_paths)
 
 # ================================================================================================================  
 

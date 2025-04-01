@@ -339,16 +339,99 @@ def segment_disfluency_laughter(dsfl_laugh_dir,
     failed_lip_extraction = 0
     
     if extract_lip_videos and lip_video_dir and successful_video_segments > 0:
-        lip_segment_results, successful_lip_segments = process_lip_videos(
-            video_segment_results, 
-            lip_video_dir,
-            use_gpu=use_gpu,
-            use_parallel=use_parallel,
-            batch_size=batch_size,
-            batch_process=batch_process,
-            to_grayscale=to_grayscale
-        )
-        failed_lip_extraction = len([v for v in video_segment_results.values() if v[0]]) - successful_lip_segments
+        print(f"\nStep 4: Processing lip videos with settings:")
+        print(f" - use_gpu: {use_gpu}")
+        print(f" - use_parallel: {use_parallel}")
+        print(f" - batch_size: {batch_size}")
+        print(f" - batch_process: {batch_process}")
+        print(f" - to_grayscale: {to_grayscale}")
+        
+        # First try with user settings
+        try:
+            print("Starting lip extraction with current settings...")
+            lip_segment_results, successful_lip_segments = process_lip_videos(
+                video_segment_results, 
+                lip_video_dir,
+                use_gpu=use_gpu,
+                use_parallel=use_parallel,
+                batch_size=batch_size,
+                batch_process=batch_process,
+                to_grayscale=to_grayscale
+            )
+            failed_lip_extraction = len([v for v in video_segment_results.values() if v[0]]) - successful_lip_segments
+            
+            # Save lip video results for diagnostics
+            lip_results_path = os.path.join(dsfl_laugh_dir, "lip_extraction_results.json")
+            with open(lip_results_path, "w") as f:
+                json.dump({
+                    "total_videos": len([v for v in video_segment_results.values() if v[0]]),
+                    "successful": successful_lip_segments,
+                    "failed": failed_lip_extraction,
+                    "parameters": {
+                        "to_grayscale": to_grayscale,
+                        "use_gpu": use_gpu,
+                        "use_parallel": use_parallel,
+                        "batch_size": batch_size,
+                        "batch_process": batch_process
+                    }
+                }, f, indent=2)
+                
+            print(f"Lip extraction completed: {successful_lip_segments}/{len([v for v in video_segment_results.values() if v[0]])} successful")
+            
+        except Exception as e:
+            print(f"\nERROR in lip video extraction: {str(e)}")
+            print("Falling back to sequential CPU-only processing with safer settings...")
+            
+            # Try again with safer settings
+            try:
+                # Save the original error for diagnostics
+                original_error = str(e)
+                
+                # Try with CPU + reduced batch size + sequential processing
+                lip_segment_results, successful_lip_segments = process_lip_videos(
+                    video_segment_results, 
+                    lip_video_dir,
+                    use_gpu=False,  # Force CPU
+                    use_parallel=True,  # Keep parallel processing for CPU
+                    batch_size=8,  # Smaller batch size
+                    batch_process=False,  # Process one video at a time
+                    to_grayscale=to_grayscale
+                )
+                failed_lip_extraction = len([v for v in video_segment_results.values() if v[0]]) - successful_lip_segments
+                
+                # Save fallback results
+                lip_results_path = os.path.join(dsfl_laugh_dir, "lip_extraction_results.json")
+                with open(lip_results_path, "w") as f:
+                    json.dump({
+                        "total_videos": len([v for v in video_segment_results.values() if v[0]]),
+                        "successful": successful_lip_segments,
+                        "failed": failed_lip_extraction,
+                        "original_error": original_error,
+                        "fallback_parameters": {
+                            "to_grayscale": to_grayscale,
+                            "use_gpu": False,
+                            "use_parallel": True,
+                            "batch_size": 8,
+                            "batch_process": False
+                        }
+                    }, f, indent=2)
+                    
+                print(f"Fallback lip extraction completed: {successful_lip_segments}/{len([v for v in video_segment_results.values() if v[0]])} successful")
+                
+            except Exception as e2:
+                print(f"CRITICAL ERROR: Lip extraction still failed with safer settings: {str(e2)}")
+                print("Skipping lip video extraction.")
+                
+                # Save error information for diagnostics
+                lip_results_path = os.path.join(dsfl_laugh_dir, "lip_extraction_errors.json")
+                with open(lip_results_path, "w") as f:
+                    json.dump({
+                        "original_error": str(e),
+                        "fallback_error": str(e2),
+                        "total_videos": len([v for v in video_segment_results.values() if v[0]]),
+                        "successful": 0,
+                        "failed": len([v for v in video_segment_results.values() if v[0]])
+                    }, f, indent=2)
     
     # Step 5: Collect metadata from all segments
     all_segment_metadata = {}
@@ -415,13 +498,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Segment audio and video sources based on transcript timestamps')
     parser.add_argument('--dsfl_laugh_dir', type=str, default=DSFL_PATH, help='Directory to save disfluency/laughter segments')
     parser.add_argument('--dataset_path', type=str, default=DATASET_PATH, help='Path to save HuggingFace dataset')
-    parser.add_argument('--to_dataset', action='store_true', default=True, help='Create HuggingFace dataset')
-    parser.add_argument('--extract_lip_videos', action='store_true', default=True, help='Extract lip videos')
-    parser.add_argument('--use_gpu', action='store_true', default=False, help='Use GPU for lip extraction')
-    parser.add_argument('--use_parallel', action='store_true', default=True, help='Use parallel processing for lip extraction')
+    parser.add_argument('--to_dataset', type=bool, default=True, help='Create HuggingFace dataset')
+    parser.add_argument('--extract_lip_videos', type=bool, default=True, help='Extract lip videos')
+    
+    # Default to False for GPU usage to avoid segmentation faults
+    parser.add_argument('--use_gpu', type=bool, default=False, help='Use GPU for lip extraction')
+    
+    parser.add_argument('--use_parallel', type=bool, default=True, help='Use parallel processing for lip extraction')
     parser.add_argument('--batch_size', type=int, default=16, help='Batch size for processing frames')
-    parser.add_argument('--batch_process', action='store_true', default=True, help='Process multiple videos in parallel')
-    parser.add_argument('--to_grayscale', action='store_true', default=True, help='Extract lip videos in grayscale')
+    parser.add_argument('--batch_process', type=bool, default=True, help='Process multiple videos in parallel')
+    parser.add_argument('--to_grayscale', type=bool, default=True, help='Extract lip videos in grayscale')
 
     args = parser.parse_args()
     
