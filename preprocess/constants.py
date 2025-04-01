@@ -38,3 +38,29 @@ MODEL_URLS = {
     "face_predictor": "https://github.com/speechlaugh/speechlaugh-corpus/releases/download/v0.1/shape_predictor_68_face_landmarks.dat",
     "cnn_detector": "https://github.com/speechlaugh/speechlaugh-corpus/releases/download/v0.1/mmod_human_face_detector.dat"
 }
+
+#------------------------------------------------------------------------------
+# AMI SPEAKERS
+#------------------------------------------------------------------------------
+AMI_SPEAKERS ={
+    'A': {
+        'audio': 'Headset-0',
+        'video': 'Closeup1'
+    },
+    'B': {
+        'audio': 'Headset-1',
+        'video': 'Closeup2'
+    },
+    'C': {
+        'audio': 'Headset-2',
+        'video': 'Closeup3'
+    },
+    'D': {
+        'audio': 'Headset-3',
+        'video': 'Closeup4'
+    },
+    'E': {
+        'audio': 'Headset-4',
+        'video': 'Closeup5'
+    },
+}
