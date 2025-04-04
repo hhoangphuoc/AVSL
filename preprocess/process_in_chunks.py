@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Script to process lip videos in smaller chunks within a single job,
-with checkpoint resumption capabilities. This script processes
-the main dataset CSV in smaller batches, saving progress after each
-chunk to allow for resuming if the job crashes or times out.
+Script to process lip videos in smaller chunks with intelligent multiprocessing,
+with checkpoint resumption capabilities. This script processes the main dataset CSV 
+in smaller batches, saving progress after each chunk to allow for resuming if the 
+job crashes or times out.
 """
 
 import os
@@ -17,6 +17,7 @@ import time
 import datetime
 import gc
 import traceback
+import multiprocessing as mp
 
 def prepare_chunks(
     csv_path, 
@@ -215,7 +216,7 @@ def update_csv_with_results(csv_path, results):
         
         # Apply results only to rows with IDs we processed
         df.loc[mask, ['has_lip_video', 'lip_video']] = pd.DataFrame(
-            [get_lip_info(id) for id in df.loc[mask, 'id']].tolist(),
+            [get_lip_info(id) for id in df.loc[mask, 'id']],
             index=df.loc[mask].index
         )
         
@@ -237,7 +238,7 @@ def process_chunks_sequentially(
     lip_video_dir, 
     checkpoint_dir,
     batch_size=8, 
-    to_grayscale=True, 
+    to_grayscale=True,
     max_videos_per_run=None
 ):
     """
@@ -328,7 +329,9 @@ def process_chunks_sequentially(
                     video_path,
                     lip_output_path,
                     to_grayscale=to_grayscale,
-                    batch_size=batch_size
+                    batch_size=batch_size,
+                    adaptive_memory=True,
+                    max_frames=None # Disable max_frames limit: TODO: Change back to 300
                 )
                 
                 # Record results
@@ -386,7 +389,7 @@ def process_chunks_sequentially(
         # Save overall stats
         overall_stats['end_time'] = datetime.datetime.now().isoformat()
         overall_stats['total_time_minutes'] = (datetime.datetime.now() - 
-                                            datetime.datetime.fromisoformat(overall_stats['start_time'])).total_seconds() / 60
+                                           datetime.datetime.fromisoformat(overall_stats['start_time'])).total_seconds() / 60
         
         with open(os.path.join(checkpoint_dir, 'overall_stats.json'), 'w') as f:
             json.dump(overall_stats, f, indent=2)
@@ -394,13 +397,186 @@ def process_chunks_sequentially(
     print("\n===== All chunks processed =====")
     print(f"Total videos: {overall_stats['total_processed']}")
     print(f"Successfully processed: {overall_stats['total_successful']}")
-    print(f"Success rate: {(overall_stats['total_successful']/overall_stats['total_processed'])*100:.1f}%")
+    success_rate = overall_stats['total_successful']/overall_stats['total_processed'] if overall_stats['total_processed'] > 0 else 0
+    print(f"Success rate: {success_rate*100:.1f}%")
+    print(f"Total time: {overall_stats['total_time_minutes']:.2f} minutes")
+    
+    return overall_stats
+
+def process_chunks_with_multiprocessing(
+    chunks, 
+    dataset_csv, 
+    lip_video_dir, 
+    checkpoint_dir,
+    batch_size=8, 
+    to_grayscale=True,
+    max_videos_per_run=None,
+    num_workers=None,
+    max_tasks_per_child=10,
+    use_multiprocessing=True
+):
+    """
+    Process video chunks with multiprocessing and checkpoint saving.
+    
+    Args:
+        chunks: List of chunk dictionaries
+        dataset_csv: Path to the dataset CSV file
+        lip_video_dir: Directory to save lip videos
+        checkpoint_dir: Directory to save checkpoints
+        batch_size: Batch size for frame processing within a video
+        to_grayscale: Whether to extract lip videos in grayscale
+        max_videos_per_run: Maximum number of videos to process in a single run (for testing)
+        num_workers: Number of worker processes to use
+        max_tasks_per_child: Maximum number of tasks per worker before respawning
+        use_multiprocessing: Whether to use multiprocessing
+    """
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    os.makedirs(lip_video_dir, exist_ok=True)
+    
+    # Import batch_process_lip_videos for chunk processing
+    from video_process import batch_process_lip_videos
+    
+    # Find checkpoint
+    resume_chunk, resume_video = find_checkpoint(checkpoint_dir)
+    
+    # Track overall statistics
+    overall_stats = {
+        'total_processed': 0,
+        'total_successful': 0,
+        'start_time': datetime.datetime.now().isoformat(),
+        'chunk_stats': []
+    }
+    
+    # Counter for max videos
+    videos_processed = 0
+    
+    # Process each chunk
+    for chunk in chunks:
+        chunk_id = chunk['chunk_id']
+        
+        # Skip chunks before resume point
+        if chunk_id < resume_chunk:
+            print(f"Skipping chunk {chunk_id} (already processed)")
+            continue
+        
+        chunk_records = chunk['records']
+        chunk_start_time = time.time()
+        
+        print(f"\n===== Processing chunk {chunk_id} ({len(chunk_records)} videos) =====")
+        
+        # Determine starting point within chunk
+        start_idx = 0
+        if chunk_id == resume_chunk and resume_video >= 0:
+            start_idx = resume_video + 1
+            print(f"Resuming chunk {chunk_id} from video {start_idx}")
+        
+        # Check if we've hit the maximum videos limit
+        remaining_quota = max_videos_per_run - videos_processed if max_videos_per_run is not None else None
+        if remaining_quota is not None and remaining_quota <= 0:
+            print(f"Reached maximum videos limit ({max_videos_per_run})")
+            break
+            
+        # Determine how many videos to process in this chunk
+        videos_to_process = chunk_records[start_idx:]
+        if remaining_quota is not None:
+            videos_to_process = videos_to_process[:remaining_quota]
+            
+        # Prepare batch processing inputs
+        video_segment_results = {}
+        for record in videos_to_process:
+            video_id = record['id']
+            video_path = record['video']
+            if os.path.exists(video_path):
+                video_segment_results[video_id] = (True, video_path)
+        
+        # Skip empty chunks
+        if not video_segment_results:
+            print(f"No valid videos to process in chunk {chunk_id}, skipping")
+            continue
+            
+        print(f"Batch processing {len(video_segment_results)} videos from chunk {chunk_id}")
+        
+        # Process using batch_process_lip_videos
+        try:
+            # Configure processing parameters
+            process_kwargs = {
+                'to_grayscale': to_grayscale,
+                'batch_size': batch_size,
+                'num_workers': num_workers,
+                'max_tasks_per_child': max_tasks_per_child,
+                'use_multiprocessing': use_multiprocessing,
+                'adaptive_memory': True  # Enable adaptive memory handling instead of max_frames
+            }
+            
+            # Process the chunk
+            lip_segment_results, successful_lip_segments = batch_process_lip_videos(
+                video_segment_results,
+                lip_video_dir,
+                **process_kwargs
+            )
+            
+            # Update overall statistics
+            videos_processed += len(video_segment_results)
+            overall_stats['total_processed'] += len(video_segment_results)
+            overall_stats['total_successful'] += successful_lip_segments
+            
+            # Calculate performance metrics
+            chunk_time = time.time() - chunk_start_time
+            videos_per_minute = len(video_segment_results) / (chunk_time / 60) if chunk_time > 0 else 0
+            
+            # Record chunk statistics
+            chunk_stats = {
+                'chunk_id': chunk_id,
+                'processed': len(video_segment_results),
+                'successful': successful_lip_segments,
+                'time_seconds': chunk_time,
+                'videos_per_minute': videos_per_minute,
+                'success_rate': successful_lip_segments / len(video_segment_results) if video_segment_results else 0
+            }
+            overall_stats['chunk_stats'].append(chunk_stats)
+            
+            # Print chunk summary
+            print(f"\nCompleted chunk {chunk_id}")
+            print(f"Time taken: {chunk_time:.2f} seconds ({videos_per_minute:.2f} videos/minute)")
+            print(f"Success rate: {successful_lip_segments}/{len(video_segment_results)} ({chunk_stats['success_rate']*100:.1f}%)")
+            
+            # Save checkpoint for this chunk
+            save_checkpoint(checkpoint_dir, chunk_id, len(videos_to_process)-1, completed=True, results=lip_segment_results)
+            
+            # Update the main CSV with chunk results
+            update_csv_with_results(dataset_csv, lip_segment_results)
+            
+            # Save overall stats after each chunk
+            overall_stats['end_time'] = datetime.datetime.now().isoformat()
+            overall_stats['total_time_minutes'] = (datetime.datetime.now() - 
+                                               datetime.datetime.fromisoformat(overall_stats['start_time'])).total_seconds() / 60
+            
+            with open(os.path.join(checkpoint_dir, 'overall_stats.json'), 'w') as f:
+                json.dump(overall_stats, f, indent=2)
+                
+        except KeyboardInterrupt:
+            print(f"\nProcessing of chunk {chunk_id} interrupted by user")
+            save_checkpoint(checkpoint_dir, chunk_id, start_idx + len(video_segment_results)//2, 
+                           completed=False, results=lip_segment_results if 'lip_segment_results' in locals() else None)
+            raise
+            
+        except Exception as e:
+            print(f"\nError processing chunk {chunk_id}: {str(e)}")
+            traceback.print_exc()
+            save_checkpoint(checkpoint_dir, chunk_id, start_idx + len(video_segment_results)//2, 
+                           completed=False, results=lip_segment_results if 'lip_segment_results' in locals() else None)
+    
+    print("\n===== All chunks processed =====")
+    print(f"Total videos: {overall_stats['total_processed']}")
+    print(f"Successfully processed: {overall_stats['total_successful']}")
+    success_rate = overall_stats['total_successful']/overall_stats['total_processed'] if overall_stats['total_processed'] > 0 else 0
+    print(f"Success rate: {success_rate*100:.1f}%")
     print(f"Total time: {overall_stats['total_time_minutes']:.2f} minutes")
     
     return overall_stats
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Process videos in chunks with checkpoint resumption")
+    parser = argparse.ArgumentParser(description="Process videos in chunks with multiprocessing and checkpoint resumption")
     parser.add_argument("--csv_path", type=str, required=True, help="Path to the main dataset CSV")
     parser.add_argument("--output_dir", type=str, required=True, help="Directory to save outputs and checkpoints")
     parser.add_argument("--lip_video_dir", type=str, required=True, help="Directory to save lip videos")
@@ -409,6 +585,16 @@ if __name__ == "__main__":
     parser.add_argument("--filter_processed", action="store_true", help="Filter out already processed videos")
     parser.add_argument("--to_grayscale", action="store_true", default=True, help="Extract lip videos in grayscale")
     parser.add_argument("--max_videos", type=int, help="Maximum number of videos to process (for testing)")
+    
+    #Sequential processing arguments
+    parser.add_argument("--use_sequential", action="store_true", help="Use sequential processing instead of multiprocessing")
+    
+    # Multiprocessing arguments
+    parser.add_argument("--adaptive_memory", action="store_true", help="Use adaptive memory management")
+    parser.add_argument("--num_workers", type=int, help="Number of worker processes for multiprocessing (default: CPU count - 1)")
+    parser.add_argument("--max_tasks_per_child", type=int, default=10, help="Maximum tasks per worker before respawning")
+    parser.add_argument("--disable_multiprocessing", action="store_true", help="Disable multiprocessing and use sequential processing")
+    
     
     args = parser.parse_args()
     
@@ -432,15 +618,33 @@ if __name__ == "__main__":
     
     # Process chunks
     try:
-        process_chunks_sequentially(
-            chunks,
-            args.csv_path,
-            args.lip_video_dir,
-            checkpoint_dir,
-            args.batch_size,
-            args.to_grayscale,
-            args.max_videos
-        )
+        if args.use_sequential:
+            # Use sequential processing
+            print("Using sequential processing")
+            process_chunks_sequentially(
+                chunks,
+                args.csv_path,
+                args.lip_video_dir,
+                checkpoint_dir,
+                args.batch_size,
+                args.to_grayscale,
+                args.max_videos
+            )
+        else:
+            # Use multiprocessing
+            print("Using multiprocessing")
+            process_chunks_with_multiprocessing(
+                chunks,
+                args.csv_path,
+                args.lip_video_dir,
+                checkpoint_dir,
+                args.batch_size,
+                args.to_grayscale,
+                args.max_videos,
+                args.num_workers,
+                args.max_tasks_per_child,
+                not args.disable_multiprocessing
+            )
     except KeyboardInterrupt:
         print("\nProcessing interrupted by user")
         sys.exit(1)

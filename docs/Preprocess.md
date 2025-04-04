@@ -59,7 +59,7 @@ Using the following command to discover overall statistic
 ```bash
 echo "Total entries:" &&  wc -l dsfl_laugh/disfluency_laughter_markers.csv &&  echo "Laugh entries:" &&  grep -c ,,1 dsfl_laugh/disfluency_laughter_markers.csv &&  echo "Disfluency entries:" &&  grep -v ,,1 dsfl_laugh/disfluency_laughter_markers.csv |  grep -v disfluency_type |  wc -l
 ```
-Given the following result:
+It gives the following result:
 ```bash
 Total entries:
     60479 
@@ -71,7 +71,7 @@ Disfluency entries:
 ```
 
 ---
-### Segmenting Audio and Video Sources (AMI)
+## Segmenting Audio and Video Sources (AMI)
 
 Based on the `data/transcript_segments`, which contains the transcript for each `[meeting_id]-[speaker_id].txt` sentence-level transcript, We use the marked timestamp to segment the original audio and video sources into multiple sources.
 - **Audio:** Located in `data/amicorpus/[meeting_id]/audio`, where `speaker_id` annotated as: Headset-[0-4] corresponding to speaker A-E
@@ -90,3 +90,6 @@ The dataset features are formatted:
 ```python
 
 ```
+
+---
+## Extracting Lip Video from Segmented Video
