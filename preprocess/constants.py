@@ -17,7 +17,7 @@ AUDIO_PATH = os.path.join(DATA_PATH, 'audio_segments')
 VIDEO_PATH = os.path.join(DATA_PATH, 'video_segments')
 
 # PATH TO STORE DISFLUENCY/LAUGHTER MARKERS + AUDIO/VIDEO SEGMENTS
-DSFL_PATH = os.path.join(DATA_PATH, 'dsfl_laugh')
+DSFL_PATH = os.path.join(DATA_PATH, 'dsfl')
 DSFL_CSV_PATH = os.path.join(DSFL_PATH, 'disfluency_laughter_markers.csv')
 
 DATASET_PATH = os.path.join(DATA_PATH, 'dataset')

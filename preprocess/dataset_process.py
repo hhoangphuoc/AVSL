@@ -38,7 +38,7 @@ from preprocess.constants import (
 )
 
 from audio_process import batch_segment_audio
-from video_process import batch_segment_video, extract_and_save_lip_video, batch_process_lip_videos
+from video_process import batch_segment_video
 from utils import av_to_hf_dataset
 
 
@@ -366,16 +366,16 @@ def create_dataset_records(
                 "has_video": video_success,
                 "has_lip_video": lip_success
             }
-            
+                            
             if audio_success:
                 record["audio"] = audio_file
-                
+                                
             if video_success:
                 record["video"] = video_file
-                
+
             if lip_success:
                 record["lip_video"] = lip_file
-                
+                                
             dataset_records.append(record)
     
             # Check for alignment issues
@@ -509,12 +509,12 @@ def segment_sources(transcript_segments_dir,
         with open(alignment_log_path, "w") as f:
             for issue in alignment_issues:
                 f.write(f"{issue}\n")
-
+    
     
     # ----------------------- Step 6: CREATE HUGGINGFACE DATASET ---------------------------------------------------
     if to_dataset and dataset_records:
         # Use a specific dataset name for transcript-based segments
-        av_to_hf_dataset(dataset_records, dataset_path=dataset_path)
+        av_to_hf_dataset(dataset_records, dataset_path=dataset_path, prefix="ami")
     
 
     # ----------------------- REPORT DATASET STATISTICS ---------------------------------------------------
@@ -553,7 +553,7 @@ def hf_dataset_from_existing_segments(source_dir=DATA_PATH,
     |_ video_segments/\n
         |_ original_videos/\n
         |_ lip_videos/\n
-
+    
     Args:
         source_dir: Path to the directory containing the processed segments (audio, video)
         transcript_segments_dir: Path to the directory containing the transcript segments
@@ -719,7 +719,7 @@ def hf_dataset_from_existing_segments(source_dir=DATA_PATH,
     # Create and save the HuggingFace dataset
     if dataset_records:
         try:
-            av_to_hf_dataset(dataset_records, dataset_path=dataset_path)
+            av_to_hf_dataset(dataset_records, dataset_path=dataset_path, prefix="ami")
             print(f"Dataset successfully saved to {dataset_path}")
         except Exception as e:
             print(f"Error saving dataset: {str(e)}")

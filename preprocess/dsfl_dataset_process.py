@@ -492,33 +492,249 @@ def segment_disfluency_laughter(dsfl_laugh_dir,
     
     print("Disfluency/Laughter segmentation completed!")
 
+def dsfl_dataset_from_existing_segments(
+        dsfl_laugh_dir, 
+        dataset_path,
+        include_lip_videos=False
+    ):
+    """
+    Create a HuggingFace dataset from the processed segments (audio, video) which already exist
+    in the `dsfl_laugh_dir`. The directory structure of `dsfl_laugh_dir` is as follows:
+        dsfl_laugh_dir/\n
+            |_ audio_segments/\n
+            |_ video_segments/\n
+                |_ dsfl_original/\n
+                |_ dsfl_lips/\n
+    The function reads the metadata, including meeting id, speaker id, and transcript text from the `transcript_segments_dir`,
+    and align it with the audio and video segments in the `dsfl_laugh_dir`.
+    
+    Args:
+        dsfl_laugh_dir: Path to the directory containing the disfluency/laughter segments
+        dataset_path: Path to save the HuggingFace dataset
+        include_lip_videos: Whether to include lip videos in the dataset (default: False)
+    
+    Returns:
+        List of dataset records
+    """
+    print(f"Creating HuggingFace dataset for disfluency/laughter from path: {dsfl_laugh_dir}")
+    
+    # Create output directory if it doesn't exist
+    os.makedirs(dataset_path, exist_ok=True)
+    
+    # Define paths to segment directories
+    audio_segments_dir = os.path.join(dsfl_laugh_dir, "audio_segments") # /deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl/audio_segments
+    video_segments_dir = os.path.join(dsfl_laugh_dir, "video_segments") # /deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl/video_segments
+    original_video_dir = os.path.join(video_segments_dir, "dsfl_original") # /deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl/video_segments/dsfl_original
+    lip_video_dir = os.path.join(video_segments_dir, "dsfl_lips") if include_lip_videos else None # /deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl/video_segments/dsfl_lip
+    
+    # Define paths to metadata files
+    dsfl_markers_csv = os.path.join(dsfl_laugh_dir, "disfluency_laughter_markers.csv") # /deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl/disfluency_laughter_markers.csv
+    audio_results_json = os.path.join(dsfl_laugh_dir, "audio_segment_results.json") # /deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl/audio_segment_results.json
+    video_results_json = os.path.join(dsfl_laugh_dir, "video_segment_results.json") # /deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl/video_segment_results.json
+    
+    # Check if necessary files and directories exist
+    if not os.path.exists(dsfl_markers_csv):
+        print(f"Error: Disfluency/laughter markers CSV not found: {dsfl_markers_csv}")
+        return []
+    
+    if not os.path.exists(audio_segments_dir):
+        print(f"Warning: Audio segments directory not found: {audio_segments_dir}")
+    
+    if not os.path.exists(original_video_dir):
+        print(f"Warning: Video segments directory not found: {original_video_dir}")
+    
+    if include_lip_videos and not os.path.exists(lip_video_dir):
+        print(f"Warning: Lip video segments directory not found: {lip_video_dir}")
+    
+    # Load disfluency/laughter markers from CSV
+    dsfl_markers = {}
+    try:
+        df_markers = pd.read_csv(dsfl_markers_csv)
+        print(f"Loaded {len(df_markers)} disfluency/laughter markers from CSV")
+        
+        # Process each row in the CSV
+        for _, row in tqdm(df_markers.iterrows(), desc="Processing markers", total=len(df_markers)):
+            # Extract marker information from the row
+            meeting_id = row['meeting_id']
+            speaker_id = row['speaker_id']
+            start_time = row['start_time']
+            end_time = row['end_time']
+            disfluency_type = row['disfluency_type'] if row['is_laugh'] == 0 else 'laugh'
+            transcript = row['word'] #can be disfluency word or <laugh>
+
+            # Create a segment ID based on the marker information
+            segment_id = f"{meeting_id}-{speaker_id}-{start_time}-{end_time}"
+
+            # Create a dictionary with the marker information
+            marker_info = {
+                "id": segment_id,
+                "meeting_id": meeting_id,
+                "speaker_id": speaker_id,
+                "start_time": start_time,
+                "end_time": end_time,
+                "duration": end_time - start_time,
+                "disfluency_type": disfluency_type,
+                "transcript": transcript
+            }
+            
+            # Add the marker information to the dictionary
+            dsfl_markers[segment_id] = marker_info # {segment_id: marker_info} e.g. {}
+            
+    except Exception as e:
+        print(f"Error loading disfluency/laughter markers: {str(e)}")
+        return []
+    
+    # ----------------------------------- LOAD AUDIO SEGMENT RESULTS -----------------------------------    
+    audio_files = {} # {segment_id: audio_path}
+    if os.path.exists(audio_results_json):
+        try:
+            with open(audio_results_json, 'r') as f:
+                audio_results = json.load(f)
+                
+            for id, (success, audio_path) in audio_results.items():
+                if success and audio_path and os.path.exists(audio_path):
+                    segment_id = "-".join(id.split("-")[:4]) # e.g. ES2001a-A-0.0-1.0-laugh -> ES2001a-A-0.0-1.0
+                    audio_files[segment_id] = audio_path
+                    
+            print(f"Loaded {len(audio_files)} audio segment results")
+        except Exception as e:
+            print(f"Error loading audio segment results: {str(e)}")
+    else:
+        print(f"Audio results JSON not found at {audio_results_json}, scanning directory instead")
+        # Directory scanning approach
+        if os.path.exists(audio_segments_dir):
+            for file in tqdm(os.listdir(audio_segments_dir), desc="Reading audio files"):
+                if file.endswith("-audio.wav"):
+                    segment_id = "-".join(file.split("-")[:4]) # e.g. ES2001a-A-0.0-1.0-laugh -> ES2001a-A-0.0-1.0
+                    audio_files[segment_id] = os.path.join(audio_segments_dir, file)
+            print(f"Found {len(audio_files)} audio files by scanning directory")
+    
+
+    # ----------------------------------- LOAD VIDEO SEGMENT RESULTS -----------------------------------    
+    video_files = {} # {segment_id: video_path}
+    if os.path.exists(video_results_json):
+        try:
+            with open(video_results_json, 'r') as f:
+                video_results = json.load(f)
+                
+            for id, (success, video_path) in video_results.items():
+                if success and video_path and os.path.exists(video_path):
+                    segment_id = "-".join(id.split("-")[:4]) # e.g. ES2001a-A-0.0-1.0-laugh -> ES2001a-A-0.0-1.0
+                    video_files[segment_id] = video_path
+                    
+            print(f"Loaded {len(video_files)} video segment results")
+        except Exception as e:
+            print(f"Error loading video segment results: {str(e)}")
+    else:
+        print(f"Video results JSON not found at {video_results_json}, scanning directory instead")
+        # Directory scanning approach
+        if os.path.exists(original_video_dir):
+            for file in tqdm(os.listdir(original_video_dir), desc="Reading video files"):
+                if file.endswith("-video.mp4"):
+                    segment_id = "-".join(file.split("-")[:4]) # e.g. ES2001a-A-0.0-1.0-laugh -> ES2001a-A-0.0-1.0
+                    video_files[segment_id] = os.path.join(original_video_dir, file) # e.g. {'ES2001a-A-0.0-1.0': '/deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl/video_segments/dsfl_original/ES2001a-A-0.0-1.0-video.mp4'}
+            print(f"Found {len(video_files)} video files by scanning directory")
+    
+
+    # ----------------------------------- LOAD LIP VIDEO SEGMENT RESULTS -----------------------------------    
+    lip_video_files = {} # {segment_id: lip_video_path}
+    if include_lip_videos and lip_video_dir and os.path.exists(lip_video_dir):
+        for file in tqdm(os.listdir(lip_video_dir), desc="Reading lip video files"):
+            if file.endswith("-lip_video.mp4"):
+                # Extract segment_id by removing "-lip_video.mp4"
+                segment_id = "-".join(file.split("-")[:4]) # e.g. ES2001a-A-0.0-1.0-laugh -> ES2001a-A-0.0-1.0
+                lip_video_files[segment_id] = os.path.join(lip_video_dir, file)
+        print(f"Found {len(lip_video_files)} lip video files")
+
+    
+    # ----------------------------------- CREATE DATASET RECORDS -----------------------------------    
+    dataset_records = []
+    
+    # Get all unique segment IDs across all sources
+    all_segment_ids = set(list(dsfl_markers.keys()) + list(audio_files.keys()) + list(video_files.keys()))
+    
+    print(f"Processing {len(all_segment_ids)} unique segment IDs")
+    
+    for segment_id in tqdm(all_segment_ids, desc="Creating dataset records"):
+        # Check what we have for this segment
+        has_dsfl_marker = segment_id in dsfl_markers
+        has_audio = segment_id in audio_files
+        has_video = segment_id in video_files
+        has_lip_video = include_lip_videos and segment_id in lip_video_files
+        
+        # Only include segments that have at least a marker and either audio or video
+        if has_dsfl_marker and (has_audio or has_video):
+            # Parse segment_id to extract metadata
+            parts = segment_id.split('-') # e.g. ES2001a-A-0.0-1.0 -> ['ES2001a', 'A', '0.0', '1.0']
+            if len(parts) >= 4:  # Ensure we have enough parts
+                meeting_id = parts[0]
+                speaker_id = parts[1]
+                start_time = float(parts[2])
+                end_time = float(parts[3])
+                
+                # Create base record with metadata
+                record = {
+                    "id": segment_id,
+                    "meeting_id": meeting_id,
+                    "speaker_id": speaker_id,
+                    "start_time": start_time,
+                    "end_time": end_time,
+                    "duration": end_time - start_time,
+                    "has_audio": has_audio,
+                    "has_video": has_video,
+                    "has_lip_video": has_lip_video
+                }
+                
+                # Add DSFL marker info if available
+                if has_dsfl_marker:
+                    marker_info = dsfl_markers[segment_id]
+                    record.update(marker_info)
+                
+                # Add media paths if available
+                if has_audio:
+                    record["audio"] = audio_files[segment_id]
+                    
+                if has_video:
+                    record["video"] = video_files[segment_id]
+                    
+                if has_lip_video:
+                    record["lip_video"] = lip_video_files[segment_id]
+                
+                # Add to dataset records
+                dataset_records.append(record)
+    
+    print(f"Created {len(dataset_records)} dataset records")
+    
+    # Save the dataset records to a JSON file
+    dataset_records_path = os.path.join(dataset_path, "dsfl_dataset_records.json")
+    with open(dataset_records_path, "w") as f:
+        json.dump(dataset_records, f)
+    
+    # Create and save the HuggingFace dataset
+    if dataset_records:
+        try:
+            from utils import av_to_hf_dataset
+            av_to_hf_dataset(dataset_records, dataset_path=dataset_path, data_dir=dsfl_laugh_dir, prefix="dsfl")
+            print(f"Dataset successfully saved to {dataset_path}")
+        except Exception as e:
+            print(f"Error saving dataset to HuggingFace format: {str(e)}")
+    else:
+        print("No valid records found, dataset creation skipped.")
+    
+    return dataset_records
+
 if __name__ == "__main__":
     import argparse
     
     parser = argparse.ArgumentParser(description='Segment audio and video sources based on transcript timestamps')
     parser.add_argument('--dsfl_laugh_dir', type=str, default=DSFL_PATH, help='Directory to save disfluency/laughter segments')
-    parser.add_argument('--dataset_path', type=str, default=DATASET_PATH, help='Path to save HuggingFace dataset')
-    parser.add_argument('--to_dataset', type=bool, default=True, help='Create HuggingFace dataset')
-    parser.add_argument('--extract_lip_videos', type=bool, default=True, help='Extract lip videos')
-    
-    # Default to False for GPU usage to avoid segmentation faults
-    parser.add_argument('--use_gpu', type=bool, default=False, help='Use GPU for lip extraction')
-    
-    parser.add_argument('--use_parallel', type=bool, default=True, help='Use parallel processing for lip extraction')
-    parser.add_argument('--batch_size', type=int, default=16, help='Batch size for processing frames')
-    parser.add_argument('--batch_process', type=bool, default=True, help='Process multiple videos in parallel')
-    parser.add_argument('--to_grayscale', type=bool, default=True, help='Extract lip videos in grayscale')
+    parser.add_argument('--dataset_path', type=str, default="../data/dsfl/dataset", help='Path to save HuggingFace dataset')
+    parser.add_argument('--include_lip_videos', type=bool, default=False, help='Include lip videos in the dataset')
 
     args = parser.parse_args()
     
-    segment_disfluency_laughter(
+    dsfl_dataset_from_existing_segments(
         dsfl_laugh_dir=args.dsfl_laugh_dir,
         dataset_path=args.dataset_path,
-        to_dataset=args.to_dataset,
-        extract_lip_videos=args.extract_lip_videos,
-        use_gpu=args.use_gpu,
-        use_parallel=args.use_parallel,
-        batch_size=args.batch_size,
-        batch_process=args.batch_process,
-        to_grayscale=args.to_grayscale
+        include_lip_videos=args.include_lip_videos
     )

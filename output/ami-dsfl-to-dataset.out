@@ -1,0 +1,39 @@
+OpenCV CUDA available: False
+Creating HuggingFace dataset for disfluency/laughter from path: /deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl
+Loaded 60478 disfluency/laughter markers from CSV
+
+Reading audio files:   0%|          | 0/52990 [00:00<?, ?it/s]
+Reading audio files: 100%|█████████▉| 52976/52990 [00:00<00:00, 529733.98it/s]
+Reading audio files: 100%|██████████| 52990/52990 [00:00<00:00, 528641.39it/s]
+Found 52990 audio files by scanning directory
+----------------------------------------------------------------
+
+Reading video files:   0%|          | 0/52542 [00:00<?, ?it/s]
+Reading video files: 100%|█████████▉| 52375/52542 [00:00<00:00, 523726.77it/s]
+Reading video files: 100%|██████████| 52542/52542 [00:00<00:00, 522724.81it/s]
+Found 52542 video files by scanning directory
+----------------------------------------------------------------
+
+Reading lip video files:   0%|          | 0/28263 [00:00<?, ?it/s]
+Reading lip video files: 100%|██████████| 28263/28263 [00:00<00:00, 511872.87it/s]
+Found 28263 lip video files
+----------------------------------------------------------------
+
+Processing 77691 unique segment IDs
+
+Creating dataset records:   0%|          | 0/77691 [00:00<?, ?it/s]
+Creating dataset records:  64%|██████▍   | 49894/77691 [00:00<00:00, 498907.17it/s]
+Creating dataset records: 100%|██████████| 77691/77691 [00:00<00:00, 513482.63it/s]
+Created 35731 dataset records
+-----------------------------------------------------------------
+
+Creating HuggingFace dataset with 35731 records
+Saving dataframe to csv file: ../data/dsfl/dataset/dsfl-segmented-recordings.csv
+Saving dataset to ../data/dsfl/dataset
+
+Saving the dataset (2/2 shards): 100%|██████████| 35731/35731 [10:05<00:00, 58.97 examples/s]
+HuggingFace dataset saved: Dataset({
+    features: ['id', 'meeting_id', 'speaker_id', 'start_time', 'end_time', 'duration', 'has_audio', 'has_video', 'has_lip_video', 'disfluency_type', 'transcript', 'audio', 'video', 'lip_video'],
+    num_rows: 35731
+})
+Dataset successfully saved to ../data/dsfl/dataset
