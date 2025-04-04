@@ -6,3 +6,5 @@
 # Ignore all files in the data folder
 data/*
 
+runnable/push_to_ds.sh
+
