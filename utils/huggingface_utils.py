@@ -1,165 +1,257 @@
-from datasets import Dataset, Audio, Video, load_from_disk
-import math # Added for isnan
+from datasets import Dataset, Audio, Video
 import os
-import json
 import shutil
 from tqdm import tqdm
 from pathlib import Path
-from datetime import datetime
-from huggingface_hub import HfApi, create_repo, upload_folder, upload_large_folder
+from huggingface_hub import HfApi, create_repo, upload_large_folder
 import pandas as pd
 import time
 import random
 from requests.exceptions import HTTPError
 import re
 
-def av_to_hf_dataset(recordings, dataset_path=None, prefix="ami"):
+def av_to_hf_dataset(recordings, dataset_path=None, prefix="ami", files_per_shard=5000):
     """
-    Create a HuggingFace dataset from the processed segments (audio, video, and lip videos), 
-    along with the transcript text.
-    This function will create a HuggingFace Dataset with AudioFolder(`audio`) and VideoFolder(`video` and `lip_video`) as well.
-    The folder should include `metadata.jsonl` at the root scope, which points to the audio, video, and lip_video files in corresponding folders.
-    The folder structure should be as follows:
-
-    dataset_path/
-        data/
-            audio_file (e.g. ES2002a-0.00-0.10-audio.wav)
-            video_file (e.g. ES2002a-0.00-0.10-video.mp4)
-            lip_video_file (e.g. ES2002a-0.00-0.10-lip_video.mp4)
-        metadata.jsonl
-        {prefix}-segments-info.csv
-        ...
-
+    Create a HuggingFace dataset from processed segments (audio, video, lip videos).
+    Stores metadata in Arrow/Parquet format and media files in sharded 'data/' directories.
+    Uses absolute paths during casting and maps to relative paths before saving.
+    
     Args:
-        recordings: List of dictionaries containing segment information
-        dataset_path: Path to HuggingFace Dataset. If None, defaults to `DATA_PATH/dataset`
-        prefix: Prefix for the dataset name.
+        recordings: List of dictionaries containing segment information.
+        dataset_path: Path to save the HuggingFace dataset structure.
+        prefix: Prefix for dataset-related files (e.g., CSV info file).
+        files_per_shard: Target number of media files per shard.
     """
     print(f"Creating HuggingFace dataset with {len(recordings)} records")
+    if not dataset_path:
+        raise ValueError("dataset_path must be provided")
+        
+    dataset_path_abs = os.path.abspath(dataset_path) # Get absolute path for reference
+    os.makedirs(dataset_path_abs, exist_ok=True)
     
-    os.makedirs(dataset_path, exist_ok=True)
+    # --- 1. Prepare DataFrame with correct relative paths --- 
     
-    # Create the data directory for proper Huggingface VideoFolder format
-    data_dir = os.path.join(dataset_path, "data")
-    os.makedirs(data_dir, exist_ok=True)
+    # Estimate total number of media files for sharding calculation
+    estimated_media_files = sum(
+        int(os.path.exists(record.get('audio', ''))) + 
+        int(os.path.exists(record.get('video', ''))) + 
+        int(os.path.exists(record.get('lip_video', ''))) 
+        for record in recordings
+    )
+    num_shards = max(1, (estimated_media_files + files_per_shard - 1) // files_per_shard)
+    print(f"Estimated {estimated_media_files} media files. Planning for {num_shards} shards.")
     
-    # GENERATE THE DATASET FROM THE RECORDINGS
-    df = pd.DataFrame(recordings)
+    processed_records = []
+    files_copied_count = 0
+    media_files_in_shards = [0] * num_shards
+    
+    print("Processing recordings and copying media files to sharded directories...")
+    for idx, record in enumerate(tqdm(recordings, desc="Processing records")):
+        shard_idx = idx % num_shards
+        shard_name = f"shard_{shard_idx:04d}"
+        shard_dir_abs = os.path.join(dataset_path_abs, "data", shard_name)
+        os.makedirs(shard_dir_abs, exist_ok=True)
+        
+        metadata = record.copy()
+        current_record_media_count = 0
+        
+        # Process and copy audio --------------------------------------------------------------------------
+        if 'audio' in metadata and metadata['audio'] and os.path.exists(metadata['audio']):
+            try:
+                audio_file = os.path.basename(metadata['audio'])
+                destination_path_abs = os.path.join(shard_dir_abs, audio_file)
+                if not os.path.exists(destination_path_abs):
+                    shutil.copy2(metadata['audio'], destination_path_abs)
+                    files_copied_count += 1
+                    current_record_media_count += 1
+                metadata['audio'] = destination_path_abs # Store absolute path
+            except Exception as e:
+                print(f"\nWarning: Failed to copy audio {metadata['audio']} for record {idx}: {e}")
+                metadata['audio'] = None
+        elif 'audio' in metadata:
+             metadata['audio'] = None
+        # ------------------------------------------------------------------------------------------------
+             
+        # Process and copy video ---------------------------------------------------------------------------
+        if 'video' in metadata and metadata['video'] and os.path.exists(metadata['video']):
+            try:
+                video_file = os.path.basename(metadata['video'])
+                destination_path_abs = os.path.join(shard_dir_abs, video_file)
+                if not os.path.exists(destination_path_abs):
+                    shutil.copy2(metadata['video'], destination_path_abs)
+                    files_copied_count += 1
+                    current_record_media_count += 1
+                metadata['video'] = destination_path_abs # Store absolute path
+            except Exception as e:
+                 print(f"\nWarning: Failed to copy video {metadata['video']} for record {idx}: {e}")
+                 metadata['video'] = None
+        elif 'video' in metadata:
+             metadata['video'] = None
+        # ------------------------------------------------------------------------------------------------
 
-    # save the dataframe to a csv file
-    csv_path = os.path.join(dataset_path, f'{prefix}-segments-info.csv')
-    print(f"Saving dataframe to csv file: {csv_path}")
-    df.to_csv(csv_path, index=False)
-    
-    # Save metadata as JSON for easier handling during upload
-    metadata_path = os.path.join(dataset_path, f'metadata.jsonl')
-    print(f"Saving metadata to jsonl file: {metadata_path}")
+        # Process and copy lip_video ----------------------------------------------------------------------
+        if 'lip_video' in metadata and metadata['lip_video'] and os.path.exists(metadata['lip_video']):
+             try:
+                lip_video_file = os.path.basename(metadata['lip_video'])
+                destination_path_abs = os.path.join(shard_dir_abs, lip_video_file)
+                if not os.path.exists(destination_path_abs):
+                    shutil.copy2(metadata['lip_video'], destination_path_abs)
+                    files_copied_count += 1
+                    current_record_media_count += 1
+                metadata['lip_video'] = destination_path_abs # Store absolute path
+             except Exception as e:
+                 print(f"\nWarning: Failed to copy lip_video {metadata['lip_video']} for record {idx}: {e}")
+                 metadata['lip_video'] = None
+        elif 'lip_video' in metadata:
+             metadata['lip_video'] = None
+        # ------------------------------------------------------------------------------------------------
 
-    # Process each recording in batches to avoid excessive output
-    batch_size = 100
-    num_batches = (len(recordings) + batch_size - 1) // batch_size
+        media_files_in_shards[shard_idx] += current_record_media_count
+        processed_records.append(metadata)
+        
+    print(f"Finished processing. Copied {files_copied_count} media files into {num_shards} shards.")
+
+    print("---------------------------------------------")
+    print("Shard distribution:")
+    for i, count in enumerate(media_files_in_shards):
+         print(f"  Shard {i:04d}: {count} files")
+    print("---------------------------------------------")
+
+    # --- Create HuggingFace Dataset --- 
+    df = pd.DataFrame(processed_records)
+    csv_path = os.path.join(dataset_path_abs, f'{prefix}-segments-info.csv')
+    try:
+        print(f"Saving informational CSV to: {csv_path}")
+        df.to_csv(csv_path, index=False)
+    except Exception as e:
+        print(f"Warning: Could not save informational CSV: {e}")
+        
+    # Create HuggingFace Dataset from the DataFrame
+    print("Creating HuggingFace Dataset...")
+    try:
+        dataset = Dataset.from_pandas(df)
+    except Exception as e:
+         print(f"Error creating Dataset from DataFrame: {e}")
+         print("Columns in DataFrame:", df.columns)
+         # Attempt to create dataset with only existing columns if error is related to missing keys
+         try:
+            present_cols = {col for col in ['id', 'meeting_id', 'speaker_id', 'start_time', 'end_time', 'audio', 'video', 'lip_video', 'text'] if col in df.columns}
+            dataset = Dataset.from_pandas(df[list(present_cols)])
+            print("Successfully created dataset with subset of columns.")
+         except Exception as e2:
+            print(f"Could not create dataset even with subset of columns: {e2}")
+            raise ValueError("Failed to create Dataset object from processed records.") from e
+
+    # --- Cast features (using Absolute Paths) --- 
+    print("Casting features (Audio, Video) using absolute paths...")
+
+    cast_success = True
+    if 'audio' in dataset.features:
+        try:
+             # Temporarily disable decoding during cast if needed, or handle potential load errors
+            dataset = dataset.cast_column('audio', Audio(sampling_rate=16000))
+        except Exception as e:
+             print(f"\nWarning: Failed to cast 'audio' column: {e}. Check file paths and formats.")
+             cast_success = False
+    if 'video' in dataset.features:
+        try:
+            dataset = dataset.cast_column('video', Video())
+        except Exception as e:
+             print(f"\nWarning: Failed to cast 'video' column: {e}. Check file paths and formats.")
+             cast_success = False
+    if 'lip_video' in dataset.features:
+        try:
+            dataset = dataset.cast_column('lip_video', Video())
+        except Exception as e:
+             print(f"\nWarning: Failed to cast 'lip_video' column: {e}. Check file paths and formats.")
+             cast_success = False
+
+    if not cast_success:
+         print("One or more casting operations failed. Proceeding without casting for failed columns.")
+    else:
+        print("Features cast successfully.")
+
+    # --- 4. Map Absolute Paths to Relative Paths --- 
+    print("Mapping absolute paths to relative paths for saving...")
     
-    with open(metadata_path, 'w') as f:
-        for batch_idx in range(num_batches):
-            start_idx = batch_idx * batch_size
-            end_idx = min((batch_idx + 1) * batch_size, len(recordings))
-            batch = recordings[start_idx:end_idx]
+    def make_path_relative(batch):
+        # This function processes a batch of examples
+        updates = {}
+        cols_to_process = [col for col in ['audio', 'video', 'lip_video'] if col in batch]
+        
+        for col in cols_to_process:
+            new_paths = []
+            for abs_path in batch[col]:
+                if abs_path and isinstance(abs_path, str) and os.path.isabs(abs_path):
+                    try:
+                        # Calculate relative path from dataset_path_abs
+                        rel_path = os.path.relpath(abs_path, dataset_path_abs)
+                        # Ensure it uses forward slashes for cross-platform compatibility in URLs/HF Hub
+                        new_paths.append(Path(rel_path).as_posix())
+                    except ValueError:
+                         # Handle cases where path cannot be made relative (e.g., different drive on Windows)
+                         print(f"\nWarning: Could not make path relative for {abs_path}. Keeping absolute.")
+                         new_paths.append(abs_path) 
+                else:
+                    new_paths.append(abs_path) # Keep None or already relative paths as is
+            updates[col] = new_paths
             
-            print(f"Processing batch {batch_idx+1}/{num_batches} ({start_idx} to {end_idx-1})...")
-            
-            for record in batch:
-                # Create a copy of the record to avoid modifying the original
-                metadata = record.copy()
+        return updates
 
-                # Copy audio file to data directory
-                if 'audio' in metadata and os.path.exists(metadata['audio']):
-                    audio_file = os.path.basename(metadata['audio'])
-                    destination_path = os.path.join(data_dir, audio_file)
-                    if metadata['audio'] != destination_path and not os.path.exists(destination_path):
-                        shutil.copy(metadata['audio'], destination_path)
-                    metadata['audio'] = f"data/{audio_file}"
-                
-                # Copy video file to data directory
-                if 'video' in metadata and os.path.exists(metadata['video']):
-                    video_file = os.path.basename(metadata['video'])
-                    destination_path = os.path.join(data_dir, video_file)
-                    if metadata['video'] != destination_path and not os.path.exists(destination_path):
-                        shutil.copy(metadata['video'], destination_path)
-                    metadata['video'] = f"data/{video_file}"
-                    
-                    # Add format info for video
-                    metadata['video_format'] = {'fps': 25.0}
+    try:
+        # Use batched=True for efficiency
+        dataset = dataset.map(make_path_relative, batched=True, num_proc=max(1, os.cpu_count() // 2))
+        print("Paths mapped to relative successfully.")
+    except Exception as e:
+        print(f"\nError during path mapping: {e}")
+        raise
 
-                # Copy lip video file to data directory
-                if 'lip_video' in metadata and os.path.exists(metadata['lip_video']):
-                    lip_video_file = os.path.basename(metadata['lip_video'])
-                    destination_path = os.path.join(data_dir, lip_video_file)
-                    if metadata['lip_video'] != destination_path and not os.path.exists(destination_path):
-                        shutil.copy(metadata['lip_video'], destination_path)
-                    metadata['lip_video'] = f"data/{lip_video_file}"
-                    
-                    # Add format info for lip_video
-                    metadata['lip_video_format'] = {'fps': 25.0}
-                
-                # Add format info for audio
-                if 'audio' in metadata:
-                    metadata['audio_format'] = {'sampling_rate': 16000}
-                
-                # Write the metadata as a JSON line
-                f.write(json.dumps(metadata) + '\n')
-    
-    # Create README.md if it doesn't exist
-    readme_path = os.path.join(dataset_path, "README.md")
+    # --- Save dataset structure (with Relative Paths) --- 
+    try:
+        print(f"Saving final dataset structure (with relative paths) to {dataset_path_abs}...")
+        dataset.save_to_disk(dataset_path_abs)
+        print(f"HuggingFace dataset structure saved successfully.")
+    except Exception as e:
+        print(f"\nFATAL ERROR saving dataset structure: {e}")
+        raise
+        
+    # --- 6. Create README --- 
+    readme_path = os.path.join(dataset_path_abs, "README.md")
     if not os.path.exists(readme_path):
+        print("Creating README.md...")
         with open(readme_path, "w") as f:
             f.write(f"# {prefix.upper()} Dataset\n\n")
             f.write(f"This dataset contains segmented audio and video clips.\n\n")
             f.write(f"- Number of recordings: {len(recordings)}\n")
-            f.write(f"- Has audio: {'audio' in df.columns}\n")
-            f.write(f"- Has video: {'video' in df.columns}\n")
-            f.write(f"- Has lip video: {'lip_video' in df.columns}\n\n")
+            # Check actual columns present in the final DataFrame/Dataset
+            actual_cols = set(df.columns)
+            f.write(f"- Has audio column: {'audio' in actual_cols}\n")
+            f.write(f"- Has video column: {'video' in actual_cols}\n")
+            f.write(f"- Has lip video column: {'lip_video' in actual_cols}\n\n")
             f.write("## Dataset Format\n\n")
-            f.write("This dataset follows the VideoFolder format recommended by Huggingface.\n")
-            f.write("All media files are stored in the 'data/' directory and referenced in metadata.jsonl.\n")
+            f.write("This dataset follows the recommended format for large audio/video datasets:\n")
+            f.write("- Metadata is stored in Arrow/Parquet format.\n")
+            f.write(f"- Media files (audio, video) are stored in sharded directories under `data/` (using {num_shards} shards).\n")
+            f.write("- Paths in the dataset table point to the relative location of media files within the sharded `data/` directory.\n")
     
-    # Create HuggingFace Dataset containing all recordings
-    dataset = Dataset.from_pandas(df)
-    
-    # Add audio and video features
-    if 'audio' in dataset.features:
-        dataset = dataset.cast_column('audio', Audio(sampling_rate=16000))
-    
-    if 'video' in dataset.features:
-        dataset = dataset.cast_column('video', Video())
-        
-    if 'lip_video' in dataset.features:
-        dataset = dataset.cast_column('lip_video', Video())
-    
-    # Save the dataset
-    print(f"\nSaving dataset to {dataset_path}")
-    dataset.save_to_disk(dataset_path)
-    print(f"HuggingFace dataset saved: {dataset}")
-    
-    print("\nIMPORTANT: To upload this dataset to the HuggingFace Hub:")
-    print("1. Use the `push_dataset_to_hub` function from this module")
-    print("2. Make sure you have sufficient API rate limits with HuggingFace")
-    print("3. Consider incrementally uploading if you have a large dataset")
+    print("\nDataset preparation complete.")
+    print(f"Dataset structure saved at: {dataset_path_abs}")
+    print("Ensure this entire directory (including the `data` folder with shards) is uploaded to the Hub.")
 
 
 # ================================================================================================================
 def push_dataset_to_hub(dataset_path, repo_name, token=None, private=True, max_retries=5, initial_delay=5):
     """
-    Push the dataset to the HuggingFace Hub with proper authentication and configuration.
-    This function handles datasets with video files using upload_large_folder for reliable uploading.
-    Implements exponential backoff to handle rate limiting.
+    Push the dataset (metadata + sharded media files) to the HuggingFace Hub.
+    Uses upload_large_folder and implements exponential backoff.
     
     Args:
-        dataset_path: Path to the HuggingFace dataset
-        repo_name: Name of the repository (format: 'dataset-name')
-        token: HuggingFace API token. If None, will use the token from huggingface-cli login
-        private: Whether to create a private repository (default: True)
-        max_retries: Maximum number of retries for rate-limited operations
-        initial_delay: Initial delay in seconds before retrying
+        dataset_path: Path to the locally saved HuggingFace dataset.
+        repo_name: Name of the repository (format: 'dataset-name').
+        token: HuggingFace API token.
+        private: Whether to create a private repository.
+        max_retries: Max retries for rate-limited operations.
+        initial_delay: Initial delay for backoff.
     
     Returns:
         None
@@ -177,26 +269,41 @@ def push_dataset_to_hub(dataset_path, repo_name, token=None, private=True, max_r
                     raise
                     
                 # Check if it's a rate limiting error
-                if isinstance(e, HTTPError) and "429" in str(e):
+                is_rate_limit = False
+                if isinstance(e, HTTPError) and e.response is not None and e.response.status_code == 429:
+                    is_rate_limit = True
+                    
+                # Also check for specific string if HTTPError isn't raised directly but message exists
+                # (Sometimes the hub client might wrap the error)
+                if not is_rate_limit and "rate-limited" in str(e).lower():
+                     is_rate_limit = True
+
+                if is_rate_limit:
                     # Extract wait time if available in the message
-                    wait_time_match = re.search(r"retry this action in (\d+) minutes", str(e))
+                    wait_time_match = re.search(r"retry.*?in (\d+) minutes", str(e), re.IGNORECASE)
+                    wait_time_match_secs = re.search(r"retry.*?in (\d+) seconds", str(e), re.IGNORECASE)
+                    
+                    wait_secs = 0
                     if wait_time_match:
                         wait_mins = int(wait_time_match.group(1))
                         wait_secs = wait_mins * 60
                         print(f"Rate limited. Waiting for {wait_mins} minutes as instructed by the API...")
-                        time.sleep(wait_secs + random.uniform(1, 5))  # Add a small random delay
+                    elif wait_time_match_secs:
+                        wait_secs = int(wait_time_match_secs.group(1))
+                        print(f"Rate limited. Waiting for {wait_secs} seconds as instructed by the API...")
                     else:
-                        # Calculate exponential backoff with jitter
-                        wait_time = (2 ** retries) * initial_delay + random.uniform(0, 1)
-                        print(f"Rate limited. Retrying in {wait_time:.2f} seconds...")
-                        time.sleep(wait_time)
+                        # Calculate exponential backoff with jitter if no specific time given
+                        wait_secs = (2 ** retries) * initial_delay + random.uniform(0, 1)
+                        print(f"Rate limited. Retrying in {wait_secs:.2f} seconds (exponential backoff)...")
                     
+                    time.sleep(max(1.0, wait_secs) + random.uniform(0, 2)) # Ensure minimum wait, add jitter
                     retries += 1
                     continue
                 else:
                     # For other errors, raise immediately
-                    raise
-    
+                    print(f"Non-rate-limit error encountered: {type(e).__name__}")
+                    raise e # Raise the original error
+            
     try:
         # Convert private to boolean if it's a string
         if isinstance(private, str):
@@ -219,102 +326,64 @@ def push_dataset_to_hub(dataset_path, repo_name, token=None, private=True, max_r
                 )
                 print(f"Created new dataset repository: {repo_id}")
             except Exception as e:
-                if "already exists" in str(e).lower():
-                    print(f"Repository {repo_id} already exists")
+                # Check for specific Huggingface Hub error for existing repo
+                if isinstance(e, HTTPError) and e.response is not None and e.response.status_code == 409:
+                     print(f"Repository {repo_id} already exists (HTTP 409).")
+                elif "already exists" in str(e).lower(): # Fallback check
+                     print(f"Repository {repo_id} already exists.")
                 else:
-                    raise
+                     print(f"Error creating repo (will retry if possible): {e}")
+                     raise # Re-raise to trigger retry or fail
         
+        print(f"Ensuring repository {repo_id} exists...")
         retry_with_exponential_backoff(create_repo_with_retry)
         
         # Ensure dataset_path is a string path
         if not isinstance(dataset_path, str):
-            if hasattr(dataset_path, 'cache_files') and dataset_path.cache_files:
-                dataset_path = dataset_path.cache_files[0]['filename'].rsplit('/', 1)[0]
-            else:
-                raise ValueError("Dataset must be a path or a Dataset with cache_files")
+             raise ValueError("dataset_path must be a string")
+        if not os.path.isdir(dataset_path):
+             raise FileNotFoundError(f"Dataset directory not found: {dataset_path}")
+             
+        print(f"Preparing to upload dataset from: {dataset_path}")
         
-        print(f"Preparing dataset from: {dataset_path}")
+        # --- Determine Upload Strategy --- 
+        # No need to explicitly check for video anymore. 
+        # upload_large_folder is suitable for the structure created by av_to_hf_dataset
+        # (config files + data/shards/media_files)
+        print("Using upload_large_folder strategy for dataset with sharded media.")
+
+        # --- Upload the entire dataset folder (config + data shards) --- 
+        def upload_dataset_with_retry():
+            print(f"Uploading dataset folder to {repo_id} using upload_large_folder...")
+            upload_large_folder(
+                folder_path=dataset_path,
+                repo_id=repo_id,
+                repo_type="dataset",
+                # ignore_patterns=["*.gitignore", "upload_tmp/*", f"{prefix}-segments-info.csv"], # Optionally ignore the extra CSV
+                ignore_patterns=["*.gitignore", "upload_tmp/*"], 
+                # Consider adding commit_message if desired
+                # commit_message=f"Upload dataset from {datetime.now().isoformat()}"
+            )
+            print(f"Successfully uploaded dataset folder to {repo_id}")
         
-        # Check if this is a video dataset by looking at the metadata.jsonl
-        metadata_path = os.path.join(dataset_path, "metadata.jsonl")
-        is_video_dataset = False
+        retry_with_exponential_backoff(upload_dataset_with_retry)
         
-        if os.path.exists(metadata_path):
-            # Read the first line to check for video paths
-            with open(metadata_path, 'r') as f:
-                first_record = json.loads(f.readline().strip())
-                is_video_dataset = 'video' in first_record or 'lip_video' in first_record
-        
-        # Optimize upload strategy based on dataset type
-        if is_video_dataset:
-            print("Dataset contains video files. Using optimized video upload approach...")
-            
-            # First verify the dataset structure
-            data_dir = os.path.join(dataset_path, "data")
-            if not os.path.exists(data_dir):
-                # Create data dir if it doesn't exist
-                os.makedirs(data_dir, exist_ok=True)
-                
-                # Check if we have audio/video/lips folders instead
-                for folder in ['audio', 'video', 'lips']:
-                    folder_path = os.path.join(dataset_path, folder)
-                    if os.path.exists(folder_path):
-                        print(f"Found {folder} folder. Moving files to data/ directory...")
-                        for file in os.listdir(folder_path):
-                            file_path = os.path.join(folder_path, file)
-                            if os.path.isfile(file_path):
-                                shutil.copy2(file_path, os.path.join(data_dir, file))
-            
-            # Use a single upload approach with retry
-            def upload_dataset_with_retry():
-                print(f"Uploading dataset to {repo_id} using optimized large folder upload...")
-                upload_large_folder(
-                    folder_path=dataset_path,
-                    repo_id=repo_id,
-                    repo_type="dataset",
-                    ignore_patterns=["*.gitignore", "upload_tmp/*"],
-                )
-                print(f"Successfully uploaded dataset to {repo_id}")
-            
-            retry_with_exponential_backoff(upload_dataset_with_retry)
-            
-        else:
-            # For non-video datasets, use push_to_hub
-            try:
-                dataset = load_from_disk(dataset_path)
-                
-                def push_dataset_with_retry():
-                    print("Dataset does not contain video files. Using standard push_to_hub.")
-                    dataset.push_to_hub(
-                        repo_id=repo_id,
-                        private=private,
-                        token=token,
-                        embed_external_files=True,
-                        max_shard_size="500MB"
-                    )
-                    print(f"Successfully uploaded dataset to {repo_id}")
-                
-                retry_with_exponential_backoff(push_dataset_with_retry)
-                
-            except Exception as e:
-                print(f"Error loading dataset: {e}")
-                print("Falling back to direct upload...")
-                
-                def upload_fallback_with_retry():
-                    upload_large_folder(
-                        folder_path=dataset_path,
-                        repo_id=repo_id,
-                        repo_type="dataset",
-                        ignore_patterns=["*.gitignore", "upload_tmp/*"],
-                    )
-                    print(f"Successfully uploaded dataset to {repo_id} using fallback method")
-                
-                retry_with_exponential_backoff(upload_fallback_with_retry)
-        
+        print(f"\nUpload complete.")
         print(f"View your dataset at: https://huggingface.co/datasets/{repo_id}")
+        print("Note: It might take a few minutes for the Dataset Viewer to process the data.")
         
     except Exception as e:
-        print(f"Error pushing dataset to hub: {e}")
+        print(f"\n---------------------")
+        print(f"FATAL ERROR pushing dataset to hub: {e}")
+        print(f"Type: {type(e).__name__}")
+        # If it's an HTTPError, print more details
+        if isinstance(e, HTTPError) and e.response is not None:
+            print(f"Status Code: {e.response.status_code}")
+            try:
+                 print(f"Response Content: {e.response.text}")
+            except Exception:
+                 print("Could not read response content.")
+        print(f"---------------------")
         raise e
 
 
@@ -324,8 +393,8 @@ if __name__ == "__main__":
     import argparse
     
     parser = argparse.ArgumentParser(description='Push the dataset to the HuggingFace Hub')
-    parser.add_argument('--dataset_path', type=str, default='../data/dsfl/dataset', help='Path to the HuggingFace dataset')
-    parser.add_argument('--repo_name', type=str, default='ami-disfluency-AV', help='Name of the repository to push the dataset')
+    parser.add_argument('--dataset_path', type=str, default='/deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl/dataset', help='Path to the HuggingFace dataset')
+    parser.add_argument('--repo_name', type=str, default='ami-disfluency', help='Name of the repository to push the dataset')
     parser.add_argument('--token', type=str, default=None, help='HuggingFace API token')
     parser.add_argument('--private', default=False, help='Whether to create a private repository')
     args = parser.parse_args()
