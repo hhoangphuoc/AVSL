@@ -714,7 +714,7 @@ def dsfl_dataset_from_existing_segments(
     if dataset_records:
         try:
             from utils import av_to_hf_dataset
-            av_to_hf_dataset(dataset_records, dataset_path=dataset_path, data_dir=dsfl_laugh_dir, prefix="dsfl")
+            av_to_hf_dataset(dataset_records, dataset_path=dataset_path, prefix="dsfl")
             print(f"Dataset successfully saved to {dataset_path}")
         except Exception as e:
             print(f"Error saving dataset to HuggingFace format: {str(e)}")
