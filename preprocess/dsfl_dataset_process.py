@@ -692,7 +692,7 @@ def dsfl_dataset_from_existing_segments(
                 
                 # Add media paths if available
                 if has_audio:
-                    record["audio"] = audio_files[segment_id]
+                    record["audio"] = audio_files[segment_id] # {"audio": "/deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl/audio_segments/ES2001a-A-0.0-1.0-audio.wav"}
                     
                 if has_video:
                     record["video"] = video_files[segment_id]
@@ -713,9 +713,14 @@ def dsfl_dataset_from_existing_segments(
     # Create and save the HuggingFace dataset
     if dataset_records:
         try:
-            from utils import av_to_hf_dataset
-            av_to_hf_dataset(dataset_records, dataset_path=dataset_path, prefix="dsfl")
-            print(f"Dataset successfully saved to {dataset_path}")
+            from utils import av_to_hf_dataset, av_to_hf_dataset_with_shards
+            av_to_hf_dataset(dataset_records, dataset_path=dataset_path, prefix="dsfl") #FIXME: Fallback to this function if error.
+            # av_to_hf_dataset_with_shards(
+            #     dataset_records, 
+            #     dataset_path=dataset_path, 
+            #     prefix="dsfl",
+            #     files_per_shard=5000
+            # )
         except Exception as e:
             print(f"Error saving dataset to HuggingFace format: {str(e)}")
     else:

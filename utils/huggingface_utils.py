@@ -1,6 +1,7 @@
 from datasets import Dataset, Audio, Video
 import os
 import shutil
+import json
 from tqdm import tqdm
 from pathlib import Path
 from huggingface_hub import HfApi, create_repo, upload_large_folder
@@ -10,12 +11,73 @@ import random
 from requests.exceptions import HTTPError
 import re
 
-def av_to_hf_dataset(recordings, dataset_path=None, prefix="ami", files_per_shard=5000):
+def av_to_hf_dataset(recordings, dataset_path=None, prefix="ami"):
     """
-    Create a HuggingFace dataset from processed segments (audio, video, lip videos).
-    Stores metadata in Arrow/Parquet format and media files in sharded 'data/' directories.
-    Uses absolute paths during casting and maps to relative paths before saving.
+    Create a HuggingFace dataset from the processed segments (audio, video, and lip videos), 
+    along with the transcript text.
     
+    Args:
+        recordings: List of dictionaries containing segment information
+        dataset_path: Path to HuggingFace Dataset. If None, defaults to `DATA_PATH/dataset`
+    """
+    print(f"Creating HuggingFace dataset with {len(recordings)} records")
+    
+    os.makedirs(dataset_path, exist_ok=True)
+    
+    # GENERATE THE DATASET FROM THE RECORDINGS
+    df = pd.DataFrame(recordings)
+
+    # save the dataframe to a csv file
+    csv_path = os.path.join(dataset_path, 'ami-segmented-recordings.csv')
+    print(f"Saving dataframe to csv file: {csv_path}")
+    df.to_csv(csv_path, index=False)
+    
+    # Save metadata as JSON for easier handling during upload
+    metadata_path = os.path.join(dataset_path, 'metadata.jsonl')
+    with open(metadata_path, 'w') as f:
+        for record in recordings:
+            # Create a copy of the record to avoid modifying the original
+            metadata = record.copy()
+            
+            # Store relative paths instead of absolute paths
+            if 'audio' in metadata:
+                metadata['audio'] = os.path.basename(metadata['audio'])
+            if 'video' in metadata:
+                metadata['video'] = os.path.basename(metadata['video'])
+            if 'lip_video' in metadata:
+                metadata['lip_video'] = os.path.basename(metadata['lip_video'])
+                
+            # Write the metadata as a JSON line
+            f.write(json.dumps(metadata) + '\n')
+    
+    # Create HuggingFace Dataset containing all recordings
+    dataset = Dataset.from_pandas(df)
+    
+    # Add audio and video features
+    if 'audio' in dataset.features:
+        dataset = dataset.cast_column('audio', Audio(sampling_rate=16000))
+    
+    if 'video' in dataset.features:
+        dataset = dataset.cast_column('video', Video())
+        
+    if 'lip_video' in dataset.features:
+        dataset = dataset.cast_column('lip_video', Video())
+    
+    # Save the dataset
+    print(f"Saving dataset to {dataset_path}")
+    dataset.save_to_disk(dataset_path)
+    print(f"HuggingFace dataset saved: {dataset}")
+
+#====================================================================================================
+
+def av_to_hf_dataset_with_shards(recordings, dataset_path=None, prefix="ami", files_per_shard=5000):
+    """
+    Create a HuggingFace dataset from processed segments (audio, video, lip videos)
+    Stores metadata in Arrow/Parquet format and media files in multiple shards of 'data/' directories.
+    
+    NOTE: This function is designed for uploading large dataset with both audio, video, and lip video clips 
+    to the HuggingFace Hub, for better DataViewer. For normal use, you can use `av_to_hf_dataset` instead.
+
     Args:
         recordings: List of dictionaries containing segment information.
         dataset_path: Path to save the HuggingFace dataset structure.
@@ -55,7 +117,7 @@ def av_to_hf_dataset(recordings, dataset_path=None, prefix="ami", files_per_shar
         metadata = record.copy()
         current_record_media_count = 0
         
-        # Process and copy audio --------------------------------------------------------------------------
+        # ------------------------ Process and copy audio ----------------------------------------------
         if 'audio' in metadata and metadata['audio'] and os.path.exists(metadata['audio']):
             try:
                 audio_file = os.path.basename(metadata['audio'])
@@ -64,15 +126,20 @@ def av_to_hf_dataset(recordings, dataset_path=None, prefix="ami", files_per_shar
                     shutil.copy2(metadata['audio'], destination_path_abs)
                     files_copied_count += 1
                     current_record_media_count += 1
-                metadata['audio'] = destination_path_abs # Store absolute path
+                # Store both absolute path (for casting) and relative path (for saving)
+                metadata['_audio_abs'] = destination_path_abs
+                metadata['audio'] = f"data/{shard_name}/{audio_file}"
             except Exception as e:
                 print(f"\nWarning: Failed to copy audio {metadata['audio']} for record {idx}: {e}")
                 metadata['audio'] = None
+                metadata['_audio_abs'] = None
         elif 'audio' in metadata:
              metadata['audio'] = None
+             metadata['_audio_abs'] = None
         # ------------------------------------------------------------------------------------------------
              
-        # Process and copy video ---------------------------------------------------------------------------
+
+        # ------------------------ Process and copy video ------------------------------------------------
         if 'video' in metadata and metadata['video'] and os.path.exists(metadata['video']):
             try:
                 video_file = os.path.basename(metadata['video'])
@@ -81,15 +148,20 @@ def av_to_hf_dataset(recordings, dataset_path=None, prefix="ami", files_per_shar
                     shutil.copy2(metadata['video'], destination_path_abs)
                     files_copied_count += 1
                     current_record_media_count += 1
-                metadata['video'] = destination_path_abs # Store absolute path
+
+                metadata['_video_abs'] = destination_path_abs # Store absolute path for reference
+                metadata['video'] = f"data/{shard_name}/{video_file}" # Store relative path for HF_DATASET
             except Exception as e:
                  print(f"\nWarning: Failed to copy video {metadata['video']} for record {idx}: {e}")
                  metadata['video'] = None
+                 metadata['_video_abs'] = None
         elif 'video' in metadata:
              metadata['video'] = None
+             metadata['_video_abs'] = None
         # ------------------------------------------------------------------------------------------------
 
-        # Process and copy lip_video ----------------------------------------------------------------------
+
+        # ------------------------ Process and copy lip_video -------------------------------------------
         if 'lip_video' in metadata and metadata['lip_video'] and os.path.exists(metadata['lip_video']):
              try:
                 lip_video_file = os.path.basename(metadata['lip_video'])
@@ -98,12 +170,15 @@ def av_to_hf_dataset(recordings, dataset_path=None, prefix="ami", files_per_shar
                     shutil.copy2(metadata['lip_video'], destination_path_abs)
                     files_copied_count += 1
                     current_record_media_count += 1
-                metadata['lip_video'] = destination_path_abs # Store absolute path
+                metadata['_lip_video_abs'] = destination_path_abs # Store absolute path for reference
+                metadata['lip_video'] = f"data/{shard_name}/{lip_video_file}" # Store relative path for HF_DATASET
              except Exception as e:
                  print(f"\nWarning: Failed to copy lip_video {metadata['lip_video']} for record {idx}: {e}")
                  metadata['lip_video'] = None
+                 metadata['_lip_video_abs'] = None
         elif 'lip_video' in metadata:
              metadata['lip_video'] = None
+             metadata['_lip_video_abs'] = None
         # ------------------------------------------------------------------------------------------------
 
         media_files_in_shards[shard_idx] += current_record_media_count
@@ -125,115 +200,50 @@ def av_to_hf_dataset(recordings, dataset_path=None, prefix="ami", files_per_shar
         df.to_csv(csv_path, index=False)
     except Exception as e:
         print(f"Warning: Could not save informational CSV: {e}")
-        
-    # Create HuggingFace Dataset from the DataFrame
-    print("Creating HuggingFace Dataset...")
-    try:
-        dataset = Dataset.from_pandas(df)
-    except Exception as e:
-         print(f"Error creating Dataset from DataFrame: {e}")
-         print("Columns in DataFrame:", df.columns)
-         # Attempt to create dataset with only existing columns if error is related to missing keys
-         try:
-            present_cols = {col for col in ['id', 'meeting_id', 'speaker_id', 'start_time', 'end_time', 'audio', 'video', 'lip_video', 'text'] if col in df.columns}
-            dataset = Dataset.from_pandas(df[list(present_cols)])
-            print("Successfully created dataset with subset of columns.")
-         except Exception as e2:
-            print(f"Could not create dataset even with subset of columns: {e2}")
-            raise ValueError("Failed to create Dataset object from processed records.") from e
-
-    # --- Cast features (using Absolute Paths) --- 
-    print("Casting features (Audio, Video) using absolute paths...")
-
-    cast_success = True
-    if 'audio' in dataset.features:
-        try:
-             # Temporarily disable decoding during cast if needed, or handle potential load errors
-            dataset = dataset.cast_column('audio', Audio(sampling_rate=16000))
-        except Exception as e:
-             print(f"\nWarning: Failed to cast 'audio' column: {e}. Check file paths and formats.")
-             cast_success = False
-    if 'video' in dataset.features:
-        try:
-            dataset = dataset.cast_column('video', Video())
-        except Exception as e:
-             print(f"\nWarning: Failed to cast 'video' column: {e}. Check file paths and formats.")
-             cast_success = False
-    if 'lip_video' in dataset.features:
-        try:
-            dataset = dataset.cast_column('lip_video', Video())
-        except Exception as e:
-             print(f"\nWarning: Failed to cast 'lip_video' column: {e}. Check file paths and formats.")
-             cast_success = False
-
-    if not cast_success:
-         print("One or more casting operations failed. Proceeding without casting for failed columns.")
-    else:
-        print("Features cast successfully.")
-
-    # --- 4. Map Absolute Paths to Relative Paths --- 
-    print("Mapping absolute paths to relative paths for saving...")
     
-    def make_path_relative(batch):
-        # This function processes a batch of examples
-        updates = {}
-        cols_to_process = [col for col in ['audio', 'video', 'lip_video'] if col in batch]
+    # ---------------------------------------- USING STANDARD HF DATASET API ---------------------------
+    print("Creating HuggingFace Dataset (with relative paths)...")
+    try:
+        # ONLY USE COLUMNS WITH RELATIVE PATHS
+        columns_to_use = [col for col in df.columns if not col.startswith('_')]
+        dataset = Dataset.from_pandas(df[columns_to_use])
         
-        for col in cols_to_process:
-            new_paths = []
-            for abs_path in batch[col]:
-                if abs_path and isinstance(abs_path, str) and os.path.isabs(abs_path):
-                    try:
-                        # Calculate relative path from dataset_path_abs
-                        rel_path = os.path.relpath(abs_path, dataset_path_abs)
-                        # Ensure it uses forward slashes for cross-platform compatibility in URLs/HF Hub
-                        new_paths.append(Path(rel_path).as_posix())
-                    except ValueError:
-                         # Handle cases where path cannot be made relative (e.g., different drive on Windows)
-                         print(f"\nWarning: Could not make path relative for {abs_path}. Keeping absolute.")
-                         new_paths.append(abs_path) 
-                else:
-                    new_paths.append(abs_path) # Keep None or already relative paths as is
-            updates[col] = new_paths
+        # Cast features AFTER the dataset has relative paths already
+        print("Casting features...")
+        if 'audio' in dataset.features:
+            try:
+                # For audio, use absolute paths only during validation if needed
+                dataset = dataset.cast_column('audio', Audio(sampling_rate=16000))
+            except Exception as e:
+                print(f"Warning: Could not cast audio column: {e}")
+                
+        if 'video' in dataset.features:
+            try:
+                # Disable decoding for videos
+                dataset = dataset.cast_column('video', Video())
+            except Exception as e:
+                print(f"Warning: Could not cast video column: {e}")
+                
+        if 'lip_video' in dataset.features:
+            try:
+                # Disable decoding for lip videos
+                dataset = dataset.cast_column('lip_video', Video())
+            except Exception as e:
+                print(f"Warning: Could not cast lip_video column: {e}")
+                
+        # Save the dataset with relative paths
+        try:
+            print(f"Saving dataset structure to {dataset_path_abs}...")
+            dataset.save_to_disk(dataset_path_abs)
+            print(f"HuggingFace dataset structure saved successfully.")
+        except Exception as e:
+            print(f"\nFATAL ERROR saving dataset structure: {e}")
+            raise
             
-        return updates
-
-    try:
-        # Use batched=True for efficiency
-        dataset = dataset.map(make_path_relative, batched=True, num_proc=max(1, os.cpu_count() // 2))
-        print("Paths mapped to relative successfully.")
     except Exception as e:
-        print(f"\nError during path mapping: {e}")
-        raise
-
-    # --- Save dataset structure (with Relative Paths) --- 
-    try:
-        print(f"Saving final dataset structure (with relative paths) to {dataset_path_abs}...")
-        dataset.save_to_disk(dataset_path_abs)
-        print(f"HuggingFace dataset structure saved successfully.")
-    except Exception as e:
-        print(f"\nFATAL ERROR saving dataset structure: {e}")
-        raise
-        
-    # --- 6. Create README --- 
-    readme_path = os.path.join(dataset_path_abs, "README.md")
-    if not os.path.exists(readme_path):
-        print("Creating README.md...")
-        with open(readme_path, "w") as f:
-            f.write(f"# {prefix.upper()} Dataset\n\n")
-            f.write(f"This dataset contains segmented audio and video clips.\n\n")
-            f.write(f"- Number of recordings: {len(recordings)}\n")
-            # Check actual columns present in the final DataFrame/Dataset
-            actual_cols = set(df.columns)
-            f.write(f"- Has audio column: {'audio' in actual_cols}\n")
-            f.write(f"- Has video column: {'video' in actual_cols}\n")
-            f.write(f"- Has lip video column: {'lip_video' in actual_cols}\n\n")
-            f.write("## Dataset Format\n\n")
-            f.write("This dataset follows the recommended format for large audio/video datasets:\n")
-            f.write("- Metadata is stored in Arrow/Parquet format.\n")
-            f.write(f"- Media files (audio, video) are stored in sharded directories under `data/` (using {num_shards} shards).\n")
-            f.write("- Paths in the dataset table point to the relative location of media files within the sharded `data/` directory.\n")
+        print(f"Error creating Dataset: {e}")
     
+    #------------------------------------------------------------------------------------------------
     print("\nDataset preparation complete.")
     print(f"Dataset structure saved at: {dataset_path_abs}")
     print("Ensure this entire directory (including the `data` folder with shards) is uploaded to the Hub.")

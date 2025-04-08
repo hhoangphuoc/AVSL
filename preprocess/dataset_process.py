@@ -39,7 +39,7 @@ from preprocess.constants import (
 
 from audio_process import batch_segment_audio
 from video_process import batch_segment_video
-from utils import av_to_hf_dataset
+from utils import av_to_hf_dataset, av_to_hf_dataset_with_shards
 
 
 transcript_segments_dir = TRANS_SEG_PATH
@@ -49,6 +49,16 @@ video_segment_dir = VIDEO_PATH # data/video_segments
 original_video_dir = os.path.join(VIDEO_PATH, "original_videos") # data/video_segments/original_videos
 lip_video_dir = os.path.join(VIDEO_PATH, "lip_videos")  # data/video_segments/lip_videos
 
+
+#==========================================================================================================================
+#                   SEGMENTING AUDIO. VIDEO AND LIP VIDEO FROM TRANSCRIPT FILES (FROM SCRATCH)
+#                   This  function involves in 5 steps, corresponding to 5 functions below:
+#               1. `collect_segments_from_transcripts`: Collecting all segments from transcript files
+#               2. `process_audio_segments`: Processing audio segments
+#               3. `process_video_segments`: Processing video segments
+#               4. `process_lip_videos`: Processing lip videos from created video segments
+#               5. `create_dataset_records`: Creating dataset records based of the audio, video and lip video segments sources.
+#========================================================================================================================== 
 
 def collect_segments_from_transcripts(transcript_segments_dir, audio_segment_dir, original_video_dir):
     """
@@ -156,7 +166,7 @@ def process_audio_segments(audio_segments_by_source):
     Returns:
         Tuple of (audio_segment_results, successful_audio_segments)
     """
-    print("\nStep 2: Processing audio files...")
+    print("Processing audio files...")
     audio_segment_results = {}  # {segment_id: (success, output_file, text)}
     successful_audio_segments = 0
     
@@ -176,7 +186,8 @@ def process_audio_segments(audio_segments_by_source):
 
 def process_video_segments(video_segments_by_source):
     """
-    Process all video segments in batches, each batch contains multiple segments from the same video source file (e.g. ES2001a-Closeup1.avi)
+    Process all video segments in batches, each batch contains multiple segments from the same video source file 
+    (e.g. ES2001a-Closeup1.avi)
     
     Args:
         video_segments_by_source: Dictionary mapping video source files to segments to extract
@@ -184,7 +195,7 @@ def process_video_segments(video_segments_by_source):
     Returns:
         Tuple of (video_segment_results, successful_video_segments)
     """
-    print("\nStep 3: Processing video files...")
+    print("Processing video files...")
     video_segment_results = {}  # {segment_id: (success, output_file)}
     successful_video_segments = 0
     
@@ -533,9 +544,11 @@ def segment_sources(transcript_segments_dir,
 
 #==========================================================================================================================
 
-def hf_dataset_from_existing_segments(source_dir=DATA_PATH,
+
+
+def ami_dataset_from_existing_segments(source_dir=DATA_PATH,
                           transcript_segments_dir=TRANS_SEG_PATH,
-                          dataset_path='../data/hf_dataset',
+                          dataset_path='../data/ami_dataset',
                           include_lip_videos=False
                           ):
     """
@@ -552,7 +565,7 @@ def hf_dataset_from_existing_segments(source_dir=DATA_PATH,
     |_ audio_segments/\n
     |_ video_segments/\n
         |_ original_videos/\n
-        |_ lip_videos/\n
+        |_ lips/\n
     
     Args:
         source_dir: Path to the directory containing the processed segments (audio, video)
@@ -579,7 +592,7 @@ def hf_dataset_from_existing_segments(source_dir=DATA_PATH,
     original_video_dir = os.path.join(video_segments_dir, "original_videos")
     lip_video_dir = None
     if include_lip_videos:
-        lip_video_dir = os.path.join(video_segments_dir, "lip_videos")
+        lip_video_dir = os.path.join(video_segments_dir, "lips")
     
     # Check if directories exist
     if not os.path.exists(audio_segments_dir):
@@ -719,7 +732,14 @@ def hf_dataset_from_existing_segments(source_dir=DATA_PATH,
     # Create and save the HuggingFace dataset
     if dataset_records:
         try:
-            av_to_hf_dataset(dataset_records, dataset_path=dataset_path, prefix="ami")
+            # av_to_hf_dataset(dataset_records, dataset_path=dataset_path, prefix="ami")
+            # TRY WITH SHARDS
+            av_to_hf_dataset_with_shards(
+                dataset_records, 
+                dataset_path=dataset_path, 
+                prefix="ami",
+                files_per_shard=10000
+            )
             print(f"Dataset successfully saved to {dataset_path}")
         except Exception as e:
             print(f"Error saving dataset: {str(e)}")
@@ -803,7 +823,7 @@ if __name__ == "__main__":
         print(f"Dataset path: {args.dataset_path}")
         print(f"Include lip videos: {args.extract_lip_videos}")
 
-        hf_dataset_from_existing_segments(
+        ami_dataset_from_existing_segments(
             source_dir=args.source_dir,
             transcript_segments_dir=args.transcript_segments_dir,
             dataset_path=args.dataset_path,
@@ -922,7 +942,7 @@ if __name__ == "__main__":
             sys.exit(1)
 
     # =============================================================================================================
-    # PROCESS A CHUNK OF LIP VIDEOS FROM A CSV FILE
+    # PROCESS A CHUNK OF LIP VIDEOS
     # =============================================================================================================
     elif args.mode == 'process_lip_chunk':
         print(f"\nRunning mode: {args.mode.upper()}")
