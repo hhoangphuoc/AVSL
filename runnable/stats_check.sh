@@ -17,10 +17,18 @@ echo "Total size: $(du -sh /deepstore/datasets/hmi/speechlaugh-corpus/ami/audio_
 
 # Checking size of video segments directory
 # OUTPUT:
-# Files count: 78,089
+
+# Original video segments
+# Files count: 78,685
 # Total size: 5.6G
-echo "Files count: $(find /deepstore/datasets/hmi/speechlaugh-corpus/ami/video_segments/ -type f | wc -l)"; 
-echo "Total size: $(du -sh /deepstore/datasets/hmi/speechlaugh-corpus/ami/video_segments | cut -f1)"
+echo "Files count: $(find /deepstore/datasets/hmi/speechlaugh-corpus/ami/video_segments/original_videos -type f | wc -l)"; 
+echo "Total size: $(du -sh /deepstore/datasets/hmi/speechlaugh-corpus/ami/video_segments/original_videos | cut -f1)"
+
+# Lip video segments
+# Files count: 67,438
+# Total size: 1.9G
+echo "Files count: $(find /deepstore/datasets/hmi/speechlaugh-corpus/ami/video_segments/lips -type f | wc -l)"; 
+echo "Total size: $(du -sh /deepstore/datasets/hmi/speechlaugh-corpus/ami/video_segments/lips | cut -f1)"
 
 # ================================================================================================================  
 

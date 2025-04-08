@@ -15,5 +15,5 @@ cd ../preprocess
 # RUNNING MODE: DISFLUENCY/LAUGHTER SEGMENTATION  ---------------------------------------------
 python dsfl_dataset_process.py \
     --dsfl_laugh_dir "/deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl" \
-    --dataset_path "/deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl/dataset" \
+    --dataset_path "../deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl/dataset" \
     --include_lip_videos True
