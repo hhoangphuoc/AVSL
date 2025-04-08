@@ -32,5 +32,5 @@ python dataset_process.py \
     --mode segment_exist \
     --source_dir "/deepstore/datasets/hmi/speechlaugh-corpus/ami" \
     --transcript_segments_dir "/deepstore/datasets/hmi/speechlaugh-corpus/ami/transcript_segments" \
-    --dataset_path "/deepstore/datasets/hmi/speechlaugh-corpus/ami/dataset" \
+    --dataset_path "../data/ami/dataset" \
     --extract_lip_videos True \

@@ -26,11 +26,6 @@ def av_to_hf_dataset(recordings, dataset_path=None, prefix="ami"):
     
     # GENERATE THE DATASET FROM THE RECORDINGS
     df = pd.DataFrame(recordings)
-
-    # save the dataframe to a csv file
-    csv_path = os.path.join(dataset_path, 'ami-segmented-recordings.csv')
-    print(f"Saving dataframe to csv file: {csv_path}")
-    df.to_csv(csv_path, index=False)
     
     # Save metadata as JSON for easier handling during upload
     metadata_path = os.path.join(dataset_path, 'metadata.jsonl')
@@ -53,8 +48,9 @@ def av_to_hf_dataset(recordings, dataset_path=None, prefix="ami"):
     # Create HuggingFace Dataset containing all recordings
     dataset = Dataset.from_pandas(df)
     
-    # Add audio and video features
-    if 'audio' in dataset.features:
+    # Cast audio and video features to HuggingFace Audio and Video
+    # NOTE: Dataset features casting required full path
+    if 'audio' in dataset.features: 
         dataset = dataset.cast_column('audio', Audio(sampling_rate=16000))
     
     if 'video' in dataset.features:
@@ -62,6 +58,15 @@ def av_to_hf_dataset(recordings, dataset_path=None, prefix="ami"):
         
     if 'lip_video' in dataset.features:
         dataset = dataset.cast_column('lip_video', Video())
+
+    # save the dataframe to a csv file
+    # NOTE: The CSV path is relative to the dataset_path, will be: 'data/...` instead of full path
+    df['audio'] = df['audio'].apply(lambda x: os.path.join('data', os.path.basename(x)))
+    df['video'] = df['video'].apply(lambda x: os.path.join('data', os.path.basename(x)))
+    df['lip_video'] = df['lip_video'].apply(lambda x: os.path.join('data', os.path.basename(x)))
+    csv_path = os.path.join(dataset_path, f'{prefix}-segmented-info.csv')
+    print(f"Saving dataframe to csv file: {csv_path}")
+    df.to_csv(csv_path, index=False)
     
     # Save the dataset
     print(f"Saving dataset to {dataset_path}")
@@ -89,6 +94,7 @@ def av_to_hf_dataset_with_shards(recordings, dataset_path=None, prefix="ami", fi
         raise ValueError("dataset_path must be provided")
         
     dataset_path_abs = os.path.abspath(dataset_path) # Get absolute path for reference
+    print(f"Dataset path: {dataset_path_abs}")
     os.makedirs(dataset_path_abs, exist_ok=True)
     
     # --- 1. Prepare DataFrame with correct relative paths --- 
@@ -111,7 +117,7 @@ def av_to_hf_dataset_with_shards(recordings, dataset_path=None, prefix="ami", fi
     for idx, record in enumerate(tqdm(recordings, desc="Processing records")):
         shard_idx = idx % num_shards
         shard_name = f"shard_{shard_idx:04d}"
-        shard_dir_abs = os.path.join(dataset_path_abs, "data", shard_name)
+        shard_dir_abs = os.path.join(dataset_path_abs, "data", shard_name) #dataset_path/data/shard_0000/
         os.makedirs(shard_dir_abs, exist_ok=True)
         
         metadata = record.copy()
@@ -121,21 +127,17 @@ def av_to_hf_dataset_with_shards(recordings, dataset_path=None, prefix="ami", fi
         if 'audio' in metadata and metadata['audio'] and os.path.exists(metadata['audio']):
             try:
                 audio_file = os.path.basename(metadata['audio'])
-                destination_path_abs = os.path.join(shard_dir_abs, audio_file)
-                if not os.path.exists(destination_path_abs):
-                    shutil.copy2(metadata['audio'], destination_path_abs)
+                destination_path = os.path.join(shard_dir_abs, audio_file)
+                if not os.path.exists(destination_path):
+                    shutil.copy2(metadata['audio'], destination_path)
                     files_copied_count += 1
                     current_record_media_count += 1
-                # Store both absolute path (for casting) and relative path (for saving)
-                metadata['_audio_abs'] = destination_path_abs
-                metadata['audio'] = f"data/{shard_name}/{audio_file}"
+                metadata['audio'] = destination_path #metadata['audio'] = dataset_path/data/shard_0000/audio_file.wav
             except Exception as e:
                 print(f"\nWarning: Failed to copy audio {metadata['audio']} for record {idx}: {e}")
                 metadata['audio'] = None
-                metadata['_audio_abs'] = None
         elif 'audio' in metadata:
              metadata['audio'] = None
-             metadata['_audio_abs'] = None
         # ------------------------------------------------------------------------------------------------
              
 
@@ -143,21 +145,18 @@ def av_to_hf_dataset_with_shards(recordings, dataset_path=None, prefix="ami", fi
         if 'video' in metadata and metadata['video'] and os.path.exists(metadata['video']):
             try:
                 video_file = os.path.basename(metadata['video'])
-                destination_path_abs = os.path.join(shard_dir_abs, video_file)
-                if not os.path.exists(destination_path_abs):
-                    shutil.copy2(metadata['video'], destination_path_abs)
+                destination_path = os.path.join(shard_dir_abs, video_file)
+                if not os.path.exists(destination_path):
+                    shutil.copy2(metadata['video'], destination_path)
                     files_copied_count += 1
                     current_record_media_count += 1
 
-                metadata['_video_abs'] = destination_path_abs # Store absolute path for reference
-                metadata['video'] = f"data/{shard_name}/{video_file}" # Store relative path for HF_DATASET
+                metadata['video'] = destination_path
             except Exception as e:
                  print(f"\nWarning: Failed to copy video {metadata['video']} for record {idx}: {e}")
                  metadata['video'] = None
-                 metadata['_video_abs'] = None
         elif 'video' in metadata:
              metadata['video'] = None
-             metadata['_video_abs'] = None
         # ------------------------------------------------------------------------------------------------
 
 
@@ -165,20 +164,17 @@ def av_to_hf_dataset_with_shards(recordings, dataset_path=None, prefix="ami", fi
         if 'lip_video' in metadata and metadata['lip_video'] and os.path.exists(metadata['lip_video']):
              try:
                 lip_video_file = os.path.basename(metadata['lip_video'])
-                destination_path_abs = os.path.join(shard_dir_abs, lip_video_file)
-                if not os.path.exists(destination_path_abs):
-                    shutil.copy2(metadata['lip_video'], destination_path_abs)
+                destination_path = os.path.join(shard_dir_abs, lip_video_file)
+                if not os.path.exists(destination_path):
+                    shutil.copy2(metadata['lip_video'], destination_path)
                     files_copied_count += 1
                     current_record_media_count += 1
-                metadata['_lip_video_abs'] = destination_path_abs # Store absolute path for reference
-                metadata['lip_video'] = f"data/{shard_name}/{lip_video_file}" # Store relative path for HF_DATASET
+                metadata['lip_video'] = destination_path #metadata['lip_video'] = dataset_path/data/shard_0000/lip_video_file.mp4
              except Exception as e:
                  print(f"\nWarning: Failed to copy lip_video {metadata['lip_video']} for record {idx}: {e}")
                  metadata['lip_video'] = None
-                 metadata['_lip_video_abs'] = None
         elif 'lip_video' in metadata:
              metadata['lip_video'] = None
-             metadata['_lip_video_abs'] = None
         # ------------------------------------------------------------------------------------------------
 
         media_files_in_shards[shard_idx] += current_record_media_count
@@ -194,19 +190,26 @@ def av_to_hf_dataset_with_shards(recordings, dataset_path=None, prefix="ami", fi
 
     # --- Create HuggingFace Dataset --- 
     df = pd.DataFrame(processed_records)
-    csv_path = os.path.join(dataset_path_abs, f'{prefix}-segments-info.csv')
-    try:
-        print(f"Saving informational CSV to: {csv_path}")
-        df.to_csv(csv_path, index=False)
-    except Exception as e:
-        print(f"Warning: Could not save informational CSV: {e}")
+
+    # Save the metadata to a jsonl file ----------------------------------------------------------
+    metadata_path = os.path.join(dataset_path_abs, f'metadata.jsonl')
+    print(f"Saving metadata to jsonl file: {metadata_path}")
+    with open(metadata_path, 'w') as f:
+        for record in processed_records:
+            f.write(json.dumps(record) + '\n')
+    #--------------------------------------------------------------------------------------------
+
+    # Save the dataframe to a csv file ----------------------------------------------------------------
+    csv_path = os.path.join(dataset_path_abs, f'{prefix}-segmented-info.csv')
+    print(f"Saving dataframe to csv file: {csv_path}")
+    df.to_csv(csv_path, index=False)
+    #--------------------------------------------------------------------------------------------
+
     
     # ---------------------------------------- USING STANDARD HF DATASET API ---------------------------
     print("Creating HuggingFace Dataset (with relative paths)...")
     try:
-        # ONLY USE COLUMNS WITH RELATIVE PATHS
-        columns_to_use = [col for col in df.columns if not col.startswith('_')]
-        dataset = Dataset.from_pandas(df[columns_to_use])
+        dataset = Dataset.from_pandas(df)
         
         # Cast features AFTER the dataset has relative paths already
         print("Casting features...")

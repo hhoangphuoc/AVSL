@@ -1,10 +1,11 @@
 .venv
 .DS_Store
+.cursorignore
+.cursor
 #ignore pycache files
 **/*.pyc 
 
 # Ignore all files in the data folder
 data/*
-
-runnable/push_to_ds.sh
+output/*
 
