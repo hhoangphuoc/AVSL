@@ -17,10 +17,18 @@ echo "Total size: $(du -sh /deepstore/datasets/hmi/speechlaugh-corpus/ami/audio_
 
 # Checking size of video segments directory
 # OUTPUT:
-# Files count: 78,089
+
+# Original video segments
+# Files count: 78,685
 # Total size: 5.6G
-echo "Files count: $(find /deepstore/datasets/hmi/speechlaugh-corpus/ami/video_segments -type f | wc -l)"; 
-echo "Total size: $(du -sh /deepstore/datasets/hmi/speechlaugh-corpus/ami/video_segments | cut -f1)"
+echo "Files count: $(find /deepstore/datasets/hmi/speechlaugh-corpus/ami/video_segments/original_videos -type f | wc -l)"; 
+echo "Total size: $(du -sh /deepstore/datasets/hmi/speechlaugh-corpus/ami/video_segments/original_videos | cut -f1)"
+
+# Lip video segments
+# Files count: 67,438
+# Total size: 1.9G
+echo "Files count: $(find /deepstore/datasets/hmi/speechlaugh-corpus/ami/video_segments/lips -type f | wc -l)"; 
+echo "Total size: $(du -sh /deepstore/datasets/hmi/speechlaugh-corpus/ami/video_segments/lips | cut -f1)"
 
 # ================================================================================================================  
 
@@ -43,27 +51,27 @@ wc -l
 
 # Checking size of disfluency/laughter audio segments directory
 # OUTPUT:
-# Files count: 47,556
-# Total size: 816M
-echo "Files count: $(find /deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl_laugh/audio_segments -type f | wc -l)"; 
-echo "Total size: $(du -sh /deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl_laugh/audio_segments | cut -f1)"
+# Files count: 52,991
+# Total size: 895M
+echo "Files count: $(find /deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl/audio_segments -type f | wc -l)"; 
+echo "Total size: $(du -sh /deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl/audio_segments | cut -f1)"
 
 # ------------------------------------------------------------------------------------------------
 
 # Checking size of disfluency/laughter video segments directory
 # OUTPUT:
-# Files count: 47,114
-# Total size: 646M
-echo "Files count: $(find /deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl_laugh/video_segments/dsfl_original -type f | wc -l)"; 
-echo "Total size: $(du -sh /deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl_laugh/video_segments/dsfl_original | cut -f1)"
+# Files count: 52,542
+# Total size: 701M
+echo "Files count: $(find /deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl/video_segments/dsfl_original -type f | wc -l)"; 
+echo "Total size: $(du -sh /deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl/video_segments/dsfl_original | cut -f1)"
 
 # ------------------------------------------------------------------------------------------------
 
 # Checking size of disfluency/laughter lip video segments directory
 # OUTPUT:
-# Files count: 12,668
-# Total size: 60M
-echo "Files count: $(find /deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl_laugh/video_segments/dsfl_lip -type f | wc -l)"; 
-echo "Total size: $(du -sh /deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl_laugh/video_segments/dsfl_lip | cut -f1)"
+# Files count: 28,263
+# Total size: 104M
+echo "Files count: $(find /deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl/video_segments/dsfl_lips -type f | wc -l)"; 
+echo "Total size: $(du -sh /deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl/video_segments/dsfl_lips | cut -f1)"
 
 

@@ -1,4 +1,3 @@
-
 # THIS SOURCE CODE IS BASED FROM AV-HuBERT implementation at:
 # https://github.com/facebookresearch/av_hubert/blob/main/avhubert/preparation/align_mouth.py
 # and 
@@ -166,6 +165,7 @@ def cut_patch(img, landmarks, height, width, threshold=5):
 def create_dlib_detectors(face_predictor_path, cnn_detector_path):
     """
     Create dlib face detector and predictor objects.
+    If CUDA is available, the CNN detector will use GPU acceleration.
     
     Args:
         face_predictor_path: Path to the face predictor model file
@@ -174,7 +174,31 @@ def create_dlib_detectors(face_predictor_path, cnn_detector_path):
     Returns:
         tuple: (detector, cnn_detector, predictor)
     """
+    # Check if CUDA is available for dlib
+    cuda_available = dlib.DLIB_USE_CUDA
+    print(f"DLIB CUDA available: {cuda_available}")
+    
+    # Standard HOG-based detector (CPU only)
     detector = dlib.get_frontal_face_detector()
+    
+    # CNN detector (can use GPU if available)
     cnn_detector = dlib.cnn_face_detection_model_v1(cnn_detector_path)
+    
+    # Set number of CUDA devices for CNN detector if available
+    if cuda_available:
+        try:
+            # Get number of CUDA devices
+            num_cuda_devices = dlib.cuda.get_num_devices()
+            print(f"Number of CUDA devices available for dlib: {num_cuda_devices}")
+            
+            if num_cuda_devices > 0:
+                # Set the device to use
+                dlib.cuda.set_device(0)
+                print("Enabled GPU acceleration for dlib CNN face detector")
+        except Exception as e:
+            print(f"Error setting up CUDA for dlib: {e}")
+    
+    # Landmark predictor (CPU only)
     predictor = dlib.shape_predictor(face_predictor_path)
+    
     return detector, cnn_detector, predictor

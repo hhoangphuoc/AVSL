@@ -1,6 +1,14 @@
 # Preprocessing 
 
-This preprocess details corresponding to the files used in `AVSL/preprocess/` folder, including
+This preprocess details corresponding to the files used in `AVSL/preprocess/` folder, including:
+- [`transcript_process.py`](#process-transcript): Using to convert the original `XML`format of AMI into segmented text transcriptions, seperated by meeting_id and speaker_id.
+
+- [`disfluency_laughter_process.py`](#process-disfluency--laughter): The process utilise the `disfluency` annotation of AMI along words segments in transcripts, creating a file that only contain metadata corresponding to disfluency and laughter events.
+
+- [`audio_process.py` & `video_process.py`](#segmenting-audio-and-video-sources-ami): These files contains functions that segmenting audio and videos into smaller sentence-level segments - based on segmented transcripts.
+
+
+- [`process_in_chunks.py`](#segmenting-audio-and-video-sources-ami)
 
 ## Processing Transcript
 ### Transcript Description
@@ -59,7 +67,7 @@ Using the following command to discover overall statistic
 ```bash
 echo "Total entries:" &&  wc -l dsfl_laugh/disfluency_laughter_markers.csv &&  echo "Laugh entries:" &&  grep -c ,,1 dsfl_laugh/disfluency_laughter_markers.csv &&  echo "Disfluency entries:" &&  grep -v ,,1 dsfl_laugh/disfluency_laughter_markers.csv |  grep -v disfluency_type |  wc -l
 ```
-Given the following result:
+It gives the following result:
 ```bash
 Total entries:
     60479 
@@ -71,7 +79,7 @@ Disfluency entries:
 ```
 
 ---
-### Segmenting Audio and Video Sources (AMI)
+## Segmenting Audio and Video Sources (AMI)
 
 Based on the `data/transcript_segments`, which contains the transcript for each `[meeting_id]-[speaker_id].txt` sentence-level transcript, We use the marked timestamp to segment the original audio and video sources into multiple sources.
 - **Audio:** Located in `data/amicorpus/[meeting_id]/audio`, where `speaker_id` annotated as: Headset-[0-4] corresponding to speaker A-E
@@ -81,12 +89,18 @@ therefore, we mapping the audio-video naming with corresponding `speaker_id`, be
 ```bash
 [meeting_id]-[speaker_id]-[starttime]-[endtime]-[src_type].[src_format]
 ```
-in which: `src_type` and `src_format` corresponding to audio(.wav) and video(.mp4) respectively
+in which: `src_type` and `src_format` corresponding to audio(.wav) and video(.mp4) respectivel.
 
-### HuggingFace Dataset
-The segmented audio and video are store in a single `HuggingFace Dataset`, in which the audio and video are wrapped in `Audio()` and `Video()` objects.
+---
+The entire process is runnable via single command, using file: [`runnable/preprocess.sh`](../runnable/preprocess.sh), which a set of parameters that using to specified directories, modes and particular features to be processed. The details process for each are described in the following sections.
 
-The dataset features are formatted:
-```python
+### Processing Audio
 
-```
+
+### Processing Video
+
+
+### Processing Lip Extraction
+
+---
+

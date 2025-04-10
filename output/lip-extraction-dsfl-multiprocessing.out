@@ -1,0 +1,39 @@
+Starting lip video extraction with GPU acceleration
+Job ID: 352976
+Node: ctit086
+CPU cores: 16
+GPU: 2
+Starting processing with configuration:
+Mode: Multiprocessing with 8 workers
+Tasks per worker: 5
+Chunk size: 1000
+Batch size: 16
+Adaptive memory: Enabled
+Executing: 
+python process_in_chunks.py   
+    --csv_path "../data/dsfl/dsfl-segments-info.csv"   
+    --output_dir "../data/dsfl/lip_processing"   
+    --lip_video_dir "/deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl/video_segments/dsfl_lips"   
+    --chunk_size 1000   
+    --batch_size 16   
+    --filter_processed   
+    --to_grayscale 
+    --num_workers 8 
+    --max_tasks_per_child 5
+
+=============================================================================================
+Loaded 35731 records from ../data/dsfl/dsfl-segments-info.csv
+Found 35536 records with videos
+Found 35536 unprocessed videos
+Dividing 35536 videos into 36 chunks of ~1000 videos each
+Using multiprocessing
+OpenCV CUDA available: False
+
+=============================================================================================
+===== All chunks processed =====
+Total videos: 35536
+Successfully processed: 28263
+Success rate: 79.5%
+Total time: 348.36 minutes
+Processing completed with exit status: 0
+Job completed successfully!

@@ -62,8 +62,13 @@ contains various folders corresponding to various meetings (`meeting_id`), each 
 ---
 <br>
 
-# [Preprocessing](docs/Preprocess.md)
-The preprocessing part described the details process in converting the original AMI Meeting Corpus into segmented audio-video with the corresponding transcripts, specified to every `[meeting_id]-[speaker_id]`.
+# Data Processing
+## [Preprocessing](docs/Preprocess.md)
+The preprocessing part described the details process in converting the original AMI Meeting Corpus into segmented audio-video with the corresponding transcripts, specified to every `[meeting_id]-[speaker_id]`.This process handling the processing for two modalities: audio and video, separately. 
 
-The preprocessed data also stored in `HuggingFace Dataset`, where the audio and video have their own feature decoded. 
+Additionally, `disfluency` and `laughter` events with specific timestamps and audio/video segments extracted from original AMI has also been processed separately. This is designed for whom interesting in detecting paralinguistic events in AMI Meeting Corpus.
 
+
+
+## [HuggingFace Dataset](docs/DatasetProcess.md)
+The preprocessed data also stored in `HuggingFace Dataset`, where the audio and video have been additionally reformatted and structurized. See the documentation for details approach.
