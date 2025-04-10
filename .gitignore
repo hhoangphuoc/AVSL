@@ -6,3 +6,12 @@
 # Ignore all files in the data folder
 data/*
 
+# Ignore all files in the output folder
+output/*
+
+# Ignore cursor rules
+.cursorignore
+.cursor/rules/*
+
+
+
