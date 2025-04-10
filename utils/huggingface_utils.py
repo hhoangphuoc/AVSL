@@ -75,7 +75,7 @@ def av_to_hf_dataset(recordings, dataset_path=None, prefix="ami"):
 
 #====================================================================================================
 
-def av_to_hf_dataset_with_shards(recordings, dataset_path=None, prefix="ami", files_per_shard=5000):
+def av_to_hf_dataset_with_shards(recordings, dataset_path=None, prefix="ami", files_per_shard=2000):
     """
     Create a HuggingFace dataset from processed segments (audio, video, lip videos)
     Stores metadata in Arrow/Parquet format and media files in multiple shards of 'data/' directories.
@@ -407,7 +407,7 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser(description='Push the dataset to the HuggingFace Hub')
     parser.add_argument('--dataset_path', type=str, default='/deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl/dataset', help='Path to the HuggingFace dataset')
-    parser.add_argument('--repo_name', type=str, default='ami-disfluency', help='Name of the repository to push the dataset')
+    parser.add_argument('--repo_name', type=str, default='ami-audio-visual', help='Name of the repository to push the dataset')
     parser.add_argument('--token', type=str, default=None, help='HuggingFace API token')
     parser.add_argument('--private', default=False, help='Whether to create a private repository')
     args = parser.parse_args()

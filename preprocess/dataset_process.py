@@ -738,7 +738,7 @@ def ami_dataset_from_existing_segments(source_dir=DATA_PATH,
                 dataset_records, 
                 dataset_path=dataset_path, 
                 prefix="ami",
-                files_per_shard=10000
+                files_per_shard=2000 #FIXME: Reduce to 2000 for limit LFS size
             )
             print(f"Dataset successfully saved to {dataset_path}")
         except Exception as e:
