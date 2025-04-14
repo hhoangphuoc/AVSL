@@ -1,6 +1,9 @@
-# This file contains the ResNet model implementation for the AV-HuBERT model.
-# This is taken from original AV-HuBERT implementation.
-# https://github.com/facebookresearch/av_hubert/blob/main/avhubert/resnet.py
+# Copyright (c) Facebook, Inc. and its affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+# ORIGINAL SOURCE CODE: https://github.com/facebookresearch/av_hubert/blob/main/avhubert/resnet.py
 
 import torch
 import logging
