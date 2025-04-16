@@ -53,7 +53,7 @@ class AVWav2Vec2PositionalConvEmbedding(Wav2Vec2PositionalConvEmbedding):
 #==============================================================================
 #                           AVHubertEncoderLayer
 # ================================================================================
-class AVHubertEncoderLayer(Wav2Vec2EncoderLayer):
+class AVHubertBaseEncoderLayer(Wav2Vec2EncoderLayer):
     """
     Custom encoder layer for AV-HuBERT, extends Wav2Vec2EncoderLayer
     """
@@ -123,7 +123,7 @@ class AVHubertBaseEncoder(Wav2Vec2Encoder):
     """
     def __init__(self, config):
         super().__init__(config)
-        self.layers = nn.ModuleList([AVHubertEncoderLayer(config) for _ in range(config.num_hidden_layers)])
+        self.layers = nn.ModuleList([AVHubertBaseEncoderLayer(config) for _ in range(config.num_hidden_layers)])
         self.pos_conv_embed = AVWav2Vec2PositionalConvEmbedding(config)
         self.layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         
