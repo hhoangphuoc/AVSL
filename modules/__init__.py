@@ -1,10 +1,15 @@
 from .av_hubert_encoders import (
     AVHuBERTEncoderWrapper, 
     AVHuBERTVisualEncoder, 
-    AVHuBERTAudioEncoder
+    AVHuBERTAudioEncoder,
+    GradMultiply,
+    compute_mask_indices
 )
 from .av_hubert_decoder import (
     AVHuBERTDecoder,
+    AVHuBERTAttention,
+    AVHuBERTDecoderLayer,
+    AVHuBERTForS2S
 )
 
 from .whisper_encoder import WhisperEncoder
@@ -15,26 +20,39 @@ from .whisper_decoder import (
 
 from .resnet import ResNetEncoderLayer
 
-from .av_hubert_layers import (
-    ConvFeatureExtractionModel,
-    TransformerEncoderLayer,
+from .layers import (
+    LayerNorm,
+    GradMultiply,
+    TransformerEncoderLayer
 )
+
 __all__ = [
-    #AV-HuBERT
+    # AV-HuBERT Models
+    "AVHuBERTModel",
+    "AVHuBERTForCTC",
+    "AVHuBERTForS2S",
+    
+    # AV-HuBERT Components
     "AVHuBERTEncoderWrapper",
     "AVHuBERTVisualEncoder",
     "AVHuBERTAudioEncoder",
     "AVHuBERTDecoder",
+    "AVHuBERTAttention",
+    "AVHuBERTDecoderLayer",
+    
+    # Utility functions
+    "GradMultiply",
+    "compute_mask_indices",
 
-    #Whisper
+    # Whisper
     "AudioVisualWhisperDecoder",
     "WhisperEncoder",
     "GatedCrossAttentionLayer",
 
-    #Layers
+    # Layers
     "LayerNorm",
     "ConvFeatureExtractionModel",
     "TransformerEncoderLayer",
     "ResNetEncoderLayer",
-    ]
+]
 
