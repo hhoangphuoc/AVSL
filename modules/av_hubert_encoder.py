@@ -32,6 +32,7 @@ class AVHuBERTEncoderWrapper(PreTrainedModel):
     
     def __init__(
         self,
+        # General configs --------------------------------------------------
         config: Optional[Wav2Vec2Config] = None,
         use_audio: bool = True,
         use_visual: bool = True,
@@ -40,18 +41,21 @@ class AVHuBERTEncoderWrapper(PreTrainedModel):
         fusion_type: str = "concat",  # "concat", "add", "weighted_sum", etc.
         projection_dim: Optional[int] = None, 
         output_dim: Optional[int] = None,
-        # Masking parameters
-        mask_prob_audio: float = 0.0,
-        mask_prob_image: float = 0.0,
+        #-------------------------------------------------------------------
+        # Masking parameters--------------------------------------------------
+        mask_prob_audio: float = 0.8, #Set default values based on original AV-HuBERT implementation
+        mask_prob_image: float = 0.3,
         mask_length_audio: int = 10,
-        mask_length_image: int = 10,
+        mask_length_image: int = 5,
         mask_selection: str = "static",
         mask_other: float = 0.0,
         no_mask_overlap: bool = False,
         mask_min_space: int = 1,
         # Feature extraction parameters
         feature_grad_mult: float = 1.0,
-        # Visual encoder specific parameters
+        #-------------------------------------------------------------------
+
+        # Visual encoder specific parameters--------------------------------
         visual_hidden_size: int = 768,
         visual_num_layers: int = 12,
         visual_num_heads: int = 12,
@@ -60,7 +64,9 @@ class AVHuBERTEncoderWrapper(PreTrainedModel):
         visual_backbone_channels: int = 512,
         use_pretrained_visual_frontend: bool = False,
         visual_frontend_weights_path: Optional[str] = None,
-        # Audio encoder specific parameters  
+        #-------------------------------------------------------------------
+
+        # Audio encoder specific parameters--------------------------------
         audio_hidden_size: int = 768,
         audio_num_layers: int = 12,
         audio_num_heads: int = 12,
@@ -68,6 +74,7 @@ class AVHuBERTEncoderWrapper(PreTrainedModel):
         audio_conv_dim: List[int] = [512, 512, 512, 512, 512, 512, 512],
         audio_conv_kernel: List[int] = [10, 3, 3, 3, 3, 2, 2],
         audio_conv_stride: List[int] = [5, 2, 2, 2, 2, 2, 2],
+        #-------------------------------------------------------------------
     ):
         super().__init__(config) if config is not None else super().__init__(Wav2Vec2Config())
         

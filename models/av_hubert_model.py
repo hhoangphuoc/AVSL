@@ -63,6 +63,7 @@ class AVHuBERTModel(PreTrainedModel):
             How to fuse audio and visual features ("concat", "sum", "film", etc.). Passed to `AVHuBERTEncoderWrapper`.
         encoder_projection_dim (`int`, *optional*):
             Dimension to project fused features to before the main transformer encoder. Passed to `AVHuBERTEncoderWrapper`.
+
         visual_hidden_size (`int`, *optional*, defaults to 768):
              Dimensionality of the visual encoder layers and the pooler layer. Passed to `AVHuBERTEncoderWrapper`.
         visual_num_layers (`int`, *optional*, defaults to 12):
@@ -79,6 +80,7 @@ class AVHuBERTModel(PreTrainedModel):
              Whether to load pretrained weights for the visual frontend ResNet. Passed to `AVHuBERTEncoderWrapper`.
         visual_frontend_weights_path (`str`, *optional*):
              Path to pretrained visual frontend weights if `use_pretrained_visual_frontend` is `True`. Passed to `AVHuBERTEncoderWrapper`.
+
         mask_time_prob (`float`, *optional*, defaults to 0.065):
             Probability of masking tokens along the time dimension.
         mask_time_length (`int`, *optional*, defaults to 10):
@@ -87,14 +89,22 @@ class AVHuBERTModel(PreTrainedModel):
             Probability of masking tokens along the feature dimension.
         mask_feature_length (`int`, *optional*, defaults to 10):
             Length of consecutive features to mask.
+
+        mask_prob_audio (`float`, *optional*, defaults to 0.8):
+            Probability of masking tokens along the audio dimension.
+        mask_length_audio (`int`, *optional*, defaults to 10):
+            Length of consecutive audio steps to mask.
+        mask_prob_image (`float`, *optional*, defaults to 0.3):
+            Probability of masking tokens along the image dimension.
+        mask_length_image (`int`, *optional*, defaults to 5):
+            Length of consecutive image steps to mask.
+
         apply_spec_augment (`bool`, *optional*, defaults to `False`):
             Whether to apply SpecAugment time and feature masking during inference (typically False).
         mask_time_min_masks (`int`, *optional*, defaults to 2):
              Minimum number of time masks applied.
         mask_feature_min_masks (`int`, *optional*, defaults to 0):
              Minimum number of feature masks applied.
-        # Removed decoder parameters
-        # Removed num_labels (classification head handled by specific `For` models)
     """
     config_class = Wav2Vec2Config
     base_model_prefix = "avhubert"
@@ -119,11 +129,18 @@ class AVHuBERTModel(PreTrainedModel):
         use_pretrained_visual_frontend: bool = False,
         visual_frontend_weights_path: Optional[str] = None,
         # --------------------------------------------------------------------------
-        # Masking parameters
+        # Masking parameters - for fine-tuning
         mask_time_prob: float = 0.065,
         mask_time_length: int = 10,
         mask_feature_prob: float = 0.0,
         mask_feature_length: int = 10,
+        
+        # Masking parameters - for pre-training
+        mask_prob_audio: float = 0.8,
+        mask_length_audio: int = 10,
+        mask_prob_image: float = 0.3,
+        mask_length_image: int = 5,
+
         # --------------------------------------------------------------------------
         # SpecAugment parameters for data augmentation
         apply_spec_augment: bool = False,
@@ -136,7 +153,8 @@ class AVHuBERTModel(PreTrainedModel):
         # INITIALIZE CONFIG
         if config is None:
             config = Wav2Vec2Config()
-            
+        
+        # Masking parameters - for fine-tuning
         config.mask_time_prob = getattr(config, "mask_time_prob", mask_time_prob)
         config.mask_time_length = getattr(config, "mask_time_length", mask_time_length)
         config.mask_feature_prob = getattr(config, "mask_feature_prob", mask_feature_prob)
@@ -144,6 +162,12 @@ class AVHuBERTModel(PreTrainedModel):
         config.mask_time_min_masks = getattr(config, "mask_time_min_masks", mask_time_min_masks)
         config.mask_feature_min_masks = getattr(config, "mask_feature_min_masks", mask_feature_min_masks)
         config.apply_spec_augment = getattr(config, "apply_spec_augment", apply_spec_augment)
+
+        # Masking parameters - for pre-training
+        config.mask_prob_audio = getattr(config, "mask_prob_audio", mask_prob_audio)
+        config.mask_length_audio = getattr(config, "mask_length_audio", mask_length_audio)
+        config.mask_prob_image = getattr(config, "mask_prob_image", mask_prob_image)
+        config.mask_length_image = getattr(config, "mask_length_image", mask_length_image)
 
         # Store encoder-specific parameters directly in config if not already present
         # This ensures they are saved and loaded correctly.
@@ -183,6 +207,12 @@ class AVHuBERTModel(PreTrainedModel):
             visual_backbone_channels=config.visual_backbone_channels,
             use_pretrained_visual_frontend=config.use_pretrained_visual_frontend,
             visual_frontend_weights_path=config.visual_frontend_weights_path,
+
+            # Masking parameters
+            mask_prob_audio=config.mask_prob_audio,
+            mask_length_audio=config.mask_length_audio,
+            mask_prob_image=config.mask_prob_image,
+            mask_length_image=config.mask_length_image,
         )
 
         # Store encoder output dimension for potential use in heads
