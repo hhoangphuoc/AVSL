@@ -9,8 +9,8 @@
 data/*
 output/*
 
-# Ignore all files in the output folder
-output/*
+# Ignore all files in the refs folder
+refs/*
 
 # Ignore cursor rules
 .cursorignore

@@ -1,26 +1,28 @@
+import logging
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn import CrossEntropyLoss
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Union, Any, Callable
+from typing import Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass
 
-from transformers import PreTrainedModel, Wav2Vec2Config
+from transformers import (
+    PreTrainedModel, 
+    Wav2Vec2Config,
+)
 from transformers.modeling_outputs import (
-    BaseModelOutput,
-    # CausalLMOutput, # Use Seq2SeqLMOutput for S2S models
-    Seq2SeqLMOutput,
     ModelOutput,
 )
 from modules.av_hubert_encoder import AVHuBERTEncoderWrapper # THE ENCODER WRAPPER (Wrapping both audio and visual encoders layers)
 from modules.av_hubert_decoder import AVHuBERTDecoder # The refactored decoder
 
+from config.av_hubert_config import AVHuBERTConfig
 
-# Remove old layer imports if no longer needed
-# from modules.av_hubert_layers import LayerNorm, TransformerEncoderLayer # Decoder Layers
+logger = logging.getLogger(__name__)
 
-
+#--------------------------------------------------------------------------------------------------
+#                           AVHuBERTOutput
+#--------------------------------------------------------------------------------------------------
 @dataclass
 class AVHuBERTOutput(ModelOutput):
     """
@@ -42,8 +44,7 @@ class AVHuBERTOutput(ModelOutput):
     last_hidden_state: torch.FloatTensor = None
     hidden_states: Optional[Tuple[torch.FloatTensor]] = None
     attentions: Optional[Tuple[torch.FloatTensor]] = None
-
-
+#--------------------------------------------------------------------------------------------------
 class AVHuBERTModel(PreTrainedModel):
     """
     The bare AV-HuBERT Model transformer outputting raw hidden-states without any specific head on top.
@@ -97,7 +98,7 @@ class AVHuBERTModel(PreTrainedModel):
     """
     config_class = Wav2Vec2Config
     base_model_prefix = "avhubert"
-    main_input_name = "audio_input" # Or define based on common use case
+    main_input_name = "input_values" # Input name: `input_values` cause it inherits from Wav2Vec2Config
 
     def __init__(
         self,
@@ -796,10 +797,14 @@ class AVHuBERTModel(PreTrainedModel):
 
         return masked_hidden_states, mask_dict
 
+#==========================================================================================================================================
+#     AVHuBERT Manual Implementation. 
+#     Using `PreTrainedModel` and `ModelOutput` classes
+#==========================================================================================================================================
 
-#==============================================================================================
+#--------------------------------------------------------------------------------------------------
 #                           AVHuBERTForCTC
-#==============================================================================================
+#--------------------------------------------------------------------------------------------------
 @dataclass
 class AVHuBERTForCTCOutput(ModelOutput):
     """
@@ -828,7 +833,6 @@ class AVHuBERTForCTCOutput(ModelOutput):
     hidden_states: Optional[Tuple[torch.FloatTensor, ...]] = None
     attentions: Optional[Tuple[torch.FloatTensor, ...]] = None
 
-
 class AVHuBERTForCTC(PreTrainedModel):
     """
     AVHuBERT model with a Connectionist Temporal Classification (CTC) head on top.
@@ -842,7 +846,7 @@ class AVHuBERTForCTC(PreTrainedModel):
 
         # Initialize base AVHuBERT model (encoder)
         # Pass kwargs which might contain encoder specific params like use_audio etc.
-        self.avhubert = AVHuBERTModel(config, **kwargs)
+        self.avhubert_encoder = AVHuBERTModel(config, **kwargs)
 
         # CTC head - Ensure vocab_size is present in the config
         if not hasattr(config, "vocab_size"):
@@ -872,9 +876,9 @@ class AVHuBERTForCTC(PreTrainedModel):
         not be updated during training.
         """
         # Feature extraction is inside the AVHuBERTEncoderWrapper -> AudioEncoderLayer/VisualEncoderLayer
-        # Need to access it through self.avhubert.encoder
-        if hasattr(self.avhubert.encoder, 'freeze_feature_extractor'):
-             self.avhubert.encoder.freeze_feature_extractor()
+        # Need to access it through self.avhubert_encoder.encoder
+        if hasattr(self.avhubert_encoder.encoder, 'freeze_feature_extractor'):
+             self.avhubert_encoder.encoder.freeze_feature_extractor()
         else:
              print("Warning: Encoder wrapper does not have 'freeze_feature_extractor' method.")
 
@@ -918,7 +922,7 @@ class AVHuBERTForCTC(PreTrainedModel):
 
         # Pass inputs to the base AVHuBERT model (encoder)
         # Ensure masking is OFF for CTC inference/fine-tuning
-        outputs = self.avhubert(
+        outputs = self.avhubert_encoder(
             audio_input=audio_input,
             audio_attention_mask=audio_attention_mask,
             visual_input=visual_input,
@@ -944,7 +948,7 @@ class AVHuBERTForCTC(PreTrainedModel):
             # Replace padding values if necessary, assuming pad_token_id is used for padding
             # CTC loss expects specific padding (-100) if reduction != 'none'
             # For 'mean' or 'sum' reduction, the loss function handles ignore_index internally.
-            # Let's assume labels are already prepared with ignore_index = -100 for padding.
+            # NOTE: Assume labels are already prepared with ignore_index = -100 for padding.
 
             # CTC loss calculation
             # Input: log_probs (T, B, C), targets (B, S), input_lengths (B,), target_lengths (B,)
@@ -954,7 +958,7 @@ class AVHuBERTForCTC(PreTrainedModel):
             # Need the attention mask corresponding to the logits sequence length
             # Recompute or retrieve the effective_attention_mask from the encoder forward pass
             if audio_input is not None and audio_attention_mask is not None:
-                effective_attention_mask = self.avhubert._get_feature_vector_attention_mask(
+                effective_attention_mask = self.avhubert_encoder._get_feature_vector_attention_mask(
                     logits.shape[1], audio_attention_mask
                 )
             elif visual_input is not None and visual_attention_mask is not None:
@@ -963,7 +967,7 @@ class AVHuBERTForCTC(PreTrainedModel):
                     effective_attention_mask = visual_attention_mask
                 else:
                     # Recalculate (this needs careful handling of visual frontend details)
-                    effective_attention_mask = self.avhubert._get_feature_vector_attention_mask(
+                    effective_attention_mask = self.avhubert_encoder._get_feature_vector_attention_mask(
                        logits.shape[1], visual_attention_mask # Needs original visual time length mask
                     )
             else:
@@ -982,28 +986,28 @@ class AVHuBERTForCTC(PreTrainedModel):
             # Note: The built-in CTC loss handles ignore_index, so flattening might not be needed
             # if labels shape is (B, S) and target_lengths is (B,)
 
-            # Set blank token ID - should be defined in config
+            # Set blank token ID]
             blank_id = getattr(self.config, "pad_token_id", 0) # Often PAD token is used as blank
 
             # Ensure input_lengths and target_lengths are > 0 to avoid CUDA errors
             valid_indices = (input_lengths > 0) & (target_lengths > 0)
             if not valid_indices.all():
-                 # Handle cases with zero-length inputs/targets if necessary
-                 # Option 1: Skip loss calculation for these samples (might bias results)
-                 # Option 2: Return 0 loss for these samples (safer default)
-                 # logging.warning("Found samples with zero length input or target for CTC loss.")
-                 if valid_indices.any(): # Only compute loss for valid samples
-                      loss = F.ctc_loss(
-                          log_probs=log_probs[:, valid_indices, :],
-                          targets=labels[valid_indices, :],
-                          input_lengths=input_lengths[valid_indices],
-                          target_lengths=target_lengths[valid_indices],
-                          blank=blank_id,
-                          reduction="mean", # 'mean' averages over batch and frames
-                          zero_infinity=True,
-                      )
-                 else: # No valid samples
-                     loss = torch.tensor(0.0, device=logits.device, requires_grad=True)
+                # Handle cases with zero-length inputs/targets if necessary
+                logger.warning("Found samples with zero length input or target for CTC loss.")
+                # Option 1: Skip loss calculation for these samples (might bias results)
+                if valid_indices.any(): # Only compute loss for valid samples
+                    loss = F.ctc_loss(
+                        log_probs=log_probs[:, valid_indices, :],
+                        targets=labels[valid_indices, :],
+                        input_lengths=input_lengths[valid_indices],
+                        target_lengths=target_lengths[valid_indices],
+                        blank=blank_id,
+                        reduction="mean", # 'mean' averages over batch and frames
+                        zero_infinity=True,
+                    )
+                else: # No valid samples
+                    # Option 2: Return 0 loss for these samples (safer default)
+                    loss = torch.tensor(0.0, device=logits.device, requires_grad=True)
 
             else: # All samples are valid
                  loss = F.ctc_loss(
@@ -1030,397 +1034,3 @@ class AVHuBERTForCTC(PreTrainedModel):
             hidden_states=outputs.hidden_states, # From base model output
             attentions=outputs.attentions,       # From base model output
         )
-
-#============================================================================================
-
-
-
-#============================================================================================
-#                           AVHuBERTForS2S (Refactored)
-#============================================================================================
-class AVHuBERTForS2S(PreTrainedModel):
-    """
-    AVHuBERT model for sequence-to-sequence tasks (e.g., ASR, AST).
-    Combines the AVHuBERTModel (encoder) with an AVHuBERTDecoder.
-    
-    Based on the original AVHubertSeq2Seq implementation from the fairseq repository,
-    adapted to work with the Hugging Face Transformers API.
-    """
-    config_class = Wav2Vec2Config # Use base config, ensure it has decoder params
-    base_model_prefix = "avhubert_s2s" # Differentiate prefix
-    _tied_weights_keys = ["lm_head.weight", "decoder.embed_tokens.weight"] # Keys for weight tying
-
-    def __init__(self, config: Wav2Vec2Config, **kwargs):
-        super().__init__(config)
-
-        # ------------------ Encoder ------------------
-        # Instantiate the base AVHuBERTModel as the encoder
-        # Pass kwargs which might contain encoder specific params (use_audio etc.)
-        self.avhubert = AVHuBERTModel(config, **kwargs)
-        
-        # ------------------ Decoder ------------------
-        # Ensure necessary decoder parameters are in the config
-        required_decoder_params = {
-            "decoder_embed_dim": getattr(config, "decoder_embed_dim", config.hidden_size),
-            "decoder_ffn_embed_dim": getattr(config, "decoder_ffn_dim", 4 * config.hidden_size),
-            "decoder_layers": getattr(config, "decoder_layers", 6),
-            "decoder_attention_heads": getattr(config, "decoder_attention_heads", config.num_attention_heads),
-            "decoder_normalize_before": getattr(config, "decoder_normalize_before", False),
-            "decoder_learned_pos": getattr(config, "decoder_learned_pos", False),
-            "decoder_layerdrop": getattr(config, "decoder_layerdrop", 0.0),
-            "max_target_positions": getattr(config, "max_target_positions", 2048),
-            "no_scale_embedding": getattr(config, "no_scale_embedding", True),
-            "activation_fn": getattr(config, "activation_function", "gelu"),
-            "share_decoder_input_output_embed": getattr(config, "share_decoder_input_output_embed", False),
-        }
-        
-        # Update config with decoder parameters
-        for param_name, param_value in required_decoder_params.items():
-            setattr(config, param_name, param_value)
-            
-        # For compatibility with original, set these as class attributes too
-        for param_name, param_value in required_decoder_params.items():
-            setattr(self, param_name, param_value)
-        
-        # Make sure d_model is set for decoder
-        config.d_model = config.decoder_embed_dim
-        # Ensure encoder dim is set for cross-attention
-        config.encoder_hidden_size = config.hidden_size
-        
-        # Setup target dictionary and other parameters needed for decoder
-        if not hasattr(config, "vocab_size"):
-            raise ValueError("config must have a vocab_size attribute for AVHuBERTForS2S")
-        
-        # Build embeddings
-        self.embed_tokens = self.build_embedding(
-            config.vocab_size, config.decoder_embed_dim, config.pad_token_id
-        )
-            
-        # Initialize the decoder with updated config
-        decoder_config = config
-        self.decoder = AVHuBERTDecoder(decoder_config)
-        
-        # Set embed_tokens in decoder for proper sharing
-        self.decoder.embed_tokens = self.embed_tokens
-        
-        # ------------------ LM Head ------------------
-        self.lm_head = nn.Linear(config.decoder_embed_dim, config.vocab_size, bias=False)
-        
-        # Initialize weights and tie if needed
-        self.init_weights()
-        
-        # Tie embeddings
-        if config.share_decoder_input_output_embed:
-            self.tie_weights()
-    
-    def build_embedding(self, vocab_size, embedding_dim, padding_idx):
-        """
-        Build token embeddings similar to original implementation.
-        """
-        return nn.Embedding(vocab_size, embedding_dim, padding_idx=padding_idx)
-
-    def tie_weights(self):
-        """
-        Tie the weights between the input embeddings and the output embeddings.
-        """
-        if hasattr(self, "share_decoder_input_output_embed") and self.share_decoder_input_output_embed:
-            if getattr(self.config, "torchscript", False):
-                # For torchscript, we need to clone weights instead of tying
-                self.lm_head.weight = nn.Parameter(self.decoder.embed_tokens.weight.clone())
-            else:
-                # Standard weight tying
-                self.lm_head.weight = self.decoder.embed_tokens.weight
-        
-    # Accessor methods expected by generate() and other HF utilities
-    def get_encoder(self):
-        return self.avhubert
-
-    def get_decoder(self):
-        return self.decoder
-
-    def get_output_embeddings(self):
-        return self.lm_head
-
-    def set_output_embeddings(self, new_embeddings):
-        self.lm_head = new_embeddings
-
-    def get_input_embeddings(self):
-        # Decoder input embeddings
-        return self.decoder.embed_tokens
-
-    def set_input_embeddings(self, value):
-        self.decoder.embed_tokens = value
-
-    # Freeze methods (optional but good practice)
-    def freeze_encoder(self):
-        """Freezes the encoder weights."""
-        self.avhubert.eval()
-        for param in self.avhubert.parameters():
-            param.requires_grad = False
-
-    def freeze_decoder(self):
-        """Freezes the decoder weights."""
-        self.decoder.eval()
-        for param in self.decoder.parameters():
-            param.requires_grad = False
-
-    # Utility methods for feature extraction
-    def extract_features(
-        self,
-        audio_input=None,
-        audio_attention_mask=None,
-        visual_input=None,
-        visual_attention_mask=None,
-        decoder_input_ids=None,
-        decoder_attention_mask=None,
-        encoder_outputs=None,
-        past_key_values=None,
-        **kwargs
-    ):
-        """
-        Extract features for encoder-decoder setup.
-        Similar to forward but returns decoder outputs directly.
-        """
-        # Run encoder if encoder_outputs not provided
-        if encoder_outputs is None:
-            encoder_outputs = self.avhubert(
-                audio_input=audio_input,
-                audio_attention_mask=audio_attention_mask,
-                visual_input=visual_input,
-                visual_attention_mask=visual_attention_mask,
-                return_dict=True,
-                apply_masking=False,  # No masking for inference
-            )
-        
-        # Get encoder attention mask
-        encoder_hidden_states = encoder_outputs.last_hidden_state
-        encoder_attention_mask = self._prepare_encoder_attention_mask(
-            audio_attention_mask if audio_input is not None else visual_attention_mask, 
-            encoder_hidden_states
-        )
-        
-        # Run decoder
-        decoder_outputs = self.decoder(
-            input_ids=decoder_input_ids,
-            attention_mask=decoder_attention_mask,
-            encoder_hidden_states=encoder_hidden_states,
-            encoder_attention_mask=encoder_attention_mask,
-            past_key_values=past_key_values,
-            use_cache=kwargs.get("use_cache", True),
-            output_attentions=kwargs.get("output_attentions", False),
-            output_hidden_states=kwargs.get("output_hidden_states", False),
-            return_dict=True,
-        )
-        
-        return decoder_outputs
-    
-    def _prepare_encoder_attention_mask(self, input_attention_mask, encoder_hidden_states):
-        """
-        Prepare the encoder attention mask for use in cross-attention.
-        Handles conversion from input mask to encoder output mask.
-        """
-        if input_attention_mask is None:
-            # No mask provided, assume no padding
-            return torch.ones(
-                encoder_hidden_states.shape[:2], 
-                dtype=torch.long, 
-                device=encoder_hidden_states.device
-            )
-            
-        # If mask shape matches encoder output shape, use as is
-        if input_attention_mask.shape[1] == encoder_hidden_states.shape[1]:
-            return input_attention_mask
-            
-        # Otherwise, need to convert input mask to match encoder output length
-        # Use the helper method from AVHuBERTModel
-        if hasattr(self.avhubert, "_get_feature_vector_attention_mask"):
-            return self.avhubert._get_feature_vector_attention_mask(
-                encoder_hidden_states.shape[1], input_attention_mask
-            )
-        else:
-            # Fallback implementation
-            batch_size, seq_len = input_attention_mask.shape
-            feature_len = encoder_hidden_states.shape[1]
-            
-            # Simple ratio-based approach
-            ratio = feature_len / seq_len
-            if ratio.is_integer():
-                # Downsample the mask for integer ratio
-                factor = int(ratio)
-                new_mask = torch.zeros((batch_size, feature_len), device=input_attention_mask.device)
-                for i in range(feature_len):
-                    orig_idx = min(i // factor, seq_len - 1)
-                    new_mask[:, i] = input_attention_mask[:, orig_idx]
-                return new_mask
-            else:
-                # For non-integer ratio, do simple interpolation
-                # This is approximate and may not perfectly match the encoder's downsampling
-                orig_lengths = input_attention_mask.sum(-1).float()
-                new_lengths = torch.ceil(orig_lengths * ratio).long()
-                new_lengths = torch.clamp(new_lengths, max=feature_len)
-                
-                # Create mask based on calculated lengths
-                range_tensor = torch.arange(feature_len, device=input_attention_mask.device)
-                # (batch_size, 1) < (1, feature_len) -> (batch_size, feature_len)
-                return (range_tensor.unsqueeze(0) < new_lengths.unsqueeze(1)).long()
-
-    def forward(
-        self,
-        # Encoder inputs
-        audio_input: Optional[torch.Tensor] = None,
-        audio_attention_mask: Optional[torch.Tensor] = None,
-        visual_input: Optional[torch.Tensor] = None,
-        visual_attention_mask: Optional[torch.Tensor] = None,
-        # Decoder inputs
-        decoder_input_ids: Optional[torch.LongTensor] = None,
-        decoder_attention_mask: Optional[torch.BoolTensor] = None, 
-        # Optional pre-computed encoder outputs
-        encoder_outputs: Optional[Union[Tuple, AVHuBERTOutput]] = None,
-        # Optional decoder past states
-        past_key_values: Optional[Tuple[Tuple[torch.Tensor]]] = None,
-        decoder_inputs_embeds: Optional[torch.FloatTensor] = None,
-        # Labels for loss calculation
-        labels: Optional[torch.LongTensor] = None,
-        # Control flags
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-        modality_override: Optional[str] = None,
-    ) -> Union[Tuple, Seq2SeqLMOutput]:
-        """
-        Forward pass for the sequence-to-sequence model.
-        
-        Args:
-            audio_input: Audio waveform input
-            audio_attention_mask: Mask for audio input
-            visual_input: Video input frames
-            visual_attention_mask: Mask for visual input
-            decoder_input_ids: Input token IDs for the decoder
-            decoder_attention_mask: Attention mask for decoder inputs
-            encoder_outputs: Pre-computed encoder outputs
-            past_key_values: Past key values for faster decoding
-            decoder_inputs_embeds: Pre-computed decoder embeddings
-            labels: Target token IDs for computing loss
-            use_cache: Whether to use past key values
-            output_attentions: Whether to return attention weights
-            output_hidden_states: Whether to return hidden states
-            return_dict: Whether to return a dict or tuple.
-            modality_override: Force using a specific modality
-            
-        Returns:
-            Seq2SeqLMOutput or tuple
-        """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-        
-        # -------- Handle labels and decoder input IDs --------
-        if labels is not None and decoder_input_ids is None:
-            # Shift labels to create decoder input IDs
-            decoder_input_ids = self._shift_right(labels)
-        
-        # -------- ENCODER --------
-        # Run encoder if outputs not provided
-        if encoder_outputs is None:
-            encoder_outputs = self.avhubert(
-                audio_input=audio_input,
-                audio_attention_mask=audio_attention_mask,
-                visual_input=visual_input,
-                visual_attention_mask=visual_attention_mask,
-                output_attentions=output_attentions,
-                output_hidden_states=output_hidden_states,
-                return_dict=True,
-                modality_override=modality_override,
-                apply_masking=False,  # No masking for S2S
-            )
-
-        # -------- Prepare encoder outputs for decoder --------
-        encoder_hidden_states = encoder_outputs.last_hidden_state
-        
-        # Prepare encoder attention mask for cross-attention
-        encoder_attention_mask = self._prepare_encoder_attention_mask(
-            audio_attention_mask if audio_input is not None else visual_attention_mask, 
-            encoder_hidden_states
-        )
-            
-        # -------- DECODER --------
-        # Prepare decoder inputs
-        if decoder_inputs_embeds is None and decoder_input_ids is not None:
-            decoder_inputs_embeds = self.decoder.embed_tokens(decoder_input_ids)
-            
-        decoder_outputs = self.decoder(
-            input_ids=decoder_input_ids,
-            attention_mask=decoder_attention_mask,
-            encoder_hidden_states=encoder_hidden_states,
-            encoder_attention_mask=encoder_attention_mask,
-            past_key_values=past_key_values,
-            inputs_embeds=decoder_inputs_embeds,
-            use_cache=use_cache,
-            output_attentions=output_attentions,
-            output_hidden_states=output_hidden_states,
-            return_dict=True,
-        )
-
-        # -------- LM Head --------
-        decoder_last_hidden_state = decoder_outputs.last_hidden_state
-        logits = self.lm_head(decoder_last_hidden_state)
-
-        # -------- Loss Calculation --------
-        loss = None
-        if labels is not None:
-            loss_fct = CrossEntropyLoss()
-            # Move labels to correct device
-            labels = labels.to(logits.device)
-            loss = loss_fct(logits.view(-1, self.config.vocab_size), labels.view(-1))
-
-        # -------- Return --------
-        if not return_dict:
-            # Return tuple format compatible with Hugging Face
-            output = (logits,)
-            if use_cache:
-                output += (decoder_outputs.past_key_values,)
-            if output_hidden_states:
-                output += (
-                    decoder_outputs.hidden_states,
-                    encoder_outputs.hidden_states,
-                )
-            if output_attentions:
-                output += (
-                    decoder_outputs.attentions,
-                    decoder_outputs.cross_attentions,
-                    encoder_outputs.attentions,
-                )
-            output = (loss,) + output if loss is not None else output
-            return output
-
-        # Use standard Seq2SeqLMOutput
-        return Seq2SeqLMOutput(
-            loss=loss,
-            logits=logits,
-            past_key_values=decoder_outputs.past_key_values,
-            decoder_hidden_states=decoder_outputs.hidden_states,
-            decoder_attentions=decoder_outputs.attentions,
-            cross_attentions=decoder_outputs.cross_attentions,
-            encoder_last_hidden_state=encoder_outputs.last_hidden_state,
-            encoder_hidden_states=encoder_outputs.hidden_states,
-            encoder_attentions=encoder_outputs.attentions,
-        )
-    
-    def _shift_right(self, input_ids):
-        """
-        Shift input_ids to the right for decoder inputs.
-        Similar to original implementation in fairseq.
-        """
-        shifted_input_ids = input_ids.new_zeros(input_ids.shape)
-        pad_token_id = self.config.pad_token_id
-        
-        # Replace beginning of the sequence with decoder start token (usually BOS)
-        bos_token_id = getattr(self.config, "bos_token_id", pad_token_id)
-        shifted_input_ids[:, 0] = bos_token_id
-        
-        # Shift input one position to the right
-        shifted_input_ids[:, 1:] = input_ids[:, :-1].clone()
-        
-        # Where input_ids was PAD, make the decoder input PAD as well
-        shifted_input_ids = torch.where(input_ids == pad_token_id, pad_token_id, shifted_input_ids)
-        
-        return shifted_input_ids

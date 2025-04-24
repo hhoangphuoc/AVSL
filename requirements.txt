@@ -15,5 +15,10 @@ sentencepiece
 scikit-image
 dlib
 tqdm
+Cython
+packaging
+nemo_toolkit['asr']
+
+
 
 
