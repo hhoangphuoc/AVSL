@@ -160,9 +160,6 @@ class HubertFtTrainingArguments(TrainingArguments):
     gradient_accumulation_steps: int = field(
         default=2, metadata={"help": "Gradient accumulation steps"}
     )
-    evaluation_strategy: str = field(
-        default="steps", metadata={"help": "Evaluation strategy"}
-    )
     num_train_epochs: int = field(
         default=30, metadata={"help": "Number of training epochs"}
     )
@@ -181,6 +178,9 @@ class HubertFtTrainingArguments(TrainingArguments):
         default=1000, metadata={"help": "Torch empty cache steps"}
     )
 
+    eval_strategy: str = field(
+        default="steps", metadata={"help": "Evaluation strategy"}
+    )
     # Save strategy--------------------------------
     save_strategy: str = field(
         default="steps", metadata={"help": "Save strategy"}
@@ -380,8 +380,8 @@ def main():
     # ------------------------------------------------------------------------------------------------------
 
     # Load dataset from disk (WHEN SPLITTED)
-    ami_train_path = os.path.join("data", data_args.dataset_name, "hubert", "ami_train")
-    ami_val_path = os.path.join("data", data_args.dataset_name, "hubert", "ami_val")
+    ami_train_path = os.path.join("data", data_args.dataset_name, "hubert", "train")
+    ami_val_path = os.path.join("data", data_args.dataset_name, "hubert", "validation")
 
     ami_train = load_from_disk(ami_train_path)
     ami_val = load_from_disk(ami_val_path)

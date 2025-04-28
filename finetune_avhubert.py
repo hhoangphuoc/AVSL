@@ -1,46 +1,60 @@
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import argparse
 import torch
-from datasets import load_dataset, load_metric
+from datasets import load_dataset, load_from_disk
 from transformers import (
     Trainer,
     TrainingArguments,
-    Wav2Vec2Processor,
-    DataCollatorCTCWithPadding,
+    Speech2TextTokenizer,
 )
-from config.av_hubert_config import AVHuBERTConfig
-from models.av_hubert_model import AVHuBERTForCTC
+from avhubert.src.model.avhubert2text import AV2TextForConditionalGeneration
+from avhubert.src.model.av2text_config import AV2TextConfig
+from avhubert.src.dataset.load_data import load_feature
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Fine-tune AVHuBERT for ASR")
     parser.add_argument(
         "--model_name_or_path", type=str, required=True,
+        default="nguyenvulebinh/AV-HuBERT-MuAViC-en",
         help="Path to pretrained AVHuBERT model or identifier"
     )
     parser.add_argument(
-        "--config_name", type=str, required=True,
+        "--cache_dir", type=str, required=True,
+        default="checkpoints/hf-avhubert",
+        help="Path to pretrained AVHuBERT model or identifier"
+    )
+    parser.add_argument(
+        "--config_name", type=str, required=False,
         help="Path to AVHuBERTConfig or identifier"
     )
     parser.add_argument(
         "--dataset_name", type=str, required=True,
-        help="HuggingFace dataset name (e.g., librispeech_asr)"
+        default="ami",
+        help="HuggingFace dataset name "
     )
     parser.add_argument(
         "--dataset_config_name", type=str, default=None,
-        help="HuggingFace dataset config variant (e.g., clean)"
+        help="HuggingFace dataset config variant"
     )
     parser.add_argument(
         "--output_dir", type=str, required=True,
+        default="output/avhubert_ft",
         help="Directory to store fine-tuned model"
     )
     parser.add_argument(
-        "--per_device_train_batch_size", type=int, default=16
+        "--per_device_train_batch_size", type=int, default=16,
+        help="Batch size for training"
     )
     parser.add_argument(
-        "--num_train_epochs", type=int, default=5
+        "--num_train_epochs", type=int, default=5,
+        help="Number of training epochs"
     )
     parser.add_argument(
-        "--learning_rate", type=float, default=3e-4
+        "--learning_rate", type=float, default=2e-5,
+        help="Learning rate for training"
     )
     return parser.parse_args()
 
@@ -49,22 +63,27 @@ def main():
     args = parse_args()
 
     # Load model config and model
-    config = AVHuBERTConfig.from_pretrained(args.config_name)
-    model = AVHuBERTForCTC.from_pretrained(
+    config = AV2TextConfig.from_pretrained(args.model_name_or_path, cache_dir=args.cache_dir)
+    model = AV2TextForConditionalGeneration.from_pretrained(
         args.model_name_or_path, config=config
     )
 
     # Load processor (feature extractor + tokenizer)
-    processor = Wav2Vec2Processor.from_pretrained(args.model_name_or_path)
+    tokenizer = Speech2TextTokenizer.from_pretrained(args.model_name_or_path, cache_dir=args.cache_dir)
 
     # Load dataset
-    dataset = load_dataset(args.dataset_name, args.dataset_config_name)
-    wer_metric = load_metric("wer")
+    dataset_path = os.path.join("data", args.dataset_name, "dataset") #data/ami/dataset
+    dataset = load_from_disk(dataset_path)
+
+    print(dataset)
+
 
     # Preprocessing function
     def prepare_batch(batch):
         # Load audio and resample if needed
         audio = batch["audio"]
+        audio_path = batch["audio"]["path"]
+        
         input_values = processor(
             audio["array"], sampling_rate=audio["sampling_rate"]
         ).input_values[0]

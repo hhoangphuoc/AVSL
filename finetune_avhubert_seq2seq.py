@@ -418,53 +418,53 @@ def main():
                 logger.warning(f"Failed to load tokenizer model: {e}")
     # ----------------------------------------------------------------------------------------------------------
     
-    # 4. If all above methods fail, create from dataset vocabulary
-    if tokenizer is None:
-        logger.info("Creating vocabulary from dataset")
+    # # 4. If all above methods fail, create from dataset vocabulary
+    # if tokenizer is None:
+    #     logger.info("Creating vocabulary from dataset")
         
-        # Extract all unique characters from transcripts
-        all_texts = []
-        for split in raw_datasets.keys():
-            if data_args.text_column_name in raw_datasets[split].column_names:
-                all_texts.extend(raw_datasets[split][data_args.text_column_name])
+    #     # Extract all unique characters from transcripts
+    #     all_texts = []
+    #     for split in raw_datasets.keys():
+    #         if data_args.text_column_name in raw_datasets[split].column_names:
+    #             all_texts.extend(raw_datasets[split][data_args.text_column_name])
         
-        # Create vocabulary with special tokens
-        vocab_list = sorted(list(set("".join(all_texts))))
-        vocab_dict = {}
+    #     # Create vocabulary with special tokens
+    #     vocab_list = sorted(list(set("".join(all_texts))))
+    #     vocab_dict = {}
         
-        # Add special tokens
-        vocab_dict["<pad>"] = 0
-        vocab_dict["<s>"] = 1
-        vocab_dict["</s>"] = 2
-        vocab_dict["<unk>"] = 3
+    #     # Add special tokens
+    #     vocab_dict["<pad>"] = 0
+    #     vocab_dict["<s>"] = 1
+    #     vocab_dict["</s>"] = 2
+    #     vocab_dict["<unk>"] = 3
         
-        # Add characters
-        for i, char in enumerate(vocab_list):
-            if char.strip():  # Skip empty characters
-                vocab_dict[char] = i + 4  # Start after special tokens
+    #     # Add characters
+    #     for i, char in enumerate(vocab_list):
+    #         if char.strip():  # Skip empty characters
+    #             vocab_dict[char] = i + 4  # Start after special tokens
         
-        # Save vocabulary to file
-        vocab_file = os.path.join(training_args.output_dir, "vocab.json")
-        os.makedirs(training_args.output_dir, exist_ok=True)
-        with open(vocab_file, "w") as f:
-            import json
-            json.dump(vocab_dict, f)
+    #     # Save vocabulary to file
+    #     vocab_file = os.path.join(training_args.output_dir, "vocab.json")
+    #     os.makedirs(training_args.output_dir, exist_ok=True)
+    #     with open(vocab_file, "w") as f:
+    #         import json
+    #         json.dump(vocab_dict, f)
         
-        # Create tokenizer
-        tokenizer = Speech2TextTokenizer.from_pretrained(
-            training_args.output_dir,
-            cache_dir=model_args.cache_dir,
-            use_fast=model_args.use_fast_tokenizer,
-        )
+    #     # Create tokenizer
+    #     tokenizer = Speech2TextTokenizer.from_pretrained(
+    #         training_args.output_dir,
+    #         cache_dir=model_args.cache_dir,
+    #         use_fast=model_args.use_fast_tokenizer,
+    #     )
         
-        # Set special tokens
-        tokenizer.bos_token = "<s>"
-        tokenizer.eos_token = "</s>"
-        tokenizer.pad_token = "<pad>"
-        tokenizer.unk_token = "<unk>"
+    #     # Set special tokens
+    #     tokenizer.bos_token = "<s>"
+    #     tokenizer.eos_token = "</s>"
+    #     tokenizer.pad_token = "<pad>"
+    #     tokenizer.unk_token = "<unk>"
         
-        logger.info(f"Created new tokenizer from dataset with {len(vocab_dict)} tokens")
-    # -------------------------------------------------------------------------
+    #     logger.info(f"Created new tokenizer from dataset with {len(vocab_dict)} tokens")
+    # # -------------------------------------------------------------------------
 
     # Update config with tokenizer info
     config.vocab_size = len(tokenizer)

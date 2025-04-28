@@ -380,8 +380,8 @@ def main():
     # ------------------------------------------------------------------------------------------------------
 
     # Load dataset from disk (WHEN SPLITTED)
-    ami_train_path = os.path.join("data", data_args.dataset_name, "whisper", "ami_train")
-    ami_val_path = os.path.join("data", data_args.dataset_name, "whisper", "ami_val")
+    ami_train_path = os.path.join("data", data_args.dataset_name, "whisper", "train")
+    ami_val_path = os.path.join("data", data_args.dataset_name, "whisper", "validation")
 
     ami_train = load_from_disk(ami_train_path)
     ami_val = load_from_disk(ami_val_path)
