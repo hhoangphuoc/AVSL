@@ -1,6 +1,13 @@
 # AVSL
 An Audio-Visual Speech Recognition (AVSR) design to transcribe disfluencies and laughter in conversational speech
 
+## Features
+- Multi-modal AVHuBERT model for speech recognition
+- Sequence-to-sequence fine-tuning with encoder-decoder architecture
+- [YAML-based configuration system](docs/YAML_CONFIG.md) for flexible model parameterization
+- Support for different modality fusion strategies (concatenation, sum, weighted sum)
+- Robust handling of missing modalities
+
 
 # Dataset
 We use AMI Meeting Corpus as the main dataset, including both audio and video sources from several AMI Meetings. The dataset stored at:
@@ -72,3 +79,30 @@ Additionally, `disfluency` and `laughter` events with specific timestamps and au
 
 ## [HuggingFace Dataset](docs/DatasetProcess.md)
 The preprocessed data also stored in `HuggingFace Dataset`, where the audio and video have been additionally reformatted and structurized. See the documentation for details approach.
+
+# Fine-tuning AVHuBERT
+
+## Configuration
+
+The AVHuBERT model can be configured using YAML configuration files. See the [YAML Configuration Documentation](docs/YAML_CONFIG.md) for details.
+
+## Sequence-to-Sequence Fine-tuning
+
+For fine-tuning AVHuBERT with a sequence-to-sequence approach, use the `finetune_avhubert_seq2seq.py` script:
+
+```bash
+python finetune_avhubert_seq2seq.py \
+  --config_yaml config/avhubert_large.yaml \
+  --output_dir output/avhubert_ft \
+  --dataset_name ami_corpus \
+  --do_train \
+  --do_eval
+```
+
+See [SEQ2SEQ_FINETUNING.md](docs/SEQ2SEQ_FINETUNING.md) for detailed instructions and options.
+
+## Example Scripts
+
+Example scripts for fine-tuning are provided in the `scripts/` directory:
+
+- `scripts/finetune_avhubert_with_yaml.sh`: Fine-tuning with a YAML configuration
