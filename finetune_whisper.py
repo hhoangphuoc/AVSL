@@ -65,6 +65,9 @@ class ModelArguments:
     hidden_dropout: float = field(
         default=0.1, metadata={"help": "Hidden layer dropout probability"}
     )
+    local_files_only: bool = field(
+        default=True, metadata={"help": "Whether to use local files only"}
+    )
 
 @dataclass
 class DataTrainingArguments:
@@ -367,21 +370,33 @@ def main():
     #=================================================================================================================
     #                        SETUP DATASET (LOAD, SPLIT, SAVE)
     #=================================================================================================================
-    # Load dataset from disk
-    dataset_path = os.path.join("data", data_args.dataset_name, "dataset") #data/ami/dataset
-    ami_dataset = load_from_disk(dataset_path)
+    # Load dataset from disk (WHEN NOT SPLITTED)
+    # dataset_path = os.path.join("data", data_args.dataset_name, "dataset") #data/ami/dataset
+    # ami_dataset = load_from_disk(dataset_path)
 
-    raw_datasets = create_dataset_splits(ami_dataset, 
-                                         dataset_name=data_args.dataset_name, 
-                                         model_name="whisper")
-    
+    # raw_datasets = create_dataset_splits(ami_dataset, 
+    #                                      dataset_name=data_args.dataset_name, 
+    #                                      model_name="whisper")
+    # ------------------------------------------------------------------------------------------------------
 
-    # Trim dataset if requested
+    # Load dataset from disk (WHEN SPLITTED)
+    ami_train_path = os.path.join("data", data_args.dataset_name, "whisper", "ami_train")
+    ami_val_path = os.path.join("data", data_args.dataset_name, "whisper", "ami_val")
+
+    ami_train = load_from_disk(ami_train_path)
+    ami_val = load_from_disk(ami_val_path)
+
+    raw_datasets = DatasetDict({
+        "train": ami_train,
+        "validation": ami_val
+    })
+    # ------------------------------------------------------------------------------------------------------
+    # Trim dataset if MAX_TRAIN_SAMPLES or MAX_EVAL_SAMPLES is declared ------------------------------------
     if data_args.max_train_samples is not None and "train" in raw_datasets:
         raw_datasets["train"] = raw_datasets["train"].select(range(data_args.max_train_samples))
     if data_args.max_eval_samples is not None and "validation" in raw_datasets:
         raw_datasets["validation"] = raw_datasets["validation"].select(range(data_args.max_eval_samples))
-    # -------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------------------------------
 
     # Print dataset info
     logger.info(f"Training examples: {len(raw_datasets['train']) if 'train' in raw_datasets else 0}")
@@ -398,6 +413,7 @@ def main():
         cache_dir=model_args.cache_dir,
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
+        local_files_only=True if model_args.local_files_only else False,
     )
     
     # Update config with model args
@@ -409,6 +425,7 @@ def main():
         cache_dir=model_args.cache_dir,
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
+        local_files_only=True if model_args.local_files_only else False,
     )
     
     model = WhisperForConditionalGeneration.from_pretrained(
@@ -417,6 +434,7 @@ def main():
         cache_dir=model_args.cache_dir,
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
+        local_files_only=True if model_args.local_files_only else False,
     )
     
     # Freeze components if requested

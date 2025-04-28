@@ -34,7 +34,12 @@ from transformers import (
 
 from transformers.trainer_utils import get_last_checkpoint
 
-from utils.data_loading import AVHubertDataset, collate_audio_visual_batch, AVHubertBatch, create_dataset_splits
+from utils import (
+    AVHubertDataset, 
+    collate_audio_visual_batch, 
+    AVHubertBatch, 
+    create_dataset_splits
+)
 from config.av_hubert_config import AVHuBERTConfig
 from models.av_hubert_seq2seq_model import AVHuBERTForConditionalGeneration
 

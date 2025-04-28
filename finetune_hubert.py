@@ -81,6 +81,9 @@ class ModelArguments:
     layerdrop: float = field(
         default=0.1, metadata={"help": "Probability of dropping a layer during training"}
     )
+    local_files_only: bool = field(
+        default=True, metadata={"help": "Whether to use local files only"}
+    )
 
 @dataclass
 class DataTrainingArguments:
@@ -355,35 +358,39 @@ def main():
     #                        SETUP DATASET (LOAD, SPLIT, SAVE)
     #=================================================================================================================
     # Load dataset from disk
-    dataset_path = os.path.join("data", data_args.dataset_name, "dataset") #data/ami/dataset
-    ami_dataset = load_from_disk(dataset_path)
+    # dataset_path = os.path.join("data", data_args.dataset_name, "dataset") #data/ami/dataset
+    # ami_dataset = load_from_disk(dataset_path)
 
-    # Check if dataset is already split or needs splitting
-    if isinstance(ami_dataset, DatasetDict):
-        # Dataset is already a DatasetDict, check if it has the required splits
-        if "train" not in ami_dataset or "validation" not in ami_dataset or "test" not in ami_dataset:
-            # Create splits if needed
-            raw_datasets = create_dataset_splits(ami_dataset, 
-                                                 dataset_name=data_args.dataset_name, 
-                                                 model_name="hubert")
-        else:
-            # Use existing splits
-            raw_datasets = ami_dataset
-    else:
-        # Dataset is a single Dataset without splits, create them
-        raw_datasets = create_dataset_splits(ami_dataset, 
-                                                 dataset_name=data_args.dataset_name, 
-                                                 model_name="hubert")
+    # # Check if dataset is already split or needs splitting
+    # if isinstance(ami_dataset, DatasetDict):
+    #     # Dataset is already a DatasetDict, check if it has the required splits
+    #     if "train" not in ami_dataset or "validation" not in ami_dataset or "test" not in ami_dataset:
+    #         # Create splits if needed
+    #         raw_datasets = create_dataset_splits(ami_dataset, 
+    #                                              dataset_name=data_args.dataset_name, 
+    #                                              model_name="hubert")
+    #     else:
+    #         # Use existing splits
+    #         raw_datasets = ami_dataset
+    # else:
+    #     # Dataset is a single Dataset without splits, create them
+    #     raw_datasets = create_dataset_splits(ami_dataset, 
+    #                                              dataset_name=data_args.dataset_name, 
+    #                                              model_name="hubert")
+    # ------------------------------------------------------------------------------------------------------
 
-    # Rename the splits if needed
-    if data_args.train_split_name != "train" or data_args.eval_split_name != "validation":
-        raw_datasets_renamed = DatasetDict()
-        if data_args.train_split_name in raw_datasets:
-            raw_datasets_renamed["train"] = raw_datasets[data_args.train_split_name]
-        if data_args.eval_split_name in raw_datasets:
-            raw_datasets_renamed["validation"] = raw_datasets[data_args.eval_split_name]
-        raw_datasets = raw_datasets_renamed
+    # Load dataset from disk (WHEN SPLITTED)
+    ami_train_path = os.path.join("data", data_args.dataset_name, "hubert", "ami_train")
+    ami_val_path = os.path.join("data", data_args.dataset_name, "hubert", "ami_val")
 
+    ami_train = load_from_disk(ami_train_path)
+    ami_val = load_from_disk(ami_val_path)
+
+    raw_datasets = DatasetDict({
+        "train": ami_train,
+        "validation": ami_val
+    })
+    # ------------------------------------------------------------------------------------------------------
     # Trim dataset if requested
     if data_args.max_train_samples is not None and "train" in raw_datasets:
         raw_datasets["train"] = raw_datasets["train"].select(range(data_args.max_train_samples))
@@ -406,6 +413,7 @@ def main():
         cache_dir=model_args.cache_dir,
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
+        local_files_only=True if model_args.local_files_only else False,
     )
     
     # Update config with model args
@@ -422,6 +430,7 @@ def main():
         cache_dir=model_args.cache_dir,
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
+        local_files_only=True if model_args.local_files_only else False,
     )
     
     # For HuBERT we'll need to create a tokenizer from dataset vocab if it doesn't exist
@@ -431,6 +440,7 @@ def main():
             cache_dir=model_args.cache_dir,
             revision=model_args.model_revision,
             use_auth_token=True if model_args.use_auth_token else None,
+            local_files_only=True if model_args.local_files_only else False,
         )
     except Exception as e:
         logger.warning(f"Failed to load tokenizer: {e}")
@@ -489,6 +499,7 @@ def main():
         cache_dir=model_args.cache_dir,
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
+        local_files_only=True if model_args.local_files_only else False,
     )
     
     # Freeze feature encoder if requested

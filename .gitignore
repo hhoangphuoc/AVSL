@@ -17,5 +17,5 @@ refs/*
 .cursor/rules/*
 checkpoints/*
 
-
-
+# Ignore all checkpoints cache file
+**/**/cache/*

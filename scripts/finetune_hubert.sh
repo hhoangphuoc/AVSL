@@ -37,10 +37,10 @@ source activate .venv
 cd /home/s2587130/AVSL
 
 # Set variables
-MODEL_NAME_OR_PATH="facebook/hubert-large-ls960-ft"  # HuBERT large fine-tuned on LibriSpeech
+MODEL_NAME_OR_PATH="checkpoints/hf-hubert/hubert-large-ls960-ft"  # HuBERT large fine-tuned on LibriSpeech
 OUTPUT_DIR="output/hubert_ft"
 DATASET_NAME="ami"
-CACHE_DIR="./checkpoints/hf-hubert"
+CACHE_DIR="./checkpoints/hf-hubert/"
 BATCH_SIZE=16  # Larger batch size for CTC model
 GRAD_ACCUM=2
 LR=3e-5
@@ -66,7 +66,7 @@ python finetune_hubert.py \
     --num_train_epochs $NUM_EPOCHS \
     --fp16 \
     --save_strategy "epoch" \
-    --evaluation_strategy "epoch" \
+    --eval_strategy "epoch" \
     --logging_steps 100 \
     --save_total_limit 3 \
     --load_best_model_at_end \

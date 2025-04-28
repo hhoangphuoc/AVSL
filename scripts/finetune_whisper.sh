@@ -37,10 +37,10 @@ source activate .venv
 cd /home/s2587130/AVSL
 
 # Set variables
-MODEL_NAME_OR_PATH="openai/whisper-large-v2"  # Or other model size: tiny, base, small, medium, large-v2
+MODEL_NAME_OR_PATH="checkpoints/hf-whisper/whisper-large-v2"  # Or other model size: tiny, base, small, medium, large-v2
 OUTPUT_DIR="output/whisper_ft"
 DATASET_NAME="ami"
-CACHE_DIR="./checkpoints/hf-whisper"
+CACHE_DIR="./checkpoints/hf-whisper/"
 BATCH_SIZE=8
 GRAD_ACCUM=4
 LR=2e-5
@@ -68,7 +68,8 @@ python finetune_whisper.py \
     --num_train_epochs $NUM_EPOCHS \
     --fp16 \
     --save_strategy "epoch" \
-    --evaluation_strategy "epoch" \
+    --eval_strategy "epoch" \
+    --eval_accumulation_steps $GRAD_ACCUM \
     --logging_steps 100 \
     --save_total_limit 3 \
     --load_best_model_at_end \

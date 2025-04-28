@@ -13,10 +13,10 @@ from transformers import (
 from transformers.modeling_outputs import (
     ModelOutput,
 )
-from modules.av_hubert_encoder import AVHuBERTEncoderWrapper # THE ENCODER WRAPPER (Wrapping both audio and visual encoders layers)
-from modules.av_hubert_decoder import AVHuBERTDecoder # The refactored decoder
+# from modules.av_hubert_encoder import AVHuBERTEncoderWrapper # THE ENCODER WRAPPER (Wrapping both audio and visual encoders layers)
+# from modules.av_hubert_decoder import AVHuBERTDecoder # The refactored decoder
 
-from config.av_hubert_config import AVHuBERTConfig
+from modules import AVHuBERTEncoderWrapper
 
 logger = logging.getLogger(__name__)
 

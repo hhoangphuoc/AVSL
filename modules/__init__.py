@@ -1,15 +1,13 @@
-from .av_hubert_encoders import (
+from .av_hubert_encoder import (
     AVHuBERTEncoderWrapper, 
     AVHuBERTVisualEncoder, 
     AVHuBERTAudioEncoder,
-    GradMultiply,
-    compute_mask_indices
 )
 from .av_hubert_decoder import (
     AVHuBERTDecoder,
     AVHuBERTAttention,
     AVHuBERTDecoderLayer,
-    AVHuBERTForS2S
+    AVHuBERTSinusoidalPositionalEmbedding
 )
 
 from .whisper_encoder import WhisperEncoder
@@ -18,41 +16,40 @@ from .whisper_decoder import (
     GatedCrossAttentionLayer
 )
 
-from .resnet import ResNetEncoderLayer
-
-from .layers import (
-    LayerNorm,
+from .av_hubert_layers import (
     GradMultiply,
-    TransformerEncoderLayer
+    TransformerEncoderLayer,
+    LayerNorm,
+    AVHubertBaseEncoder,
 )
 
 __all__ = [
-    # AV-HuBERT Models
-    "AVHuBERTModel",
-    "AVHuBERTForCTC",
-    "AVHuBERTForS2S",
-    
-    # AV-HuBERT Components
+    # AV-HuBERT Components---------------------------
+    # Encoder
     "AVHuBERTEncoderWrapper",
     "AVHuBERTVisualEncoder",
     "AVHuBERTAudioEncoder",
+
+    # Decoder
     "AVHuBERTDecoder",
     "AVHuBERTAttention",
     "AVHuBERTDecoderLayer",
-    
-    # Utility functions
-    "GradMultiply",
-    "compute_mask_indices",
+    "AVHuBERTSinusoidalPositionalEmbedding",
 
-    # Whisper
+    # AV-HuBERT Layers
+    "LayerNorm",
+    "GradMultiply",
+    "TransformerEncoderLayer",
+    "AVHubertBaseEncoder",
+    # --------------------------------------------------------------------------
+
+
+    # Whisper Components --------------------------------------------------------
     "AudioVisualWhisperDecoder",
     "WhisperEncoder",
     "GatedCrossAttentionLayer",
 
-    # Layers
-    "LayerNorm",
-    "ConvFeatureExtractionModel",
-    "TransformerEncoderLayer",
-    "ResNetEncoderLayer",
+    # --------------------------------------------------------------------------
+
 ]
 
