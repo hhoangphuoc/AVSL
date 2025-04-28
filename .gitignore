@@ -15,6 +15,7 @@ refs/*
 # Ignore cursor rules
 .cursorignore
 .cursor/rules/*
+checkpoints/*
 
 
 

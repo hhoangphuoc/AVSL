@@ -148,8 +148,10 @@ class AVHuBERTConfig(PretrainedConfig):
         self.mask_feature_min_masks = mask_feature_min_masks
         
         # Audio-specific masking parameters
-        self.mask_time_prob_audio = mask_time_prob_audio
-        self.mask_time_length_audio = mask_time_length_audio
+        self.mask_prob_audio = mask_prob_audio
+        self.mask_length_audio = mask_length_audio
+        self.mask_prob_image = mask_prob_image
+        self.mask_length_image = mask_length_image
         
         # Dropout parameters
         self.hidden_dropout = hidden_dropout

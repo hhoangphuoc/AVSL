@@ -159,8 +159,8 @@ def align_lengths(audio_feats, video_feats):
     - We need to make sure both have the same temporal dimension for fusion
 
     Args:
-        audio_feats: Audio features tensor [B, T_audio, D_audio]
-        video_feats: Video features tensor [B, T_video, D_video]
+        audio_feats: Audio features tensor [B, T_audio, D_audio] (batch_size, time_steps, feature_dim)
+        video_feats: Video features tensor [B, T_video, D_video] (batch_size, time_steps, feature_dim)
 
     Returns:
         Tuple of aligned features tensors
@@ -195,7 +195,7 @@ def process_data_for_avhubert(
     Args:
         audio_path: Path to audio file
         video_path: Path to video file
-        transcript: Transcript text for labels
+        transcript: Transcript text for labels_ids
         processor: HuggingFace processor for tokenization
         max_audio_length: Maximum audio length in samples
         max_video_frames: Maximum number of video frames
