@@ -34,7 +34,7 @@ from transformers import (
 
 from transformers.trainer_utils import get_last_checkpoint
 
-from utils.data_loading import AVHubertDataset, collate_audio_visual_batch, AVHubertBatch
+from utils.data_loading import AVHubertDataset, collate_audio_visual_batch, AVHubertBatch, create_dataset_splits
 from config.av_hubert_config import AVHuBERTConfig
 from models.av_hubert_seq2seq_model import AVHuBERTForConditionalGeneration
 
@@ -258,37 +258,10 @@ def main():
     dataset_path = os.path.join("data", data_args.dataset_name, "dataset")
     ami_dataset = load_from_disk(dataset_path)
 
-    # Split the dataset into train-val and test
-    train_test_ami = ami_dataset.train_test_split(test_size=0.2) #80% train-val, 20% test
-    ami_test = train_test_ami["test"]
-
-    # Split the train-val dataset into train and validation
-    train_val_ami = train_test_ami["train"].train_test_split(test_size=0.1) #70% train, 10% validation
-    ami_train = train_val_ami["train"]
-    ami_val = train_val_ami["test"]
-
-    # Create a DatasetDict with the splits
-    raw_datasets = DatasetDict({
-        "train": ami_train,
-        "validation": ami_val,
-        "test": ami_test
-    })
+    raw_datasets = create_dataset_splits(ami_dataset, 
+                                         dataset_name=data_args.dataset_name, 
+                                         model_name="av_hubert")
     # -------------------------------------------------------------------------
-
-    # Save the splits to disk-------------------------------------------------
-    ami_train.save_to_disk(os.path.join("data", data_args.dataset_name, "ami_train")) #data/ami/ami_train
-    ami_val.save_to_disk(os.path.join("data", data_args.dataset_name, "ami_val")) #data/ami/ami_val
-    ami_test.save_to_disk(os.path.join("data", data_args.dataset_name, "ami_test")) #data/ami/ami_test
-    # -------------------------------------------------------------------------
-    
-    # Rename the splits if needed
-    if data_args.train_split_name != "train" or data_args.eval_split_name != "validation":
-        raw_datasets_renamed = DatasetDict()
-        if data_args.train_split_name in raw_datasets:
-            raw_datasets_renamed["train"] = raw_datasets[data_args.train_split_name]
-        if data_args.eval_split_name in raw_datasets:
-            raw_datasets_renamed["validation"] = raw_datasets[data_args.eval_split_name]
-        raw_datasets = raw_datasets_renamed
 
     # Trim dataset if requested - NOTE: NOT IMPLEMENTED--------------------------------
     if data_args.max_train_samples is not None and "train" in raw_datasets:

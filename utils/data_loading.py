@@ -5,6 +5,7 @@ import torch
 import torch.nn.functional as F
 import torchaudio
 import logging
+from datasets import DatasetDict
 from typing import Dict, List, Optional, Tuple, Union, Any
 from dataclasses import dataclass
 
@@ -66,6 +67,34 @@ class AVHubertBatch:
             if isinstance(value, torch.Tensor):
                 setattr(self, key, value.to(device))
         return self
+
+def create_dataset_splits(dataset, test_size=0.2, val_size=0.1, train_size=0.7, dataset_name="ami", model_name="av_hubert"):
+    """
+    Create dataset splits from a HuggingFace dataset. 
+    This will create a train-val-test split and save each of the splits to disk.
+    """
+
+    train_test_split = dataset.train_test_split(test_size=test_size) #80% train-val, 20% test
+    test_split = train_test_split["test"]
+
+    # Split the train-val dataset into train and validation
+    train_val_split = train_test_split["train"].train_test_split(test_size=val_size) #70% train, 10% validation
+    train_split = train_val_split["train"]
+    val_split = train_val_split["test"]
+
+    # Create a DatasetDict with the splits
+    splits = DatasetDict({
+        "train": train_split,
+        "validation": val_split,
+        "test": test_split
+    })
+    
+    # Save the splits to disk
+    train_split.save_to_disk(os.path.join("data", dataset_name, model_name, "train")) 
+    val_split.save_to_disk(os.path.join("data", dataset_name, model_name, "validation"))
+    test_split.save_to_disk(os.path.join("data", dataset_name, model_name, "test"))
+    
+    return splits
 
 def load_audio(audio_path, target_sr=16000):
     """

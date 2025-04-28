@@ -14,7 +14,8 @@ from .data_loading import (
     align_lengths, 
     process_data_for_avhubert, 
     collate_audio_visual_batch, 
-    AVHubertDataset
+    AVHubertDataset,
+    create_dataset_splits
 )
 
 __all__ = [
@@ -38,5 +39,6 @@ __all__ = [
     "align_lengths",
     "process_data_for_avhubert",
     "collate_audio_visual_batch",
-    "AVHubertDataset"
+    "AVHubertDataset",
+    "create_dataset_splits"
 ]

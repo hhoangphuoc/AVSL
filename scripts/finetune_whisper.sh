@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=avhubert_ft_seq2seq
+#SBATCH --job-name=whisper_ft
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=64G
 #SBATCH --gres=gpu:ampere:1
-#SBATCH --output=logs/avhubert_ft_seq2seq_%j.log
-#SBATCH --error=logs/avhubert_ft_seq2seq_%j.err
+#SBATCH --output=logs/whisper_ft_%j.log
+#SBATCH --error=logs/whisper_ft_%j.err
 #SBATCH --time=240:00:00
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=hohoangphuoc@student.utwente.nl
@@ -37,25 +37,25 @@ source activate .venv
 cd /home/s2587130/AVSL
 
 # Set variables
-MODEL_NAME_OR_PATH="nguyenvulebinh/AV-HuBERT-MuAViC-en"  # Will fallback to local checkpoints if unavailable
-CONFIG_YAML="config/avhubert_large.yaml"
-OUTPUT_DIR="output/avhubert_ft_seq2seq"
+MODEL_NAME_OR_PATH="openai/whisper-large-v2"  # Or other model size: tiny, base, small, medium, large-v2
+OUTPUT_DIR="output/whisper_ft"
 DATASET_NAME="ami"
-CACHE_DIR="./checkpoints/hf-avhubert"
+CACHE_DIR="./checkpoints/hf-whisper"
 BATCH_SIZE=8
 GRAD_ACCUM=4
 LR=2e-5
 NUM_EPOCHS=10
 MAX_DURATION=30.0  # Maximum duration in seconds
+LANGUAGE="en"
+TASK="transcribe"
 
 # Create output directory
 mkdir -p $OUTPUT_DIR
 mkdir -p logs
 
-# Run fine-tuning with YAML configuration
-python finetune_avhubert_seq2seq.py \
+# Run fine-tuning
+python finetune_whisper.py \
     --model_name_or_path $MODEL_NAME_OR_PATH \
-    --config_yaml $CONFIG_YAML \
     --cache_dir $CACHE_DIR \
     --output_dir $OUTPUT_DIR \
     --dataset_name $DATASET_NAME \
@@ -77,8 +77,8 @@ python finetune_avhubert_seq2seq.py \
     --predict_with_generate \
     --do_train \
     --do_eval \
-    --use_audio True \
-    --use_visual True \
-    --fusion_type "concat" \
-    --audio_drop_prob 0.5 \
-    --visual_drop_prob 0.5
+    --language $LANGUAGE \
+    --task $TASK \
+    --freeze_encoder False \
+    --attn_dropout 0.1 \
+    --hidden_dropout 0.1
