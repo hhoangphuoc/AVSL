@@ -114,7 +114,7 @@ class DataTrainingArguments:
         default=30.0, metadata={"help": "Maximum audio duration in seconds"}
     )
     max_target_length: Optional[int] = field(
-        default=128, metadata={"help": "Max sequence length for decoder outputs"}
+        default=448, metadata={"help": "Max sequence length for decoder outputs"}
     )
     num_beams: Optional[int] = field(
         default=4, metadata={"help": "Number of beams to use for evaluation."}
@@ -233,6 +233,7 @@ class WhisperDataset(torch.utils.data.Dataset):
         dataset: Dataset, 
         processor: WhisperProcessor,
         max_duration_in_seconds: float = 30.0,
+
         split: str = "train",
     ):
         self.dataset = dataset
@@ -255,7 +256,7 @@ class WhisperDataset(torch.utils.data.Dataset):
             audio["array"], 
             sampling_rate=audio["sampling_rate"],
             return_tensors="pt"
-        ).input_features.squeeze(0)
+        ).input_features[0]
         
         # Prepare target text
         transcript = item["transcript"]
@@ -263,10 +264,8 @@ class WhisperDataset(torch.utils.data.Dataset):
         # Tokenize text
         labels = self.processor.tokenizer(
             transcript,
-            padding="max_length",
-            max_length=128,
             return_tensors="pt"
-        ).input_ids.squeeze(0)
+        ).input_ids
         
         return {
             "input_features": input_features,
@@ -282,33 +281,36 @@ class WhisperDataCollator:
         """
         Data collator for Whisper that handles batching input features
         """
+        if not batch:
+            return None
+        
         input_features = [{
             "input_features": item["input_features"]
-        } for item in batch]
-        labels = [{
+        } for item in batch] #"input_features" is the input features parsed from `WhisperDataset`
+        labels_features = [{
             "input_ids": item["labels"]
-        } for item in batch]
+        } for item in batch] #"input_ids" is the tokenized labels parsed from `WhisperDataset`
     
-        # Pad input features
+        # Pad input features - Only pad in DataCollator
         input_features = self.processor.feature_extractor.pad(
             input_features,
             padding=True,
             return_tensors="pt",
         )
         
-        # Pad labels
-        labels = self.processor.tokenizer.pad(
-            labels,
+        # Pad labels - Only pad in DataCollator
+        labels_batch = self.processor.tokenizer.pad(
+            labels_features,
             padding=True,
             return_tensors="pt",
         )
 
         # Remove decoder_start_token_id if present
         # padding token id is -100
-        processed_labels = labels["input_ids"].masked_fill(labels["attention_mask"].ne(1), -100)
+        processed_labels = labels_batch["input_ids"].masked_fill(labels_batch["attention_mask"].ne(1), -100)
 
         # Remove decoder_start_token_id if present
-        if (processed_labels[:, 0] == self.decoder_start_token_id).all().cpu().item():
+        if processed_labels.size(1) > 0 and (processed_labels[:, 0] == self.decoder_start_token_id).all():
             processed_labels = processed_labels[:, 1:]
     
         batch = {
