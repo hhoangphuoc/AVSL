@@ -21,8 +21,8 @@ class AVHuBERTConfig(PretrainedConfig):
         use_visual: bool = True,
         fusion_type: str = "concat",  # "concat", "sum", "weighted_sum"
         encoder_projection_dim: Optional[int] = None,   # Set to None to determine based on fusion_type
-        modality_dropout: float = 0.0,                  # Probability of dropping a modality during training
-        audio_dropout: float = 0.0,                     # Probability of dropping audio when dropping a modality
+        modality_dropout: float = 0.5,                  # Probability of dropping a modality during training
+        audio_dropout: float = 0.5,                     # Probability of dropping audio when dropping a modality
         
         # Visual encoder params
         visual_hidden_size: int = 1024,                 # Dimensionality of visual encoder (large model)
@@ -42,11 +42,12 @@ class AVHuBERTConfig(PretrainedConfig):
         conv_dim: List[int] = [512, 512, 512, 512, 512, 512, 512],      # Dimensions of CNN layers
         conv_stride: List[int] = [5, 2, 2, 2, 2, 2, 2],                 # Strides of CNN layers
         conv_kernel: List[int] = [10, 3, 3, 3, 3, 2, 2],                # Kernel sizes of CNN layers
+        conv_kernel_sizes: List[int] = [5, 5],
         audio_feat_dim: int = 104,                      # Dimension of audio features after preprocessing
         
         # Masking parameters (for fine-tuning)
-        mask_time_prob: float = 0.3,                    # Probability for visual time masking
-        mask_time_length: int = 5,                      # Length of visual time masking spans
+        mask_time_prob: float = 0.0,                    # Probability for visual time masking
+        mask_time_length: int = 10,                      # Length of visual time masking spans
         mask_feature_prob: float = 0.0,                 # Probability for feature masking
         mask_feature_length: int = 10,                  # Length of feature masking spans
         apply_spec_augment: bool = False,               # Whether to apply SpecAugment during inference
@@ -136,6 +137,7 @@ class AVHuBERTConfig(PretrainedConfig):
         self.conv_dim = conv_dim
         self.conv_stride = conv_stride
         self.conv_kernel = conv_kernel
+        self.conv_kernel_sizes = conv_kernel_sizes
         self.audio_feat_dim = audio_feat_dim
         
         # Masking parameters
@@ -269,10 +271,14 @@ class AVHuBERTConfig(PretrainedConfig):
                 "model.encoder_ffn_embed_dim": "visual_intermediate_size",
                 
                 # Masking parameters
-                "model.mask_prob_image": "mask_time_prob",
-                "model.mask_length_image": "mask_time_length",
-                "model.mask_prob_audio": "mask_time_prob_audio",
-                "model.mask_length_audio": "mask_time_length_audio",
+                "model.mask_time_prob": "mask_time_prob",
+                "model.mask_time_length": "mask_time_length",
+                "model.mask_feature_prob": "mask_feature_prob",
+                "model.mask_feature_length": "mask_feature_length",
+                "model.mask_prob_image": "mask_prob_image",
+                "model.mask_length_image": "mask_length_image",
+                "model.mask_prob_audio": "mask_prob_audio",
+                "model.mask_length_audio": "mask_length_audio",
                 
                 # Dropout parameters
                 "model.dropout": "hidden_dropout",

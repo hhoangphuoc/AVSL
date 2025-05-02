@@ -30,12 +30,17 @@ model:
   conv_dim: [512, 512, 512, 512, 512, 512, 512]  # Dimensions of CNN layers
   conv_stride: [5, 2, 2, 2, 2, 2, 2]              # Strides of CNN layers
   conv_kernel: [10, 3, 3, 3, 3, 2, 2]             # Kernel sizes of CNN layers
+  conv_kernel_sizes: [5, 5]
   
   # Masking parameters
   mask_prob_image: 0.3           # Probability for visual time masking
   mask_length_image: 5           # Length of visual time masking spans
   mask_prob_audio: 0.8           # Probability for audio time masking
   mask_length_audio: 10          # Length of audio time masking spans
+  mask_time_prob: 0.0
+  mask_time_length: 10
+  mask_feature_prob: 0.0
+  mask_feature_length: 10
   
   # Dropout parameters
   dropout: 0.1                   # Dropout in encoder layers
