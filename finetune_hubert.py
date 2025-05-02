@@ -10,32 +10,30 @@ import os
 import sys
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Union, Any
+import re
 
 import numpy as np
 import torch
-import evaluate
 import transformers
 from transformers import (
     HfArgumentParser,
-    Seq2SeqTrainer,
-    Seq2SeqTrainingArguments,
     TrainingArguments,
     Trainer,
     set_seed,
     AutoConfig,
-    AutoModelForCTC,
-    AutoProcessor,
-    AutoTokenizer,
-    AutoFeatureExtractor,
-    HubertForCTC,
     Wav2Vec2Processor,
+    Wav2Vec2FeatureExtractor,
+    Wav2Vec2CTCTokenizer,
+    HubertForCTC,
     EarlyStoppingCallback
 )
 from transformers.trainer_utils import get_last_checkpoint
 import datasets
 from datasets import DatasetDict, Dataset, load_from_disk
+import jiwer
+import evaluate
 
-from utils import create_dataset_splits
+# from utils import create_dataset_splits
 
 logger = logging.getLogger(__name__)
 
@@ -45,14 +43,14 @@ class ModelArguments:
     Arguments pertaining to which model/config/tokenizer we are going to fine-tune.
     """
     model_name_or_path: str = field(
-        default="facebook/hubert-large-ls960-ft", 
+        default="./checkpoints/hf-hubert/hubert-large-ls960-ft", 
         metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
     )
     config_name: Optional[str] = field(
         default=None, metadata={"help": "Pretrained config name or path if not the same as model_name"}
     )
     cache_dir: Optional[str] = field(
-        default="./checkpoints/hf-hubert", metadata={"help": "Where to store the pretrained models"}
+        default="./cache/hubert_ft", metadata={"help": "Where to store the pretrained models"}
     )
     model_revision: str = field(
         default="main", metadata={"help": "The specific model version to use"}
@@ -223,23 +221,29 @@ class HubertFtTrainingArguments(TrainingArguments):
     )
     
 
+# ================================== UTILS ===========================================
+chars_to_remove_regex = r'[\,\?\.\!\-\;\:\"\“\%\‘\”\]'
+
+def remove_special_characters(batch):
+    batch["transcript"] = re.sub(chars_to_remove_regex, '', batch["transcript"]).lower()
+    return batch
+
+def extract_all_chars(batch):
+    """
+    Function to extract all characters in the dataset
+    and added it to the vocabs.
+    """
+    all_text = " ".join(batch["transcript"])
+    vocab = list(set(all_text))
+    return {"vocab": [vocab], "all_text": [all_text]}
+#============================================================================================================
+
 class HubertDataset(torch.utils.data.Dataset):
     """Dataset for HuBERT ASR training"""
     
-    def __init__(
-        self, 
-        dataset: Dataset, 
-        processor: Wav2Vec2Processor,
-        max_duration_in_seconds: float = 30.0,
-        chars_to_ignore: List[str] = None,
-        split: str = "train"
-    ):
+    def __init__(self, dataset: Dataset, processor: Wav2Vec2Processor):
         self.dataset = dataset
         self.processor = processor
-        self.max_duration_in_seconds = max_duration_in_seconds
-        self.chars_to_ignore = chars_to_ignore if chars_to_ignore is not None else []
-        self.split = split
-        self.is_train = split == "train"
         
     def __len__(self):
         return len(self.dataset)
@@ -250,26 +254,22 @@ class HubertDataset(torch.utils.data.Dataset):
         # Load audio
         audio = item["audio"]
         
-        # Preprocess text
-        transcript = item["transcript"]
-        for char in self.chars_to_ignore:
-            transcript = transcript.replace(char, "")
-        transcript = transcript.upper()
-        
-        # Get input values
+        # Process audio
         input_values = self.processor(
             audio["array"], 
             sampling_rate=audio["sampling_rate"],
             return_tensors="pt"
-        ).input_values.squeeze(0)
+        ).input_values.squeeze(0) # Ensure it's a 1D tensor
+        input_length = len(input_values)
         
-        # Process target text
-        with self.processor.as_target_processor():
-            labels = self.processor(transcript, return_tensors="pt").input_ids.squeeze(0)
+        # Process text (already preprocessed for vocab creation)
+        transcript = item["transcript"] 
+        labels = self.processor.tokenizer(transcript, return_tensors="pt").input_ids.squeeze(0)
         
         return {
             "input_values": input_values,
-            "labels": labels
+            "input_length": input_length, # Include length for potential grouping
+            "labels": labels,
         }
 
 class HubertDataCollator:
@@ -280,30 +280,35 @@ class HubertDataCollator:
     processor: Wav2Vec2Processor
     padding: Union[bool, str] = True
 
+    def __init__(self, processor: Wav2Vec2Processor, padding: Union[bool, str] = True):
+        self.processor = processor
+        self.padding = padding
+
     def __call__(self, batch):
         # split inputs and labels since they have to be of different lenghts and need
         # different padding methods
-        input_features = [{"input_values": item["input_values"]} for item in batch]
+        input_features = [{"input_values": feature["input_values"]} for feature in batch]
         label_features = [{"input_ids": item["labels"]} for item in batch]
 
-        batch = self.processor.pad(
+        padded_inputs = self.processor.pad(
             input_features,
             padding=self.padding,
             return_tensors="pt",
         )
-        with self.processor.as_target_processor():
-            labels_batch = self.processor.pad(
-                label_features,
-                padding=self.padding,
-                return_tensors="pt",
-            )
+
+        # Pad labels separately using the tokenizer's pad method
+        labels_batch = self.processor.tokenizer.pad(
+            label_features,
+            padding=self.padding,
+            return_tensors="pt",
+        )
 
         # replace padding with -100 to ignore loss correctly
         labels = labels_batch["input_ids"].masked_fill(labels_batch.attention_mask.ne(1), -100)
 
-        batch["labels"] = labels
+        padded_inputs["labels"] = labels
 
-        return batch
+        return padded_inputs
 
 def main():
     #=================================================================================================================
@@ -390,7 +395,7 @@ def main():
         "train": ami_train,
         "validation": ami_val
     })
-    # ------------------------------------------------------------------------------------------------------
+
     # Trim dataset if requested
     if data_args.max_train_samples is not None and "train" in raw_datasets:
         raw_datasets["train"] = raw_datasets["train"].select(range(data_args.max_train_samples))
@@ -401,19 +406,90 @@ def main():
     # Print dataset info
     logger.info(f"Training examples: {len(raw_datasets['train']) if 'train' in raw_datasets else 0}")
     logger.info(f"Validation examples: {len(raw_datasets['validation']) if 'validation' in raw_datasets else 0}")
-    logger.info(f"Test examples: {len(raw_datasets['test']) if 'test' in raw_datasets else 0}")
+    # logger.info(f"Test examples: {len(raw_datasets['test']) if 'test' in raw_datasets else 0}")
     # -----------------------------------------------------------------------------------------------------------------
+
+
+    # ------------------------------------------------------------------------------------------------------
+    # Preprocess text: remove special characters
+    logger.info("Removing special characters from transcripts...")
+    data_train = raw_datasets["train"].map(
+        remove_special_characters,
+        num_proc=data_args.preprocessing_num_workers,
+        desc="Removing special characters from train datasets"
+    )
+    data_eval = raw_datasets["validation"].map(
+        remove_special_characters,
+        num_proc=data_args.preprocessing_num_workers,
+        desc="Removing special characters from validation datasets"
+    )
+
+    #--------------------------- CREATE VOCAB ------------------------------------------------
+    logger.info("Creating vocabulary from dataset...")
+    vocab_train = data_train.map(
+        extract_all_chars, 
+        batched=True, 
+        batch_size=-1, 
+        keep_in_memory=True, 
+        remove_columns=raw_datasets["train"].column_names,
+        num_proc=data_args.preprocessing_num_workers,
+        desc="Extracting vocab from train dataset"
+    )
+    vocab_eval = data_eval.map(
+        extract_all_chars, 
+        batched=True, 
+        batch_size=-1, 
+        keep_in_memory=True, 
+        remove_columns=raw_datasets["validation"].column_names,
+        num_proc=data_args.preprocessing_num_workers,
+        desc="Extracting vocab from validation dataset"
+    )
+    # Combine vocab from all splits
+    vocab_list = list(set(vocab_train["vocab"][0]) | set(vocab_eval["vocab"][0]))
+    vocab_dict = {v: k for k, v in enumerate(sorted(list(vocab_list)))}
+    
+    # Replace space with | and add UNK, PAD ------------------------------------------------------------
+    if " " in vocab_dict:
+        vocab_dict["|"] = vocab_dict.pop(" ")
+    else:
+        vocab_dict["|"] = len(vocab_dict)
+        
+    vocab_dict["[UNK]"] = len(vocab_dict)
+    vocab_dict["[PAD]"] = len(vocab_dict)
+
+    logger.info(f"Final vocabulary: {vocab_dict}")
+
+    # Save vocabulary
+    vocab_file = os.path.join(training_args.output_dir, "vocab.json")
+    os.makedirs(training_args.output_dir, exist_ok=True)
+    with open(vocab_file, "w", encoding="utf-8") as f:
+        import json
+        json.dump(vocab_dict, f)
+    # ------------------------------------------------------------------------------------------------
+    # Initialize tokenizer from saved vocab
+    tokenizer = Wav2Vec2CTCTokenizer(
+        vocab_file,
+        unk_token="[UNK]", 
+        pad_token="[PAD]", 
+        word_delimiter_token="|",
+        cache_dir=model_args.cache_dir,
+        # revision=model_args.model_revision, # Not applicable for local vocab
+        # use_auth_token=True if model_args.use_auth_token else None, 
+        # local_files_only=True if model_args.local_files_only else False, # Already local
+    )
+    #-------------------------------------------------------------------------------------
 
     #=================================================================================================================
     #                                       SETUP MODEL AND PROCESSOR
     #=================================================================================================================
-    # Load configuration
+    
+    #---------- UPDATE CONFIG ------------------------------------------------------------
     config = AutoConfig.from_pretrained(
         model_args.config_name if model_args.config_name else model_args.model_name_or_path,
         cache_dir=model_args.cache_dir,
-        revision=model_args.model_revision,
-        use_auth_token=True if model_args.use_auth_token else None,
-        local_files_only=True if model_args.local_files_only else False,
+        revision=model_args.model_revision
+        # use_auth_token=True if model_args.use_auth_token else None, # Handled by from_pretrained implicitly if token exists
+        # local_files_only=True if model_args.local_files_only else False # Handled by from_pretrained implicitly
     )
     
     # Update config with model args
@@ -423,66 +499,17 @@ def main():
     config.final_dropout = model_args.final_dropout
     config.mask_time_prob = model_args.mask_time_prob
     config.layerdrop = model_args.layerdrop
+    # -------------------------------------------------------------------------------------
     
     # Get feature extractor and tokenizer for the processor
-    feature_extractor = AutoFeatureExtractor.from_pretrained(
+    feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(
         model_args.model_name_or_path,
         cache_dir=model_args.cache_dir,
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
         local_files_only=True if model_args.local_files_only else False,
     )
-    
-    # For HuBERT we'll need to create a tokenizer from dataset vocab if it doesn't exist
-    try:
-        tokenizer = AutoTokenizer.from_pretrained(
-            model_args.model_name_or_path,
-            cache_dir=model_args.cache_dir,
-            revision=model_args.model_revision,
-            use_auth_token=True if model_args.use_auth_token else None,
-            local_files_only=True if model_args.local_files_only else False,
-        )
-    except Exception as e:
-        logger.warning(f"Failed to load tokenizer: {e}")
-        logger.info("Creating a tokenizer from dataset vocabulary...")
-        
-        # Extract all unique characters from transcripts
-        all_texts = []
-        for split in raw_datasets.keys():
-            if data_args.text_column_name in raw_datasets[split].column_names:
-                all_texts.extend(raw_datasets[split][data_args.text_column_name])
-        
-        # Clean transcripts
-        all_text = " ".join(all_texts)
-        for char in data_args.chars_to_ignore:
-            all_text = all_text.replace(char, "")
-        all_text = all_text.upper()
-        
-        # Create vocabulary with special tokens
-        vocab_list = sorted(list(set(all_text)))
-        vocab_dict = {v: k for k, v in enumerate(vocab_list)}
-        
-        # Add special tokens
-        vocab_dict["<pad>"] = len(vocab_dict)
-        vocab_dict["<unk>"] = len(vocab_dict)
-        vocab_dict["<s>"] = len(vocab_dict)
-        vocab_dict["</s>"] = len(vocab_dict)
-        
-        # Save vocabulary to file
-        vocab_file = os.path.join(training_args.output_dir, "vocab.json")
-        os.makedirs(training_args.output_dir, exist_ok=True)
-        with open(vocab_file, "w") as f:
-            import json
-            json.dump(vocab_dict, f)
-        
-        # Create tokenizer from vocab file
-        tokenizer = AutoTokenizer.from_pretrained(
-            training_args.output_dir,
-            vocab_file=vocab_file,
-            do_lower_case=False,
-            cache_dir=model_args.cache_dir,
-        )
-    
+
     # Create processor from feature extractor and tokenizer
     processor = Wav2Vec2Processor(
         feature_extractor=feature_extractor,
@@ -490,12 +517,14 @@ def main():
     )
     
     # Update config with tokenizer info
-    config.vocab_size = len(tokenizer)
+    # config.vocab_size = len(tokenizer) # Vocab size should be inferred by model or set below
     
     # Load model
     model = HubertForCTC.from_pretrained(
         model_args.model_name_or_path,
         config=config,
+        pad_token_id=processor.tokenizer.pad_token_id, # Use pad token id from processor
+        vocab_size=len(processor.tokenizer), # Set vocab size from processor
         cache_dir=model_args.cache_dir,
         revision=model_args.model_revision,
         use_auth_token=True if model_args.use_auth_token else None,
@@ -516,47 +545,52 @@ def main():
     
     if training_args.do_train:
         train_dataset = HubertDataset(
-            dataset=raw_datasets["train"],
+            dataset=data_train,
             processor=processor,
-            max_duration_in_seconds=data_args.max_duration_in_seconds,
-            chars_to_ignore=data_args.chars_to_ignore,
-            split="train",
         )
     
     if training_args.do_eval:
         eval_dataset = HubertDataset(
-            dataset=raw_datasets["validation"],
+            dataset=data_eval,
             processor=processor,
-            max_duration_in_seconds=data_args.max_duration_in_seconds,
-            chars_to_ignore=data_args.chars_to_ignore,
-            split="validation",
         )
     
     #=================================================================================================================
-    #                                               SETUP METRICS
+    #                                          SETUP METRICS (using jiwer)
     #=================================================================================================================
     # Define compute metrics
-    wer_metric = evaluate.load("wer")
-    cer_metric = evaluate.load("cer")
-    
     def compute_metrics(pred):
         pred_logits = pred.predictions
         pred_ids = np.argmax(pred_logits, axis=-1)
-        
+
         pred.label_ids[pred.label_ids == -100] = processor.tokenizer.pad_token_id
-        
+
         pred_str = processor.batch_decode(pred_ids)
+
+        # we do not want to group tokens when computing the metrics
         label_str = processor.batch_decode(pred.label_ids, group_tokens=False)
-        
-        wer = wer_metric.compute(predictions=pred_str, references=label_str)
-        cer = cer_metric.compute(predictions=pred_str, references=label_str)
-        
-        return {"wer": wer, "cer": cer}
+
+        # Define transformations based on SpeechLaughWav2Vec2.py (adjust if needed)
+        eval_transformation = jiwer.Compose([
+                jiwer.ExpandCommonEnglishContractions(),
+                jiwer.RemovePunctuation(),
+                jiwer.RemoveMultipleSpaces(),
+                jiwer.Strip(),
+                jiwer.ToLowerCase()
+        ])
+
+        pred_str = eval_transformation(pred_str)
+        label_str = eval_transformation(label_str)
+
+        wer = jiwer.wer(reference=label_str, hypothesis=pred_str)
+
+        return {"wer": wer}
     
     #=================================================================================================================
     #                                               SETUP TRAINER
     #=================================================================================================================
-    data_collator = HubertDataCollator(processor=processor)
+    # Instantiate the modified data collator
+    data_collator = HubertDataCollator(processor=processor, padding=True) 
     # Initialize Trainer
     trainer = Trainer(
         model=model,
@@ -578,7 +612,8 @@ def main():
             checkpoint = last_checkpoint
             
         train_result = trainer.train(resume_from_checkpoint=checkpoint)
-        trainer.save_model()
+        trainer.save_model() # Save the fine-tuned model
+        # Save the processor configuration alongside the model
         processor.save_pretrained(training_args.output_dir)
         
         metrics = train_result.metrics

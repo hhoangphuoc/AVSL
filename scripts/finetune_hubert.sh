@@ -65,8 +65,10 @@ python finetune_hubert.py \
     --learning_rate $LR \
     --num_train_epochs $NUM_EPOCHS \
     --fp16 \
-    --save_strategy "epoch" \
-    --eval_strategy "epoch" \
+    --save_strategy "steps" \
+    --eval_strategy "steps" \
+    --save_steps 100 \
+    --eval_steps 100 \
     --logging_steps 100 \
     --save_total_limit 3 \
     --load_best_model_at_end \

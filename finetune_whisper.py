@@ -305,15 +305,15 @@ class WhisperDataCollator:
 
         # Remove decoder_start_token_id if present
         # padding token id is -100
-        labels = labels["input_ids"].masked_fill(labels["attention_mask"].ne(1), -100)
+        processed_labels = labels["input_ids"].masked_fill(labels["attention_mask"].ne(1), -100)
 
         # Remove decoder_start_token_id if present
-        if (labels[:, 0] == self.decoder_start_token_id).all().cpu().item():
-            labels = labels[:, 1:]
+        if (processed_labels[:, 0] == self.decoder_start_token_id).all().cpu().item():
+            processed_labels = processed_labels[:, 1:]
     
         batch = {
-            "input_features": input_features,
-            "labels": labels,
+            "input_features": input_features["input_features"],
+            "labels": processed_labels,
         }
     
         return batch
@@ -392,10 +392,10 @@ def main():
     })
     # ------------------------------------------------------------------------------------------------------
     # Trim dataset if MAX_TRAIN_SAMPLES or MAX_EVAL_SAMPLES is declared ------------------------------------
-    if data_args.max_train_samples is not None and "train" in raw_datasets:
-        raw_datasets["train"] = raw_datasets["train"].select(range(data_args.max_train_samples))
-    if data_args.max_eval_samples is not None and "validation" in raw_datasets:
-        raw_datasets["validation"] = raw_datasets["validation"].select(range(data_args.max_eval_samples))
+    # if data_args.max_train_samples is not None and "train" in raw_datasets:
+    #     raw_datasets["train"] = raw_datasets["train"].select(range(data_args.max_train_samples))
+    # if data_args.max_eval_samples is not None and "validation" in raw_datasets:
+    #     raw_datasets["validation"] = raw_datasets["validation"].select(range(data_args.max_eval_samples))
     # ------------------------------------------------------------------------------------------------------
 
     # Print dataset info
@@ -481,7 +481,7 @@ def main():
     #=================================================================================================================
     # Define compute metrics
     wer_metric = evaluate.load("wer")
-    cer_metric = evaluate.load("cer")
+    # cer_metric = evaluate.load("cer")
     
     def compute_metrics(pred):
         pred_ids = pred.predictions
@@ -499,9 +499,9 @@ def main():
         label_str = processor.batch_decode(pred.label_ids, skip_special_tokens=True)
         
         wer = wer_metric.compute(predictions=pred_str, references=label_str)
-        cer = cer_metric.compute(predictions=pred_str, references=label_str)
+        # cer = cer_metric.compute(predictions=pred_str, references=label_str)
         
-        return {"wer": wer, "cer": cer}
+        return {"wer": wer}
     
     #=================================================================================================================
     #                                               SETUP TRAINER
@@ -516,7 +516,7 @@ def main():
         args=training_args,
         train_dataset=train_dataset if training_args.do_train else None,
         eval_dataset=eval_dataset if training_args.do_eval else None,
-        tokenizer=processor.feature_extractor,
+        processing_class=processor,
         data_collator=data_collator,
         compute_metrics=compute_metrics if training_args.predict_with_generate else None,
         callbacks=[EarlyStoppingCallback(early_stopping_patience=5)],
