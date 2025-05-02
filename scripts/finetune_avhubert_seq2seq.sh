@@ -37,11 +37,12 @@ source activate .venv
 cd /home/s2587130/AVSL
 
 # Set variables
-MODEL_NAME_OR_PATH="nguyenvulebinh/AV-HuBERT-MuAViC-en"  # Will fallback to local checkpoints if unavailable
-CONFIG_YAML="config/avhubert_large.yaml"
-OUTPUT_DIR="output/avhubert_ft_seq2seq"
+MODEL_NAME_OR_PATH="./checkpoints/hf-avhubert"  # Will fallback to local checkpoints if unavailable
+# CONFIG_YAML="config/avhubert_large.yaml"
+CONFIG_NAME="./checkpoints/hf-avhubert/config.json"
+OUTPUT_DIR="./output/avhubert_ft_seq2seq"
 DATASET_NAME="ami"
-CACHE_DIR="./checkpoints/hf-avhubert"
+CACHE_DIR="./cache/avhubert_ft_seq2seq"
 BATCH_SIZE=8
 GRAD_ACCUM=4
 LR=2e-5
@@ -55,7 +56,7 @@ mkdir -p logs
 # Run fine-tuning with YAML configuration
 python finetune_avhubert_seq2seq.py \
     --model_name_or_path $MODEL_NAME_OR_PATH \
-    --config_yaml $CONFIG_YAML \
+    --config_name $CONFIG_NAME \
     --cache_dir $CACHE_DIR \
     --output_dir $OUTPUT_DIR \
     --dataset_name $DATASET_NAME \
@@ -68,7 +69,7 @@ python finetune_avhubert_seq2seq.py \
     --num_train_epochs $NUM_EPOCHS \
     --fp16 \
     --save_strategy "epoch" \
-    --evaluation_strategy "epoch" \
+    --eval_strategy "epoch" \
     --logging_steps 100 \
     --save_total_limit 3 \
     --load_best_model_at_end \
@@ -81,4 +82,5 @@ python finetune_avhubert_seq2seq.py \
     --use_visual True \
     --fusion_type "concat" \
     --audio_drop_prob 0.5 \
-    --visual_drop_prob 0.5
+    --visual_drop_prob 0.5 \
+    --overwrite_output_dir

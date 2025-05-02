@@ -26,10 +26,11 @@ from transformers import (
     Seq2SeqTrainer,
     Seq2SeqTrainingArguments,
     set_seed,
-    AutoProcessor,
-    AutoTokenizer,
+    Wav2Vec2FeatureExtractor,
+    Wav2Vec2Processor,
     Speech2TextTokenizer,   
     EarlyStoppingCallback,
+    AutoProcessor,
 )
 
 from transformers.trainer_utils import get_last_checkpoint
@@ -40,15 +41,24 @@ from utils import (
     AVHubertBatch, 
     create_dataset_splits
 )
+
+#------------------------------Self-implemented models----------------------------------------------------------
 from config.av_hubert_config import AVHuBERTConfig
 from models.av_hubert_seq2seq_model import AVHuBERTForConditionalGeneration
+#-----------------------------Fall-back models------------------------------------------------------------------
+#- FIXME: Use this if the previous doesnt work
+from avhubert.src.model.avhubert2text import AV2TextForConditionalGeneration 
+from avhubert.src.model.av2text_config import AV2TextConfig
+#----------------------------------------------------------------------------------------------------------
 
 import datasets
 from datasets import DatasetDict, Dataset, load_from_disk
 
 logger = logging.getLogger(__name__)
 
-MODEL_NAME_OR_PATH = "nguyenvulebinh/AV-HuBERT-MuAViC-en" #"vumichien/AV-HuBERT"
+AVHUBERT_PRETRAINED_TOKENIZER_PATH = os.path.join("checkpoints", "hf-avhubert")  #nguyenvulebinh/AV-HuBERT-MuAViC-en"/ "vumichien/AV-HuBERT"
+AVHUBERT_PRETRAINED_CONFIG_NAME = os.path.join("checkpoints", "hf-avhubert", "config.json")
+HUBERT_PRETRAINED_FEATURE_EXTRACTOR_PATH = os.path.join("checkpoints", "hf-hubert", "hubert-large-ls960-ft")
 
 @dataclass
 class ModelArguments:
@@ -56,10 +66,10 @@ class ModelArguments:
     Arguments pertaining to which model/config/tokenizer we are going to fine-tune.
     """
     model_name_or_path: Optional[str] = field(
-        default=MODEL_NAME_OR_PATH, metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
+        default=AVHUBERT_PRETRAINED_TOKENIZER_PATH, metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
     )
     config_name: Optional[str] = field(
-        default=None, metadata={"help": "Pretrained config name or path if not the same as model_name"}
+        default=AVHUBERT_PRETRAINED_CONFIG_NAME, metadata={"help": "Pretrained config name or path if not the same as model_name"}
     )
     config_yaml: Optional[str] = field(
         default="config/avhubert_large.yaml", metadata={"help": "Path to YAML configuration file. Overrides other config options when provided."}
@@ -74,7 +84,7 @@ class ModelArguments:
         default=None, metadata={"help": "Processor name or path"}
     )
     cache_dir: Optional[str] = field(
-        default="./checkpoints/hf-avhubert", metadata={"help": "Where to store the pretrained models"}
+        default="./cache/avhubert", metadata={"help": "Where to store the pretrained models"}
     )
     use_fast_tokenizer: bool = field(
         default=True, metadata={"help": "Whether to use one of the fast tokenizer"}
@@ -257,43 +267,57 @@ def main():
     set_seed(training_args.seed)
 
     #=================================================================================================================
-    #                        SETUP DATASET (LOAD, SPLIT, SAVE)
+    #                                   SETUP DATASET (LOAD, SPLIT, SAVE)
     #=================================================================================================================
     # Load dataset from disk
-    dataset_path = os.path.join("data", data_args.dataset_name, "dataset")
-    ami_dataset = load_from_disk(dataset_path)
+    # dataset_path = os.path.join("data", data_args.dataset_name, "dataset")
+    # ami_dataset = load_from_disk(dataset_path)
 
-    raw_datasets = create_dataset_splits(ami_dataset, 
-                                         dataset_name=data_args.dataset_name, 
-                                         model_name="av_hubert")
-    # -------------------------------------------------------------------------
+    # raw_datasets = create_dataset_splits(ami_dataset, 
+    #                                      dataset_name=data_args.dataset_name, 
+    #                                      model_name="av_hubert")
 
-    # Trim dataset if requested - NOTE: NOT IMPLEMENTED--------------------------------
-    if data_args.max_train_samples is not None and "train" in raw_datasets:
-        raw_datasets["train"] = raw_datasets["train"].select(range(data_args.max_train_samples))
-    if data_args.max_eval_samples is not None and "validation" in raw_datasets:
-        raw_datasets["validation"] = raw_datasets["validation"].select(range(data_args.max_eval_samples))
-    # -------------------------------------------------------------------------
+    ami_train_path = os.path.join("data", data_args.dataset_name, "av_hubert", "train")
+    ami_val_path = os.path.join("data", data_args.dataset_name, "av_hubert", "validation")
+    ami_test_path = os.path.join("data", data_args.dataset_name, "av_hubert", "test")
 
-    # Print dataset info
-    logger.info(f"Training examples: {len(raw_datasets['train']) if 'train' in raw_datasets else 0}")
-    logger.info(f"Validation examples: {len(raw_datasets['validation']) if 'validation' in raw_datasets else 0}")
-    logger.info(f"Test examples: {len(raw_datasets['test']) if 'test' in raw_datasets else 0}")
+    ami_train = load_from_disk(ami_train_path)
+    ami_val = load_from_disk(ami_val_path)
+    ami_test = load_from_disk(ami_test_path)
+
+    # raw_datasets = DatasetDict({
+    #     "train": ami_train,
+    #     "validation": ami_val,
+    #     "test": ami_test
+    # })
+    
     # -----------------------------------------------------------------------------------------------------------------
 
+    # Trim dataset if requested - NOTE: NOT IMPLEMENTED----------------------------------------------------------------
+    # if data_args.max_train_samples is not None and "train" in raw_datasets:
+    #     raw_datasets["train"] = raw_datasets["train"].select(range(data_args.max_train_samples))
+    # if data_args.max_eval_samples is not None and "validation" in raw_datasets:
+    #     raw_datasets["validation"] = raw_datasets["validation"].select(range(data_args.max_eval_samples))
+    # -----------------------------------------------------------------------------------------------------------------
+
+    # logger.info dataset info
+    logger.info(f"Training examples: {len(ami_train)}")
+    logger.info(f"Validation examples: {len(ami_val)}")
+    logger.info(f"Test examples: {len(ami_test)}")
+    # -----------------------------------------------------------------------------------------------------------------
 
     #=================================================================================================================
     #                                               SETUP CONFIG
     #=================================================================================================================
 
     # Load config
-    if model_args.config_yaml:
-        logger.info(f"Loading configuration from YAML file {model_args.config_yaml}")
-        config = AVHuBERTConfig.from_yaml(model_args.config_yaml)
+    # if model_args.config_yaml:
+    #     logger.info(f"Loading configuration from YAML file {model_args.config_yaml}")
+    #     config = AVHuBERTConfig.from_yaml(model_args.config_yaml)
     # -------------------------------------------------------------------------------
-    # NOTE: NOT IMPLEMENTED
-    elif model_args.config_name:
-        config = AVHuBERTConfig.from_pretrained(
+    # FIXME: Try using config_name from `AVHUBERT_PRETRAINED_CONFIG_NAME`
+    if model_args.config_name:
+        config = AV2TextConfig.from_pretrained(
             model_args.config_name,
             cache_dir=model_args.cache_dir,
             revision=model_args.model_revision,
@@ -301,8 +325,8 @@ def main():
         )
     # -------------------------------------------------------------------------------
     else:
-        config = AVHuBERTConfig()
-        logger.warning("You are instantiating a new config instance from scratch.")
+        config = AV2TextConfig()
+        logger.info("You are instantiating a default `AV2TextConfig` instance")
 
     # Update config with model args (command-line args override YAML config)
     # Only override if the arguments were explicitly provided on command line
@@ -316,35 +340,25 @@ def main():
     logger.info(f"Audio modality: {'enabled' if config.use_audio else 'disabled'}")
     logger.info(f"Visual modality: {'enabled' if config.use_visual else 'disabled'}")
     logger.info(f"Fusion type: {config.fusion_type}")
+    # -----------------------------------------------------------------------------------------------------------------
+
 
     #===================================================================================================================
-    # NOTE: MAY NOT BE NEEDED TO LOAD TOKENIZER AND FEATURE EXTRACTOR SEPARATELY
-    # AS THEY ARE INCLUDED IN THE PROCESSOR 
+    #                  FIXME MAY NOT BE NEEDED TO LOAD TOKENIZER AND FEATURE EXTRACTOR SEPARATELY
+    #                                   AS THEY ARE INCLUDED IN THE PROCESSOR 
     #===================================================================================================================
-    #-------------------------------------------------------------------------
-    #                SETUP TOKENIZER
-    #-------------------------------------------------------------------------
-    # Try to load tokenizer from different sources with fallbacks
+    
+    
+    # =================================================================================================================
+    #                                       SETUP TOKENIZER
+    # =================================================================================================================
+    # TOKENIZER: `Speech2TextTokenizer` - The tokenizer will be loaded from 
+    # `AVHUBERT_PRETRAINED_TOKENIZER_PATH`
+    # This is the tokenizer generated using the `Speech2TextTokenizer`
+    #----------------------------------------------------------------------------------------------------------
     tokenizer = None
     
-    # 1. Try loading from tokenizer_name if provided
-    # NOTE: NOT IMPLEMENTED - TO BE REMOVED--------------------------------
-    # if model_args.tokenizer_name:
-    #     try:
-    #         logger.info(f"Loading tokenizer from {model_args.tokenizer_name}")
-    #         tokenizer = AutoTokenizer.from_pretrained(
-    #             model_args.tokenizer_name,
-    #             cache_dir=model_args.cache_dir,
-    #             use_fast=model_args.use_fast_tokenizer,
-    #             revision=model_args.model_revision,
-    #             use_auth_token=True if model_args.use_auth_token else None,
-    #         )
-    #         logger.info(f"Successfully loaded tokenizer from {model_args.tokenizer_name}")
-    #     except Exception as e:
-    #         logger.warning(f"Failed to load tokenizer from {model_args.tokenizer_name}: {e}")
-    # ------------------------------------------------------------------------
-    
-    # 2. Try loading from model_name_or_path if tokenizer is still None
+    # 2. Try loading from model_name_or_path if tokenizer is None
     if tokenizer is None and model_args.model_name_or_path:
         try:
             logger.info(f"Loading tokenizer from {model_args.model_name_or_path}")
@@ -358,8 +372,8 @@ def main():
             logger.info(f"Successfully loaded tokenizer from {model_args.model_name_or_path}")
         except Exception as e:
             logger.warning(f"Failed to load tokenizer from {model_args.model_name_or_path}: {e}")
-    # ------------------------------------------------------------------------
-    # 3. Try loading from local dictionary file if tokenizer is still None
+    # -------------------------------------------------------------------
+    # 3. Try loading from local dictionary file 
     if tokenizer is None:
         dict_path = os.path.join("checkpoints", "avhubert", "dict.en.txt")
         tokenizer_model_path = os.path.join("checkpoints", "avhubert", "tokenizer.model")
@@ -417,54 +431,6 @@ def main():
             except Exception as e:
                 logger.warning(f"Failed to load tokenizer model: {e}")
     # ----------------------------------------------------------------------------------------------------------
-    
-    # # 4. If all above methods fail, create from dataset vocabulary
-    # if tokenizer is None:
-    #     logger.info("Creating vocabulary from dataset")
-        
-    #     # Extract all unique characters from transcripts
-    #     all_texts = []
-    #     for split in raw_datasets.keys():
-    #         if data_args.text_column_name in raw_datasets[split].column_names:
-    #             all_texts.extend(raw_datasets[split][data_args.text_column_name])
-        
-    #     # Create vocabulary with special tokens
-    #     vocab_list = sorted(list(set("".join(all_texts))))
-    #     vocab_dict = {}
-        
-    #     # Add special tokens
-    #     vocab_dict["<pad>"] = 0
-    #     vocab_dict["<s>"] = 1
-    #     vocab_dict["</s>"] = 2
-    #     vocab_dict["<unk>"] = 3
-        
-    #     # Add characters
-    #     for i, char in enumerate(vocab_list):
-    #         if char.strip():  # Skip empty characters
-    #             vocab_dict[char] = i + 4  # Start after special tokens
-        
-    #     # Save vocabulary to file
-    #     vocab_file = os.path.join(training_args.output_dir, "vocab.json")
-    #     os.makedirs(training_args.output_dir, exist_ok=True)
-    #     with open(vocab_file, "w") as f:
-    #         import json
-    #         json.dump(vocab_dict, f)
-        
-    #     # Create tokenizer
-    #     tokenizer = Speech2TextTokenizer.from_pretrained(
-    #         training_args.output_dir,
-    #         cache_dir=model_args.cache_dir,
-    #         use_fast=model_args.use_fast_tokenizer,
-    #     )
-        
-    #     # Set special tokens
-    #     tokenizer.bos_token = "<s>"
-    #     tokenizer.eos_token = "</s>"
-    #     tokenizer.pad_token = "<pad>"
-    #     tokenizer.unk_token = "<unk>"
-        
-    #     logger.info(f"Created new tokenizer from dataset with {len(vocab_dict)} tokens")
-    # # -------------------------------------------------------------------------
 
     # Update config with tokenizer info
     config.vocab_size = len(tokenizer)
@@ -472,110 +438,72 @@ def main():
     config.eos_token_id = tokenizer.eos_token_id
     config.pad_token_id = tokenizer.pad_token_id
     config.decoder_start_token_id = tokenizer.bos_token_id
-    
-    # #-------------------------------------------------------------------------
-    # #                           SETUP FEATURE EXTRACTOR
-    # #-------------------------------------------------------------------------
-    # if model_args.feature_extractor_name:
-    #     feature_extractor = AutoFeatureExtractor.from_pretrained(
-    #         model_args.feature_extractor_name,
-    #         cache_dir=model_args.cache_dir,
-    #         revision=model_args.model_revision,
-    #         use_auth_token=True if model_args.use_auth_token else None,
-    #     )
-    # elif model_args.model_name_or_path:
-    #     feature_extractor = AutoFeatureExtractor.from_pretrained(
-    #         model_args.model_name_or_path,
-    #         cache_dir=model_args.cache_dir,
-    #         revision=model_args.model_revision,
-    #         use_auth_token=True if model_args.use_auth_token else None,
-    #     )
-    # else:
-    #     # Create a default feature extractor
-    #     feature_extractor = AutoFeatureExtractor.from_pretrained(
-    #         "facebook/hubert-base-ls960",
-    #         cache_dir=model_args.cache_dir,
-    #     )
-    #     feature_extractor.do_normalize = True
-    #-------------------------------------------------------------------------
-        
-    #=================================================================================================================
-    #                                               SETUP PROCESSOR
-    #=================================================================================================================
-    # Create processor with fallback mechanisms
-    processor = None
-    
-    # 1. Try loading from processor_name if provided
-    # NOTE: NOT IMPLEMENTED - TO BE REMOVED--------------------------------
-    # if model_args.processor_name:
-    #     try:
-    #         logger.info(f"Loading processor from {model_args.processor_name}")
-    #         processor = AutoProcessor.from_pretrained(
-    #             model_args.processor_name,
-    #             cache_dir=model_args.cache_dir,
-    #             revision=model_args.model_revision,
-    #             use_auth_token=True if model_args.use_auth_token else None,
-    #         )
-    #         logger.info(f"Successfully loaded processor from {model_args.processor_name}")
-    #     except Exception as e:
-    #         logger.warning(f"Failed to load processor from {model_args.processor_name}: {e}")
-    # ------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------------------
 
-    # 2. Try loading from model_name_or_path if processor is still None
-    if processor is None and model_args.model_name_or_path:
-        try:
-            logger.info(f"Loading processor from {model_args.model_name_or_path}")
-            processor = AutoProcessor.from_pretrained(
-                model_args.model_name_or_path,
-                cache_dir=model_args.cache_dir,
-                revision=model_args.model_revision,
-                use_auth_token=True if model_args.use_auth_token else None,
-            )
-            logger.info(f"Successfully loaded processor from {model_args.model_name_or_path}")
-        except Exception as e:
-            logger.warning(f"Failed to load processor from {model_args.model_name_or_path}: {e}")
-    
-    # 3. Create a basic processor if all above methods fail
-    if processor is None:
-        logger.info("Creating new basic processor")
-        processor = transformers.ProcessorMixin()
-        processor.tokenizer = tokenizer
+
+    # =================================================================================================================
+    #                           SETUP FEATURE EXTRACTOR
+    # =================================================================================================================
+    # Try loading feature extractor from model_name_or_path first, fallback to default
+    try:
+        feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(
+            HUBERT_PRETRAINED_FEATURE_EXTRACTOR_PATH,
+            cache_dir=model_args.cache_dir,
+            do_normalize=True,
+            return_attention_mask=True,
+            local_files_only=True
+        )
+        logger.info(f"Successfully loaded feature extractor from {HUBERT_PRETRAINED_FEATURE_EXTRACTOR_PATH}")
+    except Exception as e:
+        logger.warning(f"Failed to load feature extractor from {HUBERT_PRETRAINED_FEATURE_EXTRACTOR_PATH}: {e}. Falling back to default.")
+
+    #----------------------------------------------------------------------------------------------------------
         
-        # Additional processor setup can be done here if needed
-        # For example, setting properties that might be needed for the specific task
-        
-        # Save the processor
-        os.makedirs(training_args.output_dir, exist_ok=True)
-        processor.save_pretrained(training_args.output_dir)
-        logger.info(f"Created and saved new processor to {training_args.output_dir}")
     
-    # -------------------------------------------------------------------------
+    #=================================================================================================================
+    #                                              SETUP PROCESSOR
+    #=================================================================================================================
+    # Instead of directly creating ProcessorMixin, save components and load via AutoProcessor - FIXME: CHECK IF IT WORKS.
+
+    # Ensure output directory exists
+    os.makedirs(training_args.output_dir, exist_ok=True)
+
+    try:
+        logger.info(f"Attempting to create processor from feature extractor and tokenizer")
+        # processor = AutoProcessor.from_pretrained(
+        #     training_args.output_dir,
+        #     cache_dir=model_args.cache_dir,
+        # )
+        processor = Wav2Vec2Processor(
+            feature_extractor=feature_extractor,
+            tokenizer=tokenizer
+        )
+        logger.info(f"Successfully loaded processor from {training_args.output_dir}")
+    except Exception as e:
+        logger.info(f"Failed to load processor from {training_args.output_dir}: {e}. Saving components first.")
+        # Save the loaded feature extractor and tokenizer to the output directory
+        
+        logger.info(f"Saving feature extractor to {training_args.output_dir}")
+        feature_extractor.save_pretrained(training_args.output_dir)
+
+        logger.info(f"Saving tokenizer to {training_args.output_dir}")
+        tokenizer.save_pretrained(training_args.output_dir)
+
+        # Now, load the processor from the directory where components were just saved
+        logger.info(f"Reloading processor from {training_args.output_dir} after saving components.")
+        processor = Wav2Vec2Processor.from_pretrained(
+            training_args.output_dir,
+            cache_dir=model_args.cache_dir,
+        )
+        logger.info(f"Successfully created and loaded processor from components saved in {training_args.output_dir}")
+
+    #----------------------------------------------------------------------------------------------------------
     # COMPUTE MAX AUDIO AND VIDEO LENGTHS (LOAD FROM YAML IF AVAILABLE)
     # -------------------------------------------------------------------------
     # Get max_audio_length and max_video_frames from YAML if available, otherwise compute from max_duration
     max_audio_length = int(data_args.max_duration_in_seconds * 16000)  # Default: 16kHz sampling rate
     max_video_frames = int(data_args.max_duration_in_seconds * 25)     # Default: 25 fps
-    
-    if model_args.config_yaml:
-        # Parse YAML file directly to get dataset parameters if needed
-        try:
-            import yaml
-            with open(model_args.config_yaml, 'r') as f:
-                yaml_config = yaml.safe_load(f)
-                
-            if 'dataset' in yaml_config:
-                if 'max_audio_length' in yaml_config['dataset']:
-                    max_audio_length = yaml_config['dataset']['max_audio_length']
-                    logger.info(f"Using max_audio_length from YAML config: {max_audio_length}")
-                    
-                if 'max_video_frames' in yaml_config['dataset']:
-                    max_video_frames = yaml_config['dataset']['max_video_frames']
-                    logger.info(f"Using max_video_frames from YAML config: {max_video_frames}")
-        except Exception as e:
-            logger.warning(f"Failed to parse dataset parameters from YAML: {e}")
-            logger.info(f"Using default max_audio_length: {max_audio_length}, max_video_frames: {max_video_frames}")
-    # -------------------------------------------------------------------------
-    
+ 
     #=================================================================================================================
     #                                               SETUP MODEL
     #=================================================================================================================
@@ -584,9 +512,8 @@ def main():
         try:
             # First attempt: try loading from Hugging Face model hub
             logger.info(f"Attempting to load pretrained model from {model_args.model_name_or_path}")
-            model = AVHuBERTForConditionalGeneration.from_pretrained(
+            model = AV2TextForConditionalGeneration.from_pretrained(
                 model_args.model_name_or_path,
-                from_tf=bool(".ckpt" in model_args.model_name_or_path),
                 config=config,
                 cache_dir=model_args.cache_dir,
                 revision=model_args.model_revision,
@@ -595,64 +522,11 @@ def main():
             logger.info(f"Successfully loaded pretrained model from {model_args.model_name_or_path}")
         except Exception as e:
             # Second attempt: try loading from local checkpoint files
-            logger.warning(f"Failed to load model from {model_args.model_name_or_path}: {e}")
+            logger.info(f"Failed to load model from {model_args.model_name_or_path}: {e}")
             logger.info("Attempting to load from local checkpoint files...")
-            
-            try:
-                # Check if local checkpoint files exist
-                checkpoint_path = os.path.join("checkpoints", "avhubert", "checkpoint_best.pt")
-                dict_path = os.path.join("checkpoints", "avhubert", "dict.en.txt")
-                tokenizer_path = os.path.join("checkpoints", "avhubert", "tokenizer.model")
-                
-                if os.path.exists(checkpoint_path) and os.path.exists(dict_path) and os.path.exists(tokenizer_path):
-                    logger.info(f"Found local checkpoint files: {checkpoint_path}")
-                    
-                    # Initialize the model with the config
-                    model = AVHuBERTForConditionalGeneration(config)
-                    
-                    # Load the checkpoint weights
-                    checkpoint = torch.load(checkpoint_path, map_location="cpu")
-                    if "model" in checkpoint:
-                        checkpoint = checkpoint["model"]
-                    
-                    # Check for key mismatches or missing keys
-                    missing_keys, unexpected_keys = model.load_state_dict(checkpoint, strict=False)
-                    if missing_keys:
-                        logger.warning(f"Missing keys when loading checkpoint: {missing_keys}")
-                    if unexpected_keys:
-                        logger.warning(f"Unexpected keys when loading checkpoint: {unexpected_keys}")
-                    
-                    logger.info(f"Successfully loaded weights from local checkpoint: {checkpoint_path}")
-                    
-                    # If a dictionary file exists, update the tokenizer vocabulary
-                    if os.path.exists(dict_path):
-                        logger.info(f"Loading dictionary from {dict_path}")
-                        with open(dict_path, "r", encoding="utf-8") as f:
-                            vocab = [line.strip() for line in f if line.strip()]
-                        
-                        # Update config with correct vocabulary size
-                        config.vocab_size = len(vocab)
-                        model.config.vocab_size = len(vocab)
-                        
-                        # Need to resize token embeddings if the vocabulary size changed
-                        model.resize_token_embeddings(len(vocab))
-                    
-                    # If a tokenizer model exists, update the processor
-                    if hasattr(tokenizer, "save_vocabulary") and os.path.exists(tokenizer_path):
-                        logger.info(f"Loading tokenizer model from {tokenizer_path}")
-                        tokenizer = tokenizer.__class__.from_pretrained(
-                            os.path.dirname(tokenizer_path),
-                            cache_dir=model_args.cache_dir,
-                        )
-                else:
-                    raise FileNotFoundError(f"Local checkpoint files not found in {os.path.join('checkpoints', 'avhubert')}")
-            except Exception as local_err:
-                logger.error(f"Failed to load from local checkpoint: {local_err}")
-                logger.info("Training new model from scratch")
-                model = AVHuBERTForConditionalGeneration(config)
     else:
         logger.info("Training new model from scratch")
-        model = AVHuBERTForConditionalGeneration(config)
+        model = AV2TextForConditionalGeneration(config)
     
     # Freeze components if requested
     if model_args.freeze_encoder:
@@ -678,18 +552,9 @@ def main():
     audio_drop_prob = data_args.audio_drop_prob
     visual_drop_prob = data_args.visual_drop_prob
     
-    # Override with YAML values if they exist
-    if model_args.config_yaml:
-        if hasattr(config, 'modality_dropout'):
-            visual_drop_prob = config.modality_dropout
-            logger.info(f"Using visual_drop_prob from YAML config: {visual_drop_prob}")
-        if hasattr(config, 'audio_dropout'):
-            audio_drop_prob = config.audio_dropout
-            logger.info(f"Using audio_drop_prob from YAML config: {audio_drop_prob}")
-    
     if training_args.do_train:
         train_dataset = AVHubertDataset(
-            dataset=raw_datasets["train"],
+            dataset=ami_train,
             processor=processor,
             split="train",
             max_audio_length=max_audio_length,
@@ -700,7 +565,7 @@ def main():
     
     if training_args.do_eval:
         eval_dataset = AVHubertDataset(
-            dataset=raw_datasets["validation"],
+            dataset=ami_val,
             processor=processor,
             split="validation",
             max_audio_length=max_audio_length,
@@ -718,7 +583,7 @@ def main():
     #=================================================================================================================
     # Define compute metrics
     wer_metric = evaluate.load("wer")
-    cer_metric = evaluate.load("cer")
+    # cer_metric = evaluate.load("cer")
     
     def compute_metrics(pred):
         pred_ids = pred.predictions
@@ -736,9 +601,9 @@ def main():
         label_str = tokenizer.batch_decode(pred.label_ids, skip_special_tokens=True)
         
         wer = wer_metric.compute(predictions=pred_str, references=label_str)
-        cer = cer_metric.compute(predictions=pred_str, references=label_str)
+        # cer = cer_metric.compute(predictions=pred_str, references=label_str)
         
-        return {"wer": wer, "cer": cer}
+        return {"wer": wer}
     
     #=================================================================================================================
     #                                               SETUP TRAINER
@@ -749,7 +614,7 @@ def main():
         args=training_args,
         train_dataset=train_dataset if training_args.do_train else None,
         eval_dataset=eval_dataset if training_args.do_eval else None,
-        tokenizer=processor,
+        processing_class=processor,
         data_collator=data_collator,
         compute_metrics=compute_metrics if training_args.predict_with_generate else None,
         callbacks=[EarlyStoppingCallback(early_stopping_patience=5)],

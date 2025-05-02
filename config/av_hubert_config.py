@@ -44,6 +44,8 @@ class AVHuBERTConfig(PretrainedConfig):
         conv_kernel: List[int] = [10, 3, 3, 3, 3, 2, 2],                # Kernel sizes of CNN layers
         conv_kernel_sizes: List[int] = [5, 5],
         audio_feat_dim: int = 104,                      # Dimension of audio features after preprocessing
+        num_conv_pos_embeddings: int = 128,             # Number of positional embedding groups for convolution
+        num_conv_pos_embedding_groups: int = 16,        # Number of groups for positional embeddings
         
         # Masking parameters (for fine-tuning)
         mask_time_prob: float = 0.0,                    # Probability for visual time masking
@@ -139,6 +141,8 @@ class AVHuBERTConfig(PretrainedConfig):
         self.conv_kernel = conv_kernel
         self.conv_kernel_sizes = conv_kernel_sizes
         self.audio_feat_dim = audio_feat_dim
+        self.num_conv_pos_embeddings = num_conv_pos_embeddings
+        self.num_conv_pos_embedding_groups = num_conv_pos_embedding_groups
         
         # Masking parameters
         self.mask_time_prob = mask_time_prob
