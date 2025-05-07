@@ -9,17 +9,13 @@ from .lips_cropping import (
 from .huggingface_utils import av_to_hf_dataset, av_to_hf_dataset_with_shards
 from .model_utils import compute_mask_indices
 from .data_loading import (
-    load_audio, 
-    load_video, 
-    align_lengths, 
-    process_data_for_avhubert, 
-    collate_audio_visual_batch, 
-    AVHubertDataset,
+    load_audio_features,
+    load_video_features,
     create_dataset_splits,
-    load_audio_from_path,
-    load_video_from_path,
     TARGET_AUDIO_SR,
     VIDEO_CROP_SIZE,
+    VIDEO_MEAN,
+    VIDEO_STD,
 )
 
 __all__ = [
@@ -38,15 +34,11 @@ __all__ = [
     "compute_mask_indices",
 
     # Data loading
-    "load_audio",
-    "load_video",
-    "align_lengths",
-    "process_data_for_avhubert",
-    "collate_audio_visual_batch",
-    "AVHubertDataset",
     "create_dataset_splits",
-    "load_audio_from_path",
-    "load_video_from_path",
+    "load_audio_features",
+    "load_video_features",
     "TARGET_AUDIO_SR",
     "VIDEO_CROP_SIZE",
+    "VIDEO_MEAN",
+    "VIDEO_STD",
 ]

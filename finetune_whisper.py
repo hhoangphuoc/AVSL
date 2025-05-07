@@ -178,6 +178,9 @@ class WhisperDataCollator:
         return batch
 
 def main():
+    # Print all received command-line arguments for debugging
+    logger.info(f"Raw command-line arguments (sys.argv): {sys.argv}")
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.info(f"Using device: {device}")
     #=================================================================================================================
@@ -185,6 +188,9 @@ def main():
     #=================================================================================================================
     parser = HfArgumentParser((ModelArguments, DataTrainingArguments, Seq2SeqTrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+
+    # Print parsed training_args.report_to for debugging
+    logger.info(f"Parsed training_args.report_to: {training_args.report_to}")
 
     #=================================================================================================================
     #                                       SETUP LOGGING
@@ -400,7 +406,6 @@ def main():
     data_collator = WhisperDataCollator(
         processor=processor,
         decoder_start_token_id=model.config.decoder_start_token_id,
-        max_target_length=data_args.max_target_length
     )
     # Initialize Seq2SeqTrainer
     trainer = Seq2SeqTrainer(

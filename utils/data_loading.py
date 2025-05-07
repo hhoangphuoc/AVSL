@@ -5,10 +5,15 @@ import torch
 import torch.nn.functional as F
 import torchaudio
 import logging
+from scipy.io import wavfile
+from python_speech_features import logfbank
 from datasets import DatasetDict
 from typing import Dict, List, Optional, Tuple, Union, Any
 from dataclasses import dataclass
 
+from transformers import ProcessorMixin
+
+#---------------------------------------------------------------------------------------------------------------------
 # Setup logging
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
@@ -16,8 +21,18 @@ logging.basicConfig(
     level=logging.INFO,
 )
 logger = logging.getLogger(__name__)
+#---------------------------------------------------------------------------------------------------------------------
 
+#  Constants for data processing (can be moved to DataTrainingArguments or AV2TextConfig if preferred)
+TARGET_AUDIO_SR = 16000
+VIDEO_CROP_SIZE = 88
+VIDEO_MEAN = 0.421
+VIDEO_STD = 0.165
+
+#=====================================================================================================================
 # Video frame processing classes
+#=====================================================================================================================
+
 class Compose:
     """Compose several transforms together."""
     def __init__(self, transforms):
@@ -49,25 +64,7 @@ class CenterCrop:
         delta_w = (w - tw) // 2
         frames = frames[:, delta_h:delta_h+th, delta_w:delta_w+tw]
         return frames
-
-@dataclass
-class AVHubertBatch:
-    """
-    Data class for storing batched inputs for the AVHubert model.
-    """
-    audio_values: Optional[torch.Tensor] = None  # [B, T_audio]
-    audio_attention_mask: Optional[torch.Tensor] = None  # [B, T_audio]
-    visual_values: Optional[torch.Tensor] = None  # [B, C, T_visual, H, W]
-    visual_attention_mask: Optional[torch.Tensor] = None  # [B, T_visual]
-    labels: Optional[torch.Tensor] = None  # [B, T_labels]
-    
-    def to(self, device):
-        """Move the batch to device"""
-        for key, value in self.__dict__.items():
-            if isinstance(value, torch.Tensor):
-                setattr(self, key, value.to(device))
-        return self
-
+#=======================================================================================================================================
 def create_dataset_splits(dataset, test_size=0.2, val_size=0.1, train_size=0.7, dataset_name="ami", model_name="av_hubert"):
     """
     Create dataset splits from a HuggingFace dataset. 
@@ -95,8 +92,31 @@ def create_dataset_splits(dataset, test_size=0.2, val_size=0.1, train_size=0.7, 
     test_split.save_to_disk(os.path.join("data", dataset_name, model_name, "test"))
     
     return splits
+#---------------------------------------------------------------------------------------------------------------------
 
-def load_audio(audio_path, target_sr=16000):
+#=====================================================================================================================  
+#                           Functions for Feature Processing
+#=====================================================================================================================
+            
+def load_video_features(video_path, crop_size=VIDEO_CROP_SIZE, mean=VIDEO_MEAN, std=VIDEO_STD):
+    """
+    Load and process video frames
+    """
+    transform = Compose([
+        Normalize(0.0, 255.0),
+        CenterCrop((crop_size, crop_size)),
+        Normalize(mean, std)
+    ])
+    
+    try:
+        feats = load_video(video_path)
+        feats = transform(feats)
+        feats = np.expand_dims(feats, axis=-1)
+        return feats
+    except Exception as e:
+        logger.error(f"Error loading video {video_path}: {e}")
+        return None
+def load_audio_features(audio_path, target_sr=TARGET_AUDIO_SR):
     """
     Load audio file and convert to target sample rate.
     
@@ -112,23 +132,32 @@ def load_audio(audio_path, target_sr=16000):
             logger.warning(f"Audio file not found: {audio_path}")
             return None
             
-        waveform, sample_rate = torchaudio.load(audio_path)
-        
-        # Convert to mono if needed
-        if waveform.shape[0] > 1:
-            waveform = torch.mean(waveform, dim=0, keepdim=True)
-        
-        # Resample if needed
-        if sample_rate != target_sr:
-            resampler = torchaudio.transforms.Resample(sample_rate, target_sr)
-            waveform = resampler(waveform)
-            
-        return waveform.squeeze(0)  # Return [T] tensor
+        sample_rate, wav_data = wavfile.read(audio_path)
+        assert sample_rate == 16000 and len(wav_data.shape) == 1
+
+        audio_feats = logfbank(wav_data, samplerate=sample_rate).astype(np.float32) # [T, F]
+        audio_feats = audio_stacker(audio_feats, 4) # [T/stack_order_audio, F*stack_order_audio]
+
+        return audio_feats
+    
     except Exception as e:
         logger.error(f"Error loading audio {audio_path}: {e}")
         return None
+    
 
-def load_video(video_path, crop_size=88, mean=0.421, std=0.165):
+def audio_stacker(audio_feats, stack_order=4):
+    """
+    Concatenating consecutive audio frames
+    """
+    feat_dim = audio_feats.shape[1]
+    if len(audio_feats) % stack_order != 0:
+        res = stack_order - len(audio_feats) % stack_order
+        res = np.zeros([res, feat_dim]).astype(audio_feats.dtype)
+        audio_feats = np.concatenate([audio_feats, res], axis=0)
+    audio_feats = audio_feats.reshape((-1, stack_order, feat_dim)).reshape(-1, stack_order*feat_dim)
+    return audio_feats
+
+def load_video(video_path):
     """
     Load video file and preprocess frames.
     
@@ -141,44 +170,52 @@ def load_video(video_path, crop_size=88, mean=0.421, std=0.165):
     Returns:
         torch.Tensor: Video frames tensor with shape [C, T, H, W]
     """
-    try:
-        if not os.path.exists(video_path):
-            logger.warning(f"Video file not found: {video_path}")
-            return None
-            
-        # Apply preprocessing pipeline
-        transform = Compose([
-            Normalize(0.0, 255.0),
-            CenterCrop((crop_size, crop_size)),
-            Normalize(mean, std)
-        ])
-        
-        # Read frames
-        cap = cv2.VideoCapture(video_path)
-        frames = []
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                break
-            # Convert to grayscale
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            frames.append(gray)
-        cap.release()
-        
-        if len(frames) == 0:
-            logger.warning(f"No frames found in video: {video_path}")
-            return None
-            
-        # Stack frames and normalize
-        frames = np.stack(frames)
-        frames = transform(frames)
-        
-        # Convert to tensor [T, H, W] -> [1, T, H, W]
-        frames_tensor = torch.from_numpy(frames).float().unsqueeze(0)
-        return frames_tensor  # [C=1, T, H, W]
-    except Exception as e:
-        logger.error(f"Error loading video {video_path}: {e}")
-        return None
+    # Stacking 4 frames together
+    stack_order = 3
+    for i in range(stack_order):
+        try:
+            cap = cv2.VideoCapture(video_path)
+            frames = []
+            while True:
+                ret, frame = cap.read()
+                if ret:
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                    frames.append(frame)
+                else:
+                    break
+            frames = np.stack(frames)
+            return frames
+        except Exception:
+            print(f"failed loading {video_path} ({i} / {stack_order})")
+            if i == stack_order - 1:
+                raise ValueError(f"Unable to load {video_path}")
+
+#=====================================================================================================================
+#                           Functions for AVHubert Dataset
+# 
+# - FIXME: FUNCTIONS BELOW NO LONGER USED
+# - FIXME: Old approach, TRY new approach: using prepare_dataset() and DataCollator
+#=====================================================================================================================
+#---------------------------------------------------------------------------------------------------------------------
+
+# @dataclass
+# class AVHubertBatch:
+#     """
+#     Data class for storing batched inputs for the AVHubert model.
+#     """
+#     audio_values: Optional[torch.Tensor] = None  # [B, T_audio]
+#     audio_attention_mask: Optional[torch.Tensor] = None  # [B, T_audio]
+#     visual_values: Optional[torch.Tensor] = None  # [B, C, T_visual, H, W]
+#     visual_attention_mask: Optional[torch.Tensor] = None  # [B, T_visual]
+#     labels: Optional[torch.Tensor] = None  # [B, T_labels]
+    
+#     def to(self, device):
+#         """Move the batch to device"""
+#         for key, value in self.__dict__.items():
+#             if isinstance(value, torch.Tensor):
+#                 setattr(self, key, value.to(device))
+#         return self
+
 
 def align_lengths(audio_feats, video_feats):
     """
@@ -380,13 +417,15 @@ def collate_audio_visual_batch(batch, processor=None):
     else:
         labels_tensor = None
     
-    return AVHubertBatch(
+    # Convert AVHubertBatch to a dictionary for Trainer compatibility
+    batch_dict = AVHubertBatch(
         audio_values=audio_values_tensor,
         audio_attention_mask=audio_attention_mask_tensor,
         visual_values=visual_values_tensor,
         visual_attention_mask=visual_attention_mask_tensor,
         labels=labels_tensor
     )
+    return batch_dict.__dict__ # Return as a dictionary
 
 class AVHubertDataset(torch.utils.data.Dataset):
     """
@@ -414,7 +453,7 @@ class AVHubertDataset(torch.utils.data.Dataset):
         self.visual_drop_prob = 0.0 if split != "train" else visual_drop_prob
         
         # Log dataset info
-        logger.info(f"Initializing AVHubertDataset with {len(dataset)} samples")
+        logger.info(f"Initializing AVHubertDataset (split={split}) with {len(dataset)} samples")
         logger.info(f"Using modality dropping in {split} mode: audio_drop_prob={self.audio_drop_prob}, visual_drop_prob={self.visual_drop_prob}")
         
         # Count available modalities
@@ -449,10 +488,13 @@ class AVHubertDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         item = self.dataset[idx]
         
-        # Extract paths and transcript
-        audio_path = item.get("audio", None)
-        video_path = item.get("lip_video", None)
+        # Extract paths and transcript correctly
+        audio_item = item.get("audio", None)
+        video_item = item.get("lip_video", None)
         transcript = item.get("transcript", None)
+
+        audio_path = audio_item["path"] if isinstance(audio_item, dict) and "path" in audio_item else audio_item
+        video_path = video_item["path"] if isinstance(video_item, dict) and "path" in video_item else video_item
         
         # Apply modality dropping for training
         if self.split == "train":
@@ -464,10 +506,12 @@ class AVHubertDataset(torch.utils.data.Dataset):
         # Ensure at least one modality is available
         if audio_path is None and video_path is None:
             # If both are None, set audio back (fallback)
-            audio_path = item.get("audio", None)
+            audio_item = item.get("audio", None)
+            audio_path = audio_item["path"] if isinstance(audio_item, dict) and "path" in audio_item else audio_item
             if audio_path is None:
                 # If still None, set video back
-                video_path = item.get("lip_video", None)
+                video_item = item.get("lip_video", None)
+                video_path = video_item["path"] if isinstance(video_item, dict) and "path" in video_item else video_item
         
         # Process the data
         result = process_data_for_avhubert(

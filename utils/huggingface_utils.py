@@ -18,7 +18,7 @@ import evaluate
 #--------------------------------------------------------------------------------------------------
 from avhubert.src.model.avhubert2text import AV2TextForConditionalGeneration
 from avhubert.src.model.av2text_config import AV2TextConfig
-from transformers import Speech2TextTokenizer
+from transformers import Speech2TextTokenizer, AutoImageProcessor
 
 model_name_or_path = "nguyenvulebinh/AV-HuBERT-MuAViC-en"
 def load_pretrained_avhubert2text(model_name_or_path=model_name_or_path, cache_dir="../checkpoints/hf-avhubert", token=None):
