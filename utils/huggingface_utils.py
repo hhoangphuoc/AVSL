@@ -12,7 +12,7 @@ import time
 import random
 from requests.exceptions import HTTPError
 import re
-
+import evaluate
 #--------------------------------------------------------------------------------------------------
 # Load pretrained AVHuBERT2Text model from the HuggingFace Hub
 #--------------------------------------------------------------------------------------------------
@@ -442,12 +442,13 @@ if __name__ == "__main__":
     # print(f"Loading dataset from {args.dataset_path}")
     # push_dataset_to_hub(args.dataset_path, args.repo_name, args.token, args.private)
 
-    model, tokenizer, config = load_pretrained_avhubert2text(
-        model_name_or_path="nguyenvulebinh/AV-HuBERT-MuAViC-en",
-        cache_dir="../checkpoints/hf-avhubert"
-    )
+    # model, tokenizer, config = load_pretrained_avhubert2text(
+    #     model_name_or_path="nguyenvulebinh/AV-HuBERT-MuAViC-en",
+    #     cache_dir="../checkpoints/hf-avhubert"
+    # )
 
-    print(f"Model: {model}")
-    print(f"Tokenizer: {tokenizer}")
-    print(f"Config: {config}")
+    # print(f"Model: {model}")
+    # print(f"Tokenizer: {tokenizer}")
+    # print(f"Config: {config}")
 
+    wer_metrics = evaluate.load("wer",cache_dir="../cache/metrics/wer")

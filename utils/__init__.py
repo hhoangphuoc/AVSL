@@ -15,8 +15,11 @@ from .data_loading import (
     process_data_for_avhubert, 
     collate_audio_visual_batch, 
     AVHubertDataset,
-    AVHubertBatch,
-    create_dataset_splits
+    create_dataset_splits,
+    load_audio_from_path,
+    load_video_from_path,
+    TARGET_AUDIO_SR,
+    VIDEO_CROP_SIZE,
 )
 
 __all__ = [
@@ -41,6 +44,9 @@ __all__ = [
     "process_data_for_avhubert",
     "collate_audio_visual_batch",
     "AVHubertDataset",
-    "AVHubertBatch",
-    "create_dataset_splits"
+    "create_dataset_splits",
+    "load_audio_from_path",
+    "load_video_from_path",
+    "TARGET_AUDIO_SR",
+    "VIDEO_CROP_SIZE",
 ]

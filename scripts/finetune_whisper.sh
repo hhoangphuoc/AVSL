@@ -39,12 +39,14 @@ cd /home/s2587130/AVSL
 # Set variables
 MODEL_NAME_OR_PATH="checkpoints/hf-whisper/whisper-large-v2"  # Or other model size: tiny, base, small, medium, large-v2
 OUTPUT_DIR="output/whisper_ft"
+DATASET_CACHE_DIR="data"
 DATASET_NAME="ami"
 CACHE_DIR="./checkpoints/hf-whisper/"
 BATCH_SIZE=8
 GRAD_ACCUM=4
 LR=2e-5
 NUM_EPOCHS=10
+WARMUP_RATIO=0.15
 MAX_DURATION=30.0  # Maximum duration in seconds
 LANGUAGE="en"
 TASK="transcribe"
@@ -59,18 +61,20 @@ python finetune_whisper.py \
     --cache_dir $CACHE_DIR \
     --output_dir $OUTPUT_DIR \
     --dataset_name $DATASET_NAME \
-    --dataset_cache_dir "data" \
+    --dataset_cache_dir $DATASET_CACHE_DIR \
     --max_duration_in_seconds $MAX_DURATION \
     --per_device_train_batch_size $BATCH_SIZE \
     --per_device_eval_batch_size $BATCH_SIZE \
     --gradient_accumulation_steps $GRAD_ACCUM \
     --learning_rate $LR \
     --num_train_epochs $NUM_EPOCHS \
+    --warmup_ratio $WARMUP_RATIO \
     --fp16 \
     --save_strategy "epoch" \
     --eval_strategy "epoch" \
     --eval_accumulation_steps $GRAD_ACCUM \
     --logging_steps 100 \
+    --torch_empty_cache_steps 1000 \
     --save_total_limit 3 \
     --load_best_model_at_end \
     --metric_for_best_model "wer" \

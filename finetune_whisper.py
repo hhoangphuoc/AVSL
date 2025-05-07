@@ -129,175 +129,34 @@ class DataTrainingArguments:
         default="transcribe", metadata={"help": "Task for Whisper model (transcribe, translate, etc)"}
     )
 
-@dataclass
-class WhisperFtTrainingArguments(Seq2SeqTrainingArguments):
-    """
-    Training arguments for Whisper ASR training
-    """
-    output_dir: str = field(
-        default="output/whisper_ft", metadata={"help": "Output directory for Whisper ASR training"}
-    )
-    do_train: bool = field(
-        default=True, metadata={"help": "Whether to train the model"}
-    )
-    do_eval: bool = field(
-        default=True, metadata={"help": "Whether to evaluate the model"}
-    )
-    per_device_train_batch_size: int = field(
-        default=8, metadata={"help": "Batch size for training"}
-    )
-    num_train_epochs: int = field(
-        default=10, metadata={"help": "Number of training epochs"}
-    ) 
-    warmup_ratio: float = field(
-        default=0.15, metadata={"help": "Warmup ratio"}
-    )
-    gradient_accumulation_steps: int = field(
-        default=4, metadata={"help": "Number of gradient accumulation steps"}
-    )
-    
-    per_device_eval_batch_size: int = field(
-        default=8, metadata={"help": "Batch size for evaluation"}
-    )
-    eval_strategy: str = field(
-        default="epoch", metadata={"help": "Evaluation strategy"}
-    )
-    eval_accumulation_steps: int = field(
-        default=4, metadata={"help": "Number of evaluation accumulation steps"}
-    )
-    learning_rate: float = field(
-        default=1e-4, metadata={"help": "Learning rate"}
-    )
-    lr_scheduler_type: str = field(
-        default="linear", metadata={"help": "Learning rate scheduler type"}
-    )
-    weight_decay: float = field(
-        default=0.005, metadata={"help": "Weight decay"}
-    )
-    
-    save_strategy: str = field(
-        default="epoch", metadata={"help": "Save strategy"}
-    )
-    save_total_limit: int = field(
-        default=3, metadata={"help": "Total number of checkpoints to save"}
-    )
-
-    logging_steps: int = field(
-        default=100, metadata={"help": "Logging steps"}
-    )
-    report_to: List[str] = field(
-        default_factory=lambda: ["tensorboard"], metadata={"help": "Report to"}
-    )
-    load_best_model_at_end: bool = field(
-        default=True, metadata={"help": "Load best model at end"}
-    )
-    metric_for_best_model: str = field(
-        default="wer", metadata={"help": "Metric for best model"}
-    )
-    greater_is_better: bool = field(
-        default=False, metadata={"help": "Whether greater is better"}
-    )
-    remove_unused_columns: bool = field(
-        default=False, metadata={"help": "Remove unused columns"}
-    )
-    resume_from_checkpoint: Optional[str] = field(
-        default=None, metadata={"help": "Resume from checkpoint"}
-    )
-    predict_with_generate: bool = field(
-        default=True, metadata={"help": "Whether to predict with generate"}
-    )
-    generation_max_length: int = field(
-        default=448, metadata={"help": "Max generation length"}
-    )
-    gradient_checkpointing: bool = field(
-        default=True, metadata={"help": "Whether to use gradient checkpointing"}
-    )
-    fp16: bool = field(
-        default=True, metadata={"help": "Whether to use mixed precision training"}
-    )
-    adam_beta2: float = field(
-        default=0.98, metadata={"help": "Adam beta 2"}
-    )
-    torch_empty_cache_steps: int = field(
-        default=1000, metadata={"help": "Torch empty cache steps"}
-    )
-    push_to_hub: bool = field(
-        default=False, metadata={"help": "Whether to push to hub"}
-    )
-
-class WhisperDataset(torch.utils.data.Dataset):
-    """Dataset for Whisper ASR training"""
-    
-    def __init__(
-        self, 
-        dataset: Dataset, 
-        processor: WhisperProcessor,
-        max_duration_in_seconds: float = 30.0,
-
-        split: str = "train",
-    ):
-        self.dataset = dataset
-        self.processor = processor
-        self.max_duration_in_seconds = max_duration_in_seconds
-        self.split = split
-        self.is_train = split == "train"
-        
-    def __len__(self):
-        return len(self.dataset)
-    
-    def __getitem__(self, idx):
-        item = self.dataset[idx]
-        
-        # Load audio
-        audio = item["audio"]
-        
-        # Get input features
-        input_features = self.processor.feature_extractor(
-            audio["array"], 
-            sampling_rate=audio["sampling_rate"],
-            return_tensors="pt"
-        ).input_features[0]
-        
-        # Prepare target text
-        transcript = item["transcript"]
-        
-        # Tokenize text
-        labels = self.processor.tokenizer(
-            transcript,
-            return_tensors="pt"
-        ).input_ids
-        
-        return {
-            "input_features": input_features,
-            "labels": labels
-        }
-
 class WhisperDataCollator:
     def __init__(self, processor: WhisperProcessor, decoder_start_token_id: int):
         self.processor = processor
         self.decoder_start_token_id = decoder_start_token_id
+
     
-    def __call__(self, batch):
+    def __call__(self, features):
         """
         Data collator for Whisper that handles batching input features
         """
-        if not batch:
+        if not features:
             return None
         
         input_features = [{
             "input_features": item["input_features"]
-        } for item in batch] #"input_features" is the input features parsed from `WhisperDataset`
-        labels_features = [{
-            "input_ids": item["labels"]
-        } for item in batch] #"input_ids" is the tokenized labels parsed from `WhisperDataset`
-    
+        } for item in features] #"input_features" is the input features parsed from `WhisperDataset`
+        
         # Pad input features - Only pad in DataCollator
-        input_features = self.processor.feature_extractor.pad(
+        batch = self.processor.feature_extractor.pad(
             input_features,
             padding=True,
             return_tensors="pt",
         )
         
+        labels_features = [{
+            "input_ids": item["labels"]
+        } for item in features] #"input_ids" is the tokenized labels parsed from `WhisperDataset`
+    
         # Pad labels - Only pad in DataCollator
         labels_batch = self.processor.tokenizer.pad(
             labels_features,
@@ -307,24 +166,24 @@ class WhisperDataCollator:
 
         # Remove decoder_start_token_id if present
         # padding token id is -100
-        processed_labels = labels_batch["input_ids"].masked_fill(labels_batch["attention_mask"].ne(1), -100)
+        labels = labels_batch["input_ids"].masked_fill(labels_batch["attention_mask"].ne(1), -100)
 
         # Remove decoder_start_token_id if present
-        if processed_labels.size(1) > 0 and (processed_labels[:, 0] == self.decoder_start_token_id).all():
-            processed_labels = processed_labels[:, 1:]
-    
-        batch = {
-            "input_features": input_features["input_features"],
-            "labels": processed_labels,
-        }
+        if labels.size(1) > 0 and (labels[:, 0] == self.decoder_start_token_id).all():
+            labels = labels[:, 1:]
+
+        batch["labels"] = labels
+
     
         return batch
 
 def main():
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    logger.info(f"Using device: {device}")
     #=================================================================================================================
     #                               PARSING ARGUMENTS
     #=================================================================================================================
-    parser = HfArgumentParser((ModelArguments, DataTrainingArguments, WhisperFtTrainingArguments))
+    parser = HfArgumentParser((ModelArguments, DataTrainingArguments, Seq2SeqTrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
     #=================================================================================================================
@@ -334,7 +193,16 @@ def main():
         format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
         datefmt="%m/%d/%Y %H:%M:%S",
         handlers=[logging.StreamHandler(sys.stdout)],
+        level=logging.INFO  # Ensure basicConfig sets a level so logger.info works
     )
+    # Diagnostic logs:
+    logger.info(f"Type of training_args: {type(training_args)}")
+    logger.info(f"Does training_args have 'distributed_state' attribute? {'distributed_state' in dir(training_args)}")
+    if 'distributed_state' in dir(training_args):
+        logger.info(f"Value of training_args.distributed_state: {getattr(training_args, 'distributed_state', 'Error retrieving attribute')}")
+    else:
+        logger.info(f"training_args does NOT have 'distributed_state' attribute.")
+
     log_level = training_args.get_process_log_level()
     logger.setLevel(log_level)
 
@@ -346,7 +214,7 @@ def main():
 
     # Log on each process the small summary:
     logger.warning(
-        f"Process rank: {training_args.local_rank}, device: {training_args.device}, n_gpu: {training_args.n_gpu}, "
+        f"Process rank: {training_args.local_rank}, device: {device}, n_gpu: {training_args.n_gpu}, "
         + f"distributed training: {bool(training_args.local_rank != -1)}, 16-bits training: {training_args.fp16}"
     )
     logger.info(f"Training/evaluation parameters {training_args}")
@@ -368,43 +236,6 @@ def main():
     #=================================================================================================================
     # Set seed before initializing model
     set_seed(training_args.seed)
-
-    #=================================================================================================================
-    #                        SETUP DATASET (LOAD, SPLIT, SAVE)
-    #=================================================================================================================
-    # Load dataset from disk (WHEN NOT SPLITTED)
-    # dataset_path = os.path.join("data", data_args.dataset_name, "dataset") #data/ami/dataset
-    # ami_dataset = load_from_disk(dataset_path)
-
-    # raw_datasets = create_dataset_splits(ami_dataset, 
-    #                                      dataset_name=data_args.dataset_name, 
-    #                                      model_name="whisper")
-    # ------------------------------------------------------------------------------------------------------
-
-    # Load dataset from disk (WHEN SPLITTED)
-    ami_train_path = os.path.join("data", data_args.dataset_name, "whisper", "train")
-    ami_val_path = os.path.join("data", data_args.dataset_name, "whisper", "validation")
-
-    ami_train = load_from_disk(ami_train_path)
-    ami_val = load_from_disk(ami_val_path)
-
-    raw_datasets = DatasetDict({
-        "train": ami_train,
-        "validation": ami_val
-    })
-    # ------------------------------------------------------------------------------------------------------
-    # Trim dataset if MAX_TRAIN_SAMPLES or MAX_EVAL_SAMPLES is declared ------------------------------------
-    # if data_args.max_train_samples is not None and "train" in raw_datasets:
-    #     raw_datasets["train"] = raw_datasets["train"].select(range(data_args.max_train_samples))
-    # if data_args.max_eval_samples is not None and "validation" in raw_datasets:
-    #     raw_datasets["validation"] = raw_datasets["validation"].select(range(data_args.max_eval_samples))
-    # ------------------------------------------------------------------------------------------------------
-
-    # Print dataset info
-    logger.info(f"Training examples: {len(raw_datasets['train']) if 'train' in raw_datasets else 0}")
-    logger.info(f"Validation examples: {len(raw_datasets['validation']) if 'validation' in raw_datasets else 0}")
-    logger.info(f"Test examples: {len(raw_datasets['test']) if 'test' in raw_datasets else 0}")
-    # -----------------------------------------------------------------------------------------------------------------
 
     #=================================================================================================================
     #                                       SETUP MODEL AND PROCESSOR
@@ -430,6 +261,17 @@ def main():
         local_files_only=True if model_args.local_files_only else False,
     )
     
+    feature_extractor = processor.feature_extractor
+    tokenizer = processor.tokenizer
+
+    new_tokens = ['<laugh>']
+    tokenizer.add_tokens(new_tokens)
+
+    laugh_token_id = tokenizer.convert_tokens_to_ids('<laugh>')
+    logger.info(f"The token ID for '<laugh>' is: {laugh_token_id}") # WE FOUND THAT <laugh> TOKEN ID is 51865
+    #=================================================================================================================
+    #                                       SETUP MODEL
+    #=================================================================================================================
     model = WhisperForConditionalGeneration.from_pretrained(
         model_args.model_name_or_path,
         config=config,
@@ -453,7 +295,54 @@ def main():
         language=data_args.language,
         task=data_args.task
     )
+    model.resize_token_embeddings(len(tokenizer))
     model.config.suppress_tokens = []
+    model.config.use_cache = False # disable caching
+
+    model.to(device) # move model to GPUs
+
+    #=================================================================================================================
+    #                        SETUP DATASET (LOAD, SPLIT, SAVE)
+    #=================================================================================================================
+    # Load dataset from disk (WHEN NOT SPLITTED)
+    # dataset_path = os.path.join("data", data_args.dataset_name, "dataset") #data/ami/dataset
+    # ami_dataset = load_from_disk(dataset_path)
+
+    # raw_datasets = create_dataset_splits(ami_dataset, 
+    #                                      dataset_name=data_args.dataset_name, 
+    #                                      model_name="whisper")
+    # ------------------------------------------------------------------------------------------------------
+
+    # Load dataset from disk (WHEN SPLITTED)
+    ami_train_path = os.path.join("data", data_args.dataset_name, "whisper", "train") #data/ami/whisper/train
+    ami_val_path = os.path.join("data", data_args.dataset_name, "whisper", "validation") #data/ami/whisper/validation
+
+    ami_train = load_from_disk(ami_train_path)
+    ami_val = load_from_disk(ami_val_path)
+
+    # Print dataset info
+    logger.info(f"Training examples: {len(ami_train)}")
+    logger.info(f"Validation examples: {len(ami_val)}")
+    # -----------------------------------------------------------------------------------------------------------------
+
+    def prepare_dataset(batch):
+        audio = batch["audio"]
+        transcript = batch["transcript"].lower()
+
+
+        batch["input_features"] = feature_extractor(
+            raw_speech=audio["array"],
+            sampling_rate=audio["sampling_rate"],
+        ).input_features[0] #[0] #(n_mels, time_steps)
+
+        labels = tokenizer(
+            transcript,
+        ).input_ids
+
+        batch["labels"] = labels
+
+        return batch
+        
 
     #=================================================================================================================
     #                                  SETUP DATASETS AND PROCESS DATASET
@@ -463,19 +352,19 @@ def main():
     eval_dataset = None
     
     if training_args.do_train:
-        train_dataset = WhisperDataset(
-            dataset=raw_datasets["train"],
-            processor=processor,
-            max_duration_in_seconds=data_args.max_duration_in_seconds,
-            split="train",
+        train_dataset = ami_train.map(
+            prepare_dataset, 
+            num_proc=data_args.preprocessing_num_workers,
+            remove_columns=ami_train.column_names,
+            desc="Preprocessing training dataset"
         )
     
     if training_args.do_eval:
-        eval_dataset = WhisperDataset(
-            dataset=raw_datasets["validation"],
-            processor=processor,
-            max_duration_in_seconds=data_args.max_duration_in_seconds,
-            split="validation",
+        eval_dataset = ami_val.map(
+            prepare_dataset, 
+            num_proc=data_args.preprocessing_num_workers,
+            remove_columns=ami_val.column_names,
+            desc="Preprocessing validation dataset"
         )
     
     #=================================================================================================================
@@ -497,8 +386,8 @@ def main():
         
         pred.label_ids[pred.label_ids == -100] = processor.tokenizer.pad_token_id
         
-        pred_str = processor.batch_decode(pred_ids, skip_special_tokens=True)
-        label_str = processor.batch_decode(pred.label_ids, skip_special_tokens=True)
+        pred_str = tokenizer.batch_decode(pred_ids, skip_special_tokens=True)
+        label_str = tokenizer.batch_decode(pred.label_ids, skip_special_tokens=True)
         
         wer = wer_metric.compute(predictions=pred_str, references=label_str)
         # cer = cer_metric.compute(predictions=pred_str, references=label_str)
@@ -510,7 +399,8 @@ def main():
     #=================================================================================================================
     data_collator = WhisperDataCollator(
         processor=processor,
-        decoder_start_token_id=model.config.decoder_start_token_id
+        decoder_start_token_id=model.config.decoder_start_token_id,
+        max_target_length=data_args.max_target_length
     )
     # Initialize Seq2SeqTrainer
     trainer = Seq2SeqTrainer(
