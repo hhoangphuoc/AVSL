@@ -118,25 +118,68 @@ def load_video_features(video_path, crop_size=VIDEO_CROP_SIZE, mean=VIDEO_MEAN, 
         return None
 def load_audio_features(audio_path, target_sr=TARGET_AUDIO_SR):
     """
-    Load audio file and convert to target sample rate.
+    Load audio file and extract features.
+    Handles different sample rates and mono/stereo audio.
     
     Args:
         audio_path: Path to audio file
         target_sr: Target sampling rate (default: 16000)
         
     Returns:
-        torch.Tensor: Audio waveform with shape [1, T]
+        np.ndarray: Extracted audio features with shape [T, F]
     """
     try:
         if not os.path.exists(audio_path):
             logger.warning(f"Audio file not found: {audio_path}")
             return None
+        
+        try:
+            # First try scipy.io.wavfile which is faster
+            sample_rate, wav_data = wavfile.read(audio_path)
             
-        sample_rate, wav_data = wavfile.read(audio_path)
-        assert sample_rate == 16000 and len(wav_data.shape) == 1
+            # Handle stereo audio (convert to mono by averaging channels)
+            if len(wav_data.shape) > 1 and wav_data.shape[1] > 1:
+                logger.info(f"Converting stereo to mono for {audio_path}")
+                wav_data = wav_data.mean(axis=1).astype(wav_data.dtype)
+                
+            # Resample if needed
+            if sample_rate != target_sr:
+                logger.info(f"Resampling audio from {sample_rate}Hz to {target_sr}Hz for {audio_path}")
+                # Use torchaudio for resampling
+                wav_tensor = torch.tensor(wav_data).float()
+                resampler = torchaudio.transforms.Resample(orig_freq=sample_rate, new_freq=target_sr)
+                wav_tensor = resampler(wav_tensor)
+                wav_data = wav_tensor.numpy().astype(np.float32)
+                sample_rate = target_sr
+                
+        except Exception as e:
+            # Fallback to torchaudio which handles more formats
+            logger.warning(f"Failed to load with scipy.io.wavfile, trying torchaudio: {e}")
+            wav_tensor, sample_rate = torchaudio.load(audio_path)
+            
+            # Handle stereo (convert to mono by averaging channels)
+            if wav_tensor.shape[0] > 1:
+                logger.info(f"Converting stereo to mono for {audio_path}")
+                wav_tensor = wav_tensor.mean(dim=0, keepdim=True)
+                
+            # Resample if needed
+            if sample_rate != target_sr:
+                logger.info(f"Resampling audio from {sample_rate}Hz to {target_sr}Hz for {audio_path}")
+                resampler = torchaudio.transforms.Resample(orig_freq=sample_rate, new_freq=target_sr)
+                wav_tensor = resampler(wav_tensor)
+                sample_rate = target_sr
+                
+            wav_data = wav_tensor.squeeze().numpy()
 
-        audio_feats = logfbank(wav_data, samplerate=sample_rate).astype(np.float32) # [T, F]
-        audio_feats = audio_stacker(audio_feats, 4) # [T/stack_order_audio, F*stack_order_audio]
+        # Normalize audio to [-1, 1] range
+        if wav_data.dtype != np.float32:
+            wav_data = wav_data.astype(np.float32)
+            if wav_data.max() > 1.0:  # PCM data
+                wav_data = wav_data / 32768.0  # 16-bit audio normalization
+        
+        # Extract log mel filterbank features
+        audio_feats = logfbank(wav_data, samplerate=sample_rate).astype(np.float32)  # [T, F]
+        audio_feats = audio_stacker(audio_feats, 4)  # [T/stack_order_audio, F*stack_order_audio]
 
         return audio_feats
     
@@ -217,215 +260,215 @@ def load_video(video_path):
 #         return self
 
 
-def align_lengths(audio_feats, video_feats):
-    """
-    Align audio and video features to have the same temporal dimension.
-    For temporal alignment, we need to consider that:
-    - Audio is typically processed at a higher rate than video
-    - We need to make sure both have the same temporal dimension for fusion
+# def align_lengths(audio_feats, video_feats):
+#     """
+#     Align audio and video features to have the same temporal dimension.
+#     For temporal alignment, we need to consider that:
+#     - Audio is typically processed at a higher rate than video
+#     - We need to make sure both have the same temporal dimension for fusion
 
-    Args:
-        audio_feats: Audio features tensor [B, T_audio, D_audio] (batch_size, time_steps, feature_dim)
-        video_feats: Video features tensor [B, T_video, D_video] (batch_size, time_steps, feature_dim)
+#     Args:
+#         audio_feats: Audio features tensor [B, T_audio, D_audio] (batch_size, time_steps, feature_dim)
+#         video_feats: Video features tensor [B, T_video, D_video] (batch_size, time_steps, feature_dim)
 
-    Returns:
-        Tuple of aligned features tensors
-    """
-    if audio_feats is None or video_feats is None:
-        return audio_feats, video_feats
+#     Returns:
+#         Tuple of aligned features tensors
+#     """
+#     if audio_feats is None or video_feats is None:
+#         return audio_feats, video_feats
         
-    # Get temporal dimensions
-    B, T_audio, D_audio = audio_feats.shape
-    _, T_video, D_video = video_feats.shape
+#     # Get temporal dimensions
+#     B, T_audio, D_audio = audio_feats.shape
+#     _, T_video, D_video = video_feats.shape
     
-    # If audio is longer than video, truncate audio
-    if T_audio > T_video:
-        audio_feats = audio_feats[:, :T_video, :]
-    # If video is longer than audio, truncate video
-    elif T_video > T_audio:
-        video_feats = video_feats[:, :T_audio, :]
+#     # If audio is longer than video, truncate audio
+#     if T_audio > T_video:
+#         audio_feats = audio_feats[:, :T_video, :]
+#     # If video is longer than audio, truncate video
+#     elif T_video > T_audio:
+#         video_feats = video_feats[:, :T_audio, :]
         
-    return audio_feats, video_feats
+#     return audio_feats, video_feats
 
-def process_data_for_avhubert(
-    audio_path=None, 
-    video_path=None, 
-    transcript=None,
-    processor=None,
-    max_audio_length=480000,  # 30 seconds at 16kHz
-    max_video_frames=750      # 30 seconds at 25 fps
-):
-    """
-    Process audio and video data for the AVHubert model.
+# def process_data_for_avhubert(
+#     audio_path=None, 
+#     video_path=None, 
+#     transcript=None,
+#     processor=None,
+#     max_audio_length=480000,  # 30 seconds at 16kHz
+#     max_video_frames=750      # 30 seconds at 25 fps
+# ):
+#     """
+#     Process audio and video data for the AVHubert model.
     
-    Args:
-        audio_path: Path to audio file
-        video_path: Path to video file
-        transcript: Transcript text for labels_ids
-        processor: HuggingFace processor for tokenization
-        max_audio_length: Maximum audio length in samples
-        max_video_frames: Maximum number of video frames
+#     Args:
+#         audio_path: Path to audio file
+#         video_path: Path to video file
+#         transcript: Transcript text for labels_ids
+#         processor: HuggingFace processor for tokenization
+#         max_audio_length: Maximum audio length in samples
+#         max_video_frames: Maximum number of video frames
         
-    Returns:
-        Dict containing processed audio and video features
-    """
-    # Initialize with empty values
-    result = {
-        "audio_values": None,
-        "audio_attention_mask": None,
-        "visual_values": None,
-        "visual_attention_mask": None,
-        "labels": None
-    }
+#     Returns:
+#         Dict containing processed audio and video features
+#     """
+#     # Initialize with empty values
+#     result = {
+#         "audio_values": None,
+#         "audio_attention_mask": None,
+#         "visual_values": None,
+#         "visual_attention_mask": None,
+#         "labels": None
+#     }
     
-    # Process audio if available
-    if audio_path is not None:
-        audio_values = load_audio(audio_path)
-        if audio_values is not None:
-            # Truncate or pad audio to max_length
-            if audio_values.shape[0] > max_audio_length:
-                audio_values = audio_values[:max_audio_length]
-            elif audio_values.shape[0] < max_audio_length:
-                padding = torch.zeros(max_audio_length - audio_values.shape[0])
-                audio_values = torch.cat([audio_values, padding])
+#     # Process audio if available
+#     if audio_path is not None:
+#         audio_values = load_audio(audio_path)
+#         if audio_values is not None:
+#             # Truncate or pad audio to max_length
+#             if audio_values.shape[0] > max_audio_length:
+#                 audio_values = audio_values[:max_audio_length]
+#             elif audio_values.shape[0] < max_audio_length:
+#                 padding = torch.zeros(max_audio_length - audio_values.shape[0])
+#                 audio_values = torch.cat([audio_values, padding])
                 
-            # Create attention mask (1 for real values, 0 for padding)
-            audio_attention_mask = torch.ones_like(audio_values)
-            if audio_values.shape[0] < max_audio_length:
-                audio_attention_mask[-(max_audio_length - audio_values.shape[0]):] = 0
+#             # Create attention mask (1 for real values, 0 for padding)
+#             audio_attention_mask = torch.ones_like(audio_values)
+#             if audio_values.shape[0] < max_audio_length:
+#                 audio_attention_mask[-(max_audio_length - audio_values.shape[0]):] = 0
                 
-            result["audio_values"] = audio_values
-            result["audio_attention_mask"] = audio_attention_mask
+#             result["audio_values"] = audio_values
+#             result["audio_attention_mask"] = audio_attention_mask
     
-    # Process video if available
-    if video_path is not None:
-        visual_values = load_video(video_path)
-        if visual_values is not None:
-            # visual_values is [C, T, H, W]
-            # Truncate or pad video frames
-            T = visual_values.shape[1]
-            if T > max_video_frames:
-                visual_values = visual_values[:, :max_video_frames, :, :]
+#     # Process video if available
+#     if video_path is not None:
+#         visual_values = load_video(video_path)
+#         if visual_values is not None:
+#             # visual_values is [C, T, H, W]
+#             # Truncate or pad video frames
+#             T = visual_values.shape[1]
+#             if T > max_video_frames:
+#                 visual_values = visual_values[:, :max_video_frames, :, :]
             
-            # Create attention mask (1 for real frames, 0 for padding)
-            visual_attention_mask = torch.ones(min(T, max_video_frames))
+#             # Create attention mask (1 for real frames, 0 for padding)
+#             visual_attention_mask = torch.ones(min(T, max_video_frames))
             
-            result["visual_values"] = visual_values
-            result["visual_attention_mask"] = visual_attention_mask
+#             result["visual_values"] = visual_values
+#             result["visual_attention_mask"] = visual_attention_mask
     
-    # Process transcript if available
-    if transcript is not None and processor is not None:
-        with processor.as_target_processor():
-            labels = processor(transcript).input_ids
-            result["labels"] = torch.tensor(labels)
+#     # Process transcript if available
+#     if transcript is not None and processor is not None:
+#         with processor.as_target_processor():
+#             labels = processor(transcript).input_ids
+#             result["labels"] = torch.tensor(labels)
     
-    return result
+#     return result
 
-def collate_audio_visual_batch(batch, processor=None):
-    """
-    Collate function for creating batches from multiple samples.
+# def collate_audio_visual_batch(batch, processor=None):
+#     """
+#     Collate function for creating batches from multiple samples.
     
-    Args:
-        batch: List of dictionaries with audio_values, visual_values, etc.
-        processor: Optional processor for padding
+#     Args:
+#         batch: List of dictionaries with audio_values, visual_values, etc.
+#         processor: Optional processor for padding
         
-    Returns:
-        AVHubertBatch: Batch data for the model
-    """
-    # Initialize lists for each tensor type
-    audio_values = []
-    audio_attention_masks = []
-    visual_values = []
-    visual_attention_masks = []
-    labels = []
+#     Returns:
+#         AVHubertBatch: Batch data for the model
+#     """
+#     # Initialize lists for each tensor type
+#     audio_values = []
+#     audio_attention_masks = []
+#     visual_values = []
+#     visual_attention_masks = []
+#     labels = []
     
-    # Collect valid tensors from batch
-    has_audio = False
-    has_visual = False
-    has_labels = False
+#     # Collect valid tensors from batch
+#     has_audio = False
+#     has_visual = False
+#     has_labels = False
     
-    for item in batch:
-        if item.get("audio_values") is not None:
-            audio_values.append(item["audio_values"])
-            audio_attention_masks.append(item["audio_attention_mask"])
-            has_audio = True
+#     for item in batch:
+#         if item.get("audio_values") is not None:
+#             audio_values.append(item["audio_values"])
+#             audio_attention_masks.append(item["audio_attention_mask"])
+#             has_audio = True
             
-        if item.get("visual_values") is not None:
-            visual_values.append(item["visual_values"])
-            visual_attention_masks.append(item["visual_attention_mask"])
-            has_visual = True
+#         if item.get("visual_values") is not None:
+#             visual_values.append(item["visual_values"])
+#             visual_attention_masks.append(item["visual_attention_mask"])
+#             has_visual = True
             
-        if item.get("labels") is not None:
-            labels.append(item["labels"])
-            has_labels = True
+#         if item.get("labels") is not None:
+#             labels.append(item["labels"])
+#             has_labels = True
     
-    # Pad and stack audio
-    if has_audio:
-        # Stack audio (assuming they're already padded to same length)
-        audio_values_tensor = torch.stack(audio_values)
-        audio_attention_mask_tensor = torch.stack(audio_attention_masks)
-    else:
-        audio_values_tensor = None
-        audio_attention_mask_tensor = None
+#     # Pad and stack audio
+#     if has_audio:
+#         # Stack audio (assuming they're already padded to same length)
+#         audio_values_tensor = torch.stack(audio_values)
+#         audio_attention_mask_tensor = torch.stack(audio_attention_masks)
+#     else:
+#         audio_values_tensor = None
+#         audio_attention_mask_tensor = None
     
-    # Pad and stack video
-    if has_visual:
-        # For video, we need to ensure all sequences have the same length in time dimension
-        max_frames = max(v.shape[1] for v in visual_values)
-        padded_visual_values = []
-        padded_visual_attention_masks = []
+#     # Pad and stack video
+#     if has_visual:
+#         # For video, we need to ensure all sequences have the same length in time dimension
+#         max_frames = max(v.shape[1] for v in visual_values)
+#         padded_visual_values = []
+#         padded_visual_attention_masks = []
         
-        for i, video in enumerate(visual_values):
-            # Current shape: [C, T, H, W]
-            c, t, h, w = video.shape
-            if t < max_frames:
-                padding = torch.zeros(c, max_frames - t, h, w)
-                padded_video = torch.cat([video, padding], dim=1)
-                # Update attention mask
-                mask = visual_attention_masks[i]
-                padding_mask = torch.zeros(max_frames - t)
-                padded_mask = torch.cat([mask, padding_mask])
-                padded_visual_values.append(padded_video)
-                padded_visual_attention_masks.append(padded_mask)
-            else:
-                padded_visual_values.append(video)
-                padded_visual_attention_masks.append(visual_attention_masks[i])
+#         for i, video in enumerate(visual_values):
+#             # Current shape: [C, T, H, W]
+#             c, t, h, w = video.shape
+#             if t < max_frames:
+#                 padding = torch.zeros(c, max_frames - t, h, w)
+#                 padded_video = torch.cat([video, padding], dim=1)
+#                 # Update attention mask
+#                 mask = visual_attention_masks[i]
+#                 padding_mask = torch.zeros(max_frames - t)
+#                 padded_mask = torch.cat([mask, padding_mask])
+#                 padded_visual_values.append(padded_video)
+#                 padded_visual_attention_masks.append(padded_mask)
+#             else:
+#                 padded_visual_values.append(video)
+#                 padded_visual_attention_masks.append(visual_attention_masks[i])
         
-        visual_values_tensor = torch.stack(padded_visual_values)
-        visual_attention_mask_tensor = torch.stack(padded_visual_attention_masks)
-    else:
-        visual_values_tensor = None
-        visual_attention_mask_tensor = None
+#         visual_values_tensor = torch.stack(padded_visual_values)
+#         visual_attention_mask_tensor = torch.stack(padded_visual_attention_masks)
+#     else:
+#         visual_values_tensor = None
+#         visual_attention_mask_tensor = None
     
-    # Process labels if available
-    if has_labels and processor is not None:
-        # Use processor's padding for labels
-        with processor.as_target_processor():
-            labels_tensor = processor.pad(
-                {"input_ids": labels},
-                padding=True,
-                return_tensors="pt",
-            ).input_ids
-    elif has_labels:
-        # Manual padding if no processor
-        max_len = max(len(l) for l in labels)
-        padded_labels = []
-        for l in labels:
-            padding = [-100] * (max_len - len(l))  # Use -100 as padding index
-            padded_labels.append(torch.tensor(list(l) + padding))
-        labels_tensor = torch.stack(padded_labels)
-    else:
-        labels_tensor = None
+#     # Process labels if available
+#     if has_labels and processor is not None:
+#         # Use processor's padding for labels
+#         with processor.as_target_processor():
+#             labels_tensor = processor.pad(
+#                 {"input_ids": labels},
+#                 padding=True,
+#                 return_tensors="pt",
+#             ).input_ids
+#     elif has_labels:
+#         # Manual padding if no processor
+#         max_len = max(len(l) for l in labels)
+#         padded_labels = []
+#         for l in labels:
+#             padding = [-100] * (max_len - len(l))  # Use -100 as padding index
+#             padded_labels.append(torch.tensor(list(l) + padding))
+#         labels_tensor = torch.stack(padded_labels)
+#     else:
+#         labels_tensor = None
     
-    # Convert AVHubertBatch to a dictionary for Trainer compatibility
-    batch_dict = AVHubertBatch(
-        audio_values=audio_values_tensor,
-        audio_attention_mask=audio_attention_mask_tensor,
-        visual_values=visual_values_tensor,
-        visual_attention_mask=visual_attention_mask_tensor,
-        labels=labels_tensor
-    )
-    return batch_dict.__dict__ # Return as a dictionary
+#     # Convert AVHubertBatch to a dictionary for Trainer compatibility
+#     batch_dict = AVHubertBatch(
+#         audio_values=audio_values_tensor,
+#         audio_attention_mask=audio_attention_mask_tensor,
+#         visual_values=visual_values_tensor,
+#         visual_attention_mask=visual_attention_mask_tensor,
+#         labels=labels_tensor
+#     )
+#     return batch_dict.__dict__ # Return as a dictionary
 
 class AVHubertDataset(torch.utils.data.Dataset):
     """

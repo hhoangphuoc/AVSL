@@ -39,7 +39,7 @@ cd /home/s2587130/AVSL
 # Set variables
 MODEL_NAME_OR_PATH="./checkpoints/hf-avhubert"  # Will fallback to local checkpoints if unavailable
 # CONFIG_YAML="config/avhubert_large.yaml"
-CONFIG_NAME="./checkpoints/hf-avhubert/config.json"
+# CONFIG_NAME="./checkpoints/hf-avhubert/config.json"
 OUTPUT_DIR="./output/avhubert_ft_seq2seq"
 DATASET_NAME="ami"
 CACHE_DIR="./cache/avhubert_ft_seq2seq"
@@ -56,7 +56,6 @@ mkdir -p logs
 # Run fine-tuning with YAML configuration
 python finetune_avhubert_seq2seq.py \
     --model_name_or_path $MODEL_NAME_OR_PATH \
-    --config_name $CONFIG_NAME \
     --cache_dir $CACHE_DIR \
     --output_dir $OUTPUT_DIR \
     --dataset_name $DATASET_NAME \
@@ -83,4 +82,6 @@ python finetune_avhubert_seq2seq.py \
     --fusion_type "concat" \
     --audio_drop_prob 0.5 \
     --visual_drop_prob 0.5 \
-    --overwrite_output_dir
+    --overwrite_output_dir \
+    --debug_mode
+    # Uncomment the line above to enable/disable debug logging for troubleshooting

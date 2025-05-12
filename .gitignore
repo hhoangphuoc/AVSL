@@ -19,3 +19,8 @@ checkpoints/*
 
 # Ignore all checkpoints cache file
 **/**/cache/*
+
+# Ignore all files in the Claude folder
+CLAUDE.md
+
+avhubert/

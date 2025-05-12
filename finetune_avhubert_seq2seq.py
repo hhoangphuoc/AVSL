@@ -11,6 +11,7 @@ configuration file in one of two ways:
 
 Command-line arguments will override values specified in the YAML configuration.
 """
+import json
 import logging
 import os
 import sys
@@ -46,11 +47,7 @@ from utils import (
     load_video_features,
     TARGET_AUDIO_SR,
     VIDEO_CROP_SIZE,
-    # VIDEO_MEAN,
-    # VIDEO_STD,
 )
-
-from utils.data_loading import AudioVisualProcessor
 
 #------------------------------Self-implemented models----------------------------------------------------------
 # from config.av_hubert_config import AVHuBERTConfig
@@ -64,6 +61,8 @@ from avhubert.src.model.av2text_config import AV2TextConfig
 import datasets
 from datasets import DatasetDict, Dataset, load_from_disk
 
+# Import missing modules for YAML support
+import yaml
 
 logger = logging.getLogger(__name__)
 
@@ -134,163 +133,169 @@ class AudioVisualProcessor(ProcessorMixin):
 
 @dataclass
 class DataCollatorForAVSeq2Seq:
-    tokenizer: Speech2TextTokenizer  # Using tokenizer directly since we don't need a processor for feature extraction
-    decoder_start_token_id: int
-    padding: Union[bool, str] = True
-    max_audio_length: Optional[int] = None
-    max_video_frames: Optional[int] = None
-    max_label_length: Optional[int] = None
-    pad_to_multiple_of_audio: Optional[int] = None
-    pad_to_multiple_of_visual: Optional[int] = None
-    pad_to_multiple_of_labels: Optional[int] = None
-    ignore_pad_token_for_loss: bool = True
-
-    def __init__(self, tokenizer: Speech2TextTokenizer, decoder_start_token_id: int):
-        self.tokenizer = tokenizer
-        self.decoder_start_token_id = decoder_start_token_id
+    tokenizer: Speech2TextTokenizer
+    decoder_start_token_id: int # Should be config.decoder_start_token_id
+    # Add these parameters that were referenced but not initialized
+    max_audio_length: Optional[int] = None # Max time steps for audio features [F, T_audio]
+    max_video_frames: Optional[int] = None # Max time steps for video features [C, T_video, H, W]
+    pad_to_multiple_of: Optional[int] = None # General padding utility
+    default_audio_F: int = 104  # logfbank with stack_order=4 has 26*4=104 features
+    default_audio_T: int = 100  # arbitrary small default for audio time dimension
+    default_video_C: int = 1    # default channels for video (grayscale)
+    default_video_H: int = 88   # default height for video (VIDEO_CROP_SIZE)
+    default_video_W: int = 88   # default width for video (VIDEO_CROP_SIZE)
 
     def __call__(self, features: List[Dict[str, Union[List[int], torch.Tensor]]]) -> Dict[str, torch.Tensor]:
-        """
-        Custom collator that properly handles audio and video inputs formatted specifically
-        for AV2TextForConditionalGeneration. It expects inputs in the format produced by
-        load_feature or our modified prepare_dataset function.
-        """
-        batch_audio_values = []
-        batch_visual_values = []
-        batch_labels = []
-
-        #--------------------------------------------------------------------------------------
-        # GET FEATURES FROM DATASET
-        #-------------------------------------------------------------------------------------- 
+        batch = {}
+        logger.debug(f"DataCollator processing batch with {len(features)} examples")
+        
         has_audio = any(feature.get("input_values") is not None for feature in features)
         has_visual = any(feature.get("video") is not None for feature in features)
-
-        for feature in features:
-            # Get labels
-            if isinstance(feature["labels"], list):
-                batch_labels.append(torch.tensor(feature["labels"]))
-            else:
-                batch_labels.append(feature["labels"])
-            
-            # GET AUDIO FEATURES ------------------------------------------------------------   
-            if has_audio:
-                audio = feature.get("input_values")
-                if audio is None:  # Modality dropped
-                    # Create zero tensor with shape [1, F, T] where F is feature dim and T is time
-                    # This follows the format from AVHuBERT's load_feature function
-                    feature_dim = 26 * 4  # Default logfbank features * stacking factor
-                    time_dim = self.max_audio_length if self.max_audio_length else 100
-                    audio = torch.zeros((1, feature_dim, time_dim), dtype=torch.float32)
-                batch_audio_values.append(audio)
-            
-            # GET VIDEO FEATURES ------------------------------------------------------------
-            if has_visual:
-                video = feature.get("video")
-                if video is None:  # Modality dropped
-                    # Create zero tensor with shape [1, C, T, H, W] where C is channels
-                    channels = 1  # Grayscale
-                    time_dim = self.max_video_frames if self.max_video_frames else 100
-                    height = width = VIDEO_CROP_SIZE  # Default from AVHuBERT
-                    video = torch.zeros((1, channels, time_dim, height, width), dtype=torch.float32)
-                batch_visual_values.append(video)
-
-        #--------------------------------------------------------------------------------------
-        # Initialize the batch dictionary
-        #--------------------------------------------------------------------------------------
-        batch = {}
-
-        #--------------------------------------------------------------------------------------
-        #                       PAD LABELS
-        #--------------------------------------------------------------------------------------
-
-        labels_tensor = self.tokenizer.pad(
-            batch_labels,
-            padding=True,
-            return_tensors="pt",
-        )
-        # remove decoder_start_token_id if present
-        # padding token id is -100
-        labels = labels_tensor["input_ids"].masked_fill(labels_tensor["attention_mask"].ne(1), -100)
-
-        if labels.size(1) > 0 and (labels[:, 0] == self.decoder_start_token_id).all():
-            labels = labels[:, 1:]
-
-        batch["labels"] = labels
-
-
-        #--------------------------------------------------------------------------------------
-        #                       PAD AUDIO FEATURES
-        #--------------------------------------------------------------------------------------
-        if has_audio:
-            # Find max dims for padding
-            max_batch, max_feats, max_time = 0, 0, 0
-            for tensor in batch_audio_values:
-                b, f, t = tensor.shape
-                max_batch = max(max_batch, b)
-                max_feats = max(max_feats, f)  
-                max_time = max(max_time, t)
-            
-            # Pad and stack audio tensors
-            padded_audio = []
-            for tensor in batch_audio_values:
-                b, f, t = tensor.shape
-                # Pad time dimension to max length
-                pad_time = max_time - t
-                if pad_time > 0:
-                    padded = F.pad(tensor, (0, pad_time, 0, 0, 0, 0), value=0.0)
-                else:
-                    padded = tensor
-                padded_audio.append(padded)
-            
-            #--------------------------------------------------------------------------------------
-            # TODO: - TRY WITH Wav2Vec2FeatureExtractor as part of Processor (as fallback)
-            #--------------------------------------------------------------------------------------
-            
-            batch["input_values"] = torch.cat(padded_audio, dim=0)
-        #-------------------------------------------------------------------------------------- 
-
-        #--------------------------------------------------------------------------------------
-        #                       PAD VIDEO FEATURES
-        #--------------------------------------------------------------------------------------
-        if has_visual:
-            # Find max dims for padding
-            max_batch, max_c, max_time, max_h, max_w = 0, 0, 0, 0, 0
-            for tensor in batch_visual_values:
-                b, c, t, h, w = tensor.shape
-                max_batch = max(max_batch, b)
-                max_c = max(max_c, c)
-                max_time = max(max_time, t)
-                max_h = max(max_h, h)
-                max_w = max(max_w, w)
-            
-            # Pad and stack video tensors
-            padded_video = []
-            for tensor in batch_visual_values:
-                b, c, t, h, w = tensor.shape
-                # Pad time dimension to max length
-                pad_time = max_time - t
-                if pad_time > 0:
-                    padded = F.pad(tensor, (0, 0, 0, 0, 0, pad_time, 0, 0, 0, 0), value=0.0)
-                else:
-                    padded = tensor
-                padded_video.append(padded)
-            #--------------------------------------------------------------------------------------
-            # TODO: - TRY WITH AutoImageProcessor as part of Processor (as fallback)
-            #--------------------------------------------------------------------------------------
-            
-            batch["video"] = torch.cat(padded_video, dim=0)
-        #--------------------------------------------------------------------------------------
-
-        #--------------------------------------------------------------------------------------
-        #                       ADD ATTENTION MASK
-        #--------------------------------------------------------------------------------------
-        max_length = batch["labels"].shape[1]
-        attention_mask = torch.ones(batch["labels"].shape[0], max_length, dtype=torch.long)
-        attention_mask[batch["labels"] == self.tokenizer.pad_token_id] = 0
-        batch["attention_mask"] = attention_mask
-        #--------------------------------------------------------------------------------------
         
-        return batch # batch = {"input_values": [B, F, T], "video": [B, C, T, H, W], "labels": [B, T], "attention_mask": [B, T]}
+        logger.debug(f"Batch has audio: {has_audio}, has visual: {has_visual}")
+
+        # Process Labels first (as they are always present)
+        label_features = [torch.tensor(feature["labels"]) for feature in features]
+        
+        # Pad labels dynamically to the longest sequence in the batch
+        labels_padded = self.tokenizer.pad(
+            {"input_ids": label_features}, 
+            padding=True, # Pad to longest in batch
+            return_tensors="pt"
+        )
+        batch["labels"] = labels_padded.input_ids.masked_fill(labels_padded.attention_mask == 0, -100)
+        batch["attention_mask"] = labels_padded.attention_mask # This is for the decoder
+        
+        logger.debug(f"Processed labels with shape: {batch['labels'].shape}")
+
+        # Process Audio
+        if has_audio:
+            logger.debug("Processing audio features...")
+            audio_tensors = [feature.get("input_values") for feature in features]
+            # Filter out None values and create placeholders for them
+            processed_audio_tensors = []
+            audio_lengths = []
+            valid_audio_tensors = [t for t in audio_tensors if t is not None]
+            
+            logger.debug(f"Found {len(valid_audio_tensors)}/{len(audio_tensors)} valid audio tensors")
+            
+            # If no valid tensors, use defaults
+            if not valid_audio_tensors:
+                # Use the defaults from the class
+                default_audio_F = self.default_audio_F  
+                default_audio_T = self.max_audio_length if self.max_audio_length else self.default_audio_T
+                logger.debug(f"Using default audio shapes: F={default_audio_F}, T={default_audio_T}")
+            else:
+                # Use shape from the first valid tensor
+                default_audio_F = valid_audio_tensors[0].shape[0]
+                default_audio_T = valid_audio_tensors[0].shape[1] if valid_audio_tensors[0].shape[1] > 0 else self.default_audio_T
+                logger.debug(f"Using shape from first valid audio tensor: F={default_audio_F}, T={default_audio_T}")
+            
+            for idx, tensor in enumerate(audio_tensors):
+                if tensor is None:
+                    # Create a zero tensor with the right shape
+                    processed_audio_tensors.append(torch.zeros((default_audio_F, default_audio_T), dtype=torch.float32))
+                    audio_lengths.append(0) # Mark as zero length for attention mask
+                else:
+                    processed_audio_tensors.append(tensor) # Shape [F, T]
+                    audio_lengths.append(tensor.shape[1]) # Length is T
+            
+            # Pad the time dimension (dim 1 for [F, T])
+            max_len = max(tensor.shape[1] for tensor in processed_audio_tensors)
+            logger.debug(f"Padding audio tensors to max length {max_len}")
+            padded_audio_list = []
+            
+            for tensor in processed_audio_tensors:
+                if tensor.shape[1] < max_len:
+                    padding = torch.zeros((tensor.shape[0], max_len - tensor.shape[1]), dtype=tensor.dtype)
+                    padded_tensor = torch.cat([tensor, padding], dim=1)
+                else:
+                    padded_tensor = tensor
+                padded_audio_list.append(padded_tensor)
+            
+            # Stack to create batch dimension
+            batch["input_values"] = torch.stack(padded_audio_list)
+            logger.debug(f"Final audio tensor shape: {batch['input_values'].shape}")
+            
+            # Create audio_attention_mask
+            audio_attention_mask = torch.zeros(len(features), max_len, dtype=torch.long)
+            for i, length in enumerate(audio_lengths):
+                if length > 0:  # Only set mask for real data (not placeholders)
+                    audio_attention_mask[i, :length] = 1
+            batch["audio_attention_mask"] = audio_attention_mask
+            logger.debug(f"Audio attention mask shape: {audio_attention_mask.shape}")
+        else:
+            batch["input_values"] = None
+            batch["audio_attention_mask"] = None
+            logger.debug("Skipped audio processing (no valid audio features)")
+
+        # Process Video
+        if has_visual:
+            logger.debug("Processing video features...")
+            video_tensors = [feature.get("video") for feature in features]
+            processed_video_tensors = []
+            video_lengths = [] # Temporal lengths
+            
+            # Get shapes from valid tensors or use defaults
+            valid_video_tensors = [t for t in video_tensors if t is not None]
+            logger.debug(f"Found {len(valid_video_tensors)}/{len(video_tensors)} valid video tensors")
+            
+            if not valid_video_tensors:
+                # Use the defaults from the class
+                # Using default channels (C), timespans (T), height (H), width (W)
+                default_C = self.default_video_C  
+                default_video_T = self.max_video_frames if self.max_video_frames else self.default_audio_T
+                default_H = self.default_video_H
+                default_W = self.default_video_W
+                logger.debug(f"Using default video shapes: C={default_C}, T={default_video_T}, H={default_H}, W={default_W}")
+            else:
+                # Use shape from the first valid tensor
+                default_C = valid_video_tensors[0].shape[0]
+                default_video_T = valid_video_tensors[0].shape[1] if valid_video_tensors[0].shape[1] > 0 else self.default_audio_T
+                default_H = valid_video_tensors[0].shape[2]
+                default_W = valid_video_tensors[0].shape[3]
+                logger.debug(f"Using shape from first valid video tensor: C={default_C}, T={default_video_T}, H={default_H}, W={default_W}")
+
+            for tensor in video_tensors:
+                if tensor is None:
+                    processed_video_tensors.append(torch.zeros((default_C, default_video_T, default_H, default_W), dtype=torch.float32))
+                    video_lengths.append(0)
+                else:
+                    processed_video_tensors.append(tensor) # Shape [C, T, H, W]
+                    video_lengths.append(tensor.shape[1]) # Length is T
+
+            # Find max temporal dimension in batch
+            max_t_len = max(tensor.shape[1] for tensor in processed_video_tensors)
+            logger.debug(f"Padding video tensors to max temporal length {max_t_len}")
+            padded_videos_list = []
+            
+            # Pad each video to max length
+            for tensor in processed_video_tensors:
+                c, t, h, w = tensor.shape
+                if t < max_t_len:
+                    padding = torch.zeros((c, max_t_len - t, h, w), dtype=tensor.dtype)
+                    padded_tensor = torch.cat([tensor, padding], dim=1)
+                else:
+                    padded_tensor = tensor
+                padded_videos_list.append(padded_tensor)
+            
+            batch["video"] = torch.stack(padded_videos_list)
+            logger.debug(f"Final video tensor shape: {batch['video'].shape}")
+
+            # Create visual_attention_mask
+            visual_attention_mask = torch.zeros(len(features), max_t_len, dtype=torch.long)
+            for i, length in enumerate(video_lengths):
+                if length > 0:  # Only set mask for real data (not placeholders)
+                    visual_attention_mask[i, :length] = 1
+            batch["visual_attention_mask"] = visual_attention_mask
+            logger.debug(f"Video attention mask shape: {visual_attention_mask.shape}")
+        else:
+            batch["video"] = None
+            batch["visual_attention_mask"] = None
+            logger.debug("Skipped video processing (no valid video features)")
+            
+        logger.debug("DataCollator processing complete")
+        return batch
 
 @dataclass
 class ModelArguments:
@@ -341,6 +346,9 @@ class ModelArguments:
     )
     fusion_type: str = field(
         default="concat", metadata={"help": "How to fuse audio and visual features"}
+    )
+    debug_mode: bool = field(
+        default=False, metadata={"help": "Enable debug logging for troubleshooting"}
     )
 
 @dataclass
@@ -440,6 +448,272 @@ class DataTrainingArguments:
         default=0.5, metadata={"help": "Probability of dropping visual during training for robustness"}
     )
    
+def validate_model_inputs(batch, config):
+    """
+    Validates that the prepared batch data matches the expected input format for the model.
+    Logs warnings if there are potential incompatibilities.
+    
+    Args:
+        batch: The batch of data prepared by the data collator
+        config: The model configuration
+    """
+    if "input_values" in batch and batch["input_values"] is not None:
+        # Check audio features shape
+        if len(batch["input_values"].shape) != 3:
+            logger.warning(f"Unexpected audio shape: {batch['input_values'].shape}. Expected [B, F, T]")
+        
+        # Check audio feature dimensions match config
+        if batch["input_values"].shape[1] != config.audio_feat_dim:
+            logger.warning(f"Audio feature dimension {batch['input_values'].shape[1]} doesn't match config.audio_feat_dim ({config.audio_feat_dim})")
+    
+    if "video" in batch and batch["video"] is not None:
+        # Check video features shape
+        if len(batch["video"].shape) != 5:
+            logger.warning(f"Unexpected video shape: {batch['video'].shape}. Expected [B, C, T, H, W]")
+        
+        # Check video dimensions
+        if batch["video"].shape[2] != batch["visual_attention_mask"].shape[1]:
+            logger.warning(f"Video temporal dimension {batch['video'].shape[2]} doesn't match visual_attention_mask length {batch['visual_attention_mask'].shape[1]}")
+
+    if "labels" in batch and batch["labels"] is not None:
+        # Check if labels exceed vocab size
+        if batch["labels"].max() >= config.vocab_size:
+            logger.warning(f"Labels contain indices >= vocab_size ({config.vocab_size}). Max label index: {batch['labels'].max()}")
+            
+    # Check for attention mask consistency
+    if "input_values" in batch and batch["input_values"] is not None and "audio_attention_mask" in batch:
+        if batch["input_values"].shape[0] != batch["audio_attention_mask"].shape[0]:
+            logger.warning(f"Batch size mismatch between input_values ({batch['input_values'].shape[0]}) and audio_attention_mask ({batch['audio_attention_mask'].shape[0]})")
+        if batch["input_values"].shape[2] != batch["audio_attention_mask"].shape[1]:
+            logger.warning(f"Sequence length mismatch between input_values ({batch['input_values'].shape[2]}) and audio_attention_mask ({batch['audio_attention_mask'].shape[1]})")
+
+# Add this method to properly handle YAML configuration loading ---------------------------------------------------------
+def load_config_from_yaml(yaml_path):
+    """
+    Load configuration parameters from a YAML file and convert them to an AV2TextConfig.
+    
+    Args:
+        yaml_path: Path to the YAML configuration file
+        
+    Returns:
+        AV2TextConfig: Configuration object with parameters from YAML
+    """
+    logger.info(f"Loading configuration from YAML file: {yaml_path}")
+    try:
+        with open(yaml_path, 'r') as yaml_file:
+            yaml_config = yaml.safe_load(yaml_file)
+        
+        # Create a new config with default values
+        config = AV2TextConfig()
+        
+        # Update config with YAML values
+        # Map YAML keys to config attributes
+        yaml_to_config_mapping = {
+            # Common fields - direct mapping
+            'vocab_size': 'vocab_size',
+            'encoder_layers': 'encoder_layers',
+            'encoder_ffn_dim': 'encoder_ffn_dim',
+            'encoder_attention_heads': 'encoder_attention_heads',
+            'decoder_layers': 'decoder_layers',
+            'decoder_ffn_dim': 'decoder_ffn_dim',
+            'decoder_attention_heads': 'decoder_attention_heads',
+            'd_model': 'd_model',
+            'encoder_hidden_size': 'encoder_hidden_size',
+            'decoder_hidden_size': 'decoder_hidden_size',
+            'dropout': 'dropout',
+            'attention_dropout': 'attention_dropout',
+            'activation_dropout': 'activation_dropout',
+            
+            # AV-specific fields
+            'use_audio': 'use_audio',
+            'use_visual': 'use_visual',
+            'fusion_type': 'fusion_type',
+            'audio_feat_dim': 'audio_feat_dim',
+            
+            # Other fields with different names
+            'model.encoder_embed_dim': 'd_model',
+            'model.audio_feat_dim': 'audio_feat_dim',
+        }
+        
+        # Update config with YAML values according to mapping
+        flat_yaml = {}
+        
+        # Flatten nested YAML structure
+        def flatten_dict(d, parent_key=''):
+            for k, v in d.items():
+                key = f"{parent_key}.{k}" if parent_key else k
+                if isinstance(v, dict):
+                    flatten_dict(v, key)
+                else:
+                    flat_yaml[key] = v
+        
+        # Flatten the YAML structure
+        flatten_dict(yaml_config)
+        
+        # Update config with flattened values
+        for yaml_key, config_attr in yaml_to_config_mapping.items():
+            if yaml_key in flat_yaml:
+                setattr(config, config_attr, flat_yaml[yaml_key])
+                logger.info(f"Setting config.{config_attr} = {flat_yaml[yaml_key]} from YAML")
+        
+        return config
+    
+    except Exception as e:
+        logger.error(f"Error loading YAML configuration: {e}")
+        logger.info("Falling back to default configuration")
+        return AV2TextConfig()
+#------------------------------------------------------------------------------------------------------------------------
+
+def prepare_dataset(
+        example,
+        tokenizer,
+        data_args,
+        model_args,
+        is_training=True
+    ):
+    """
+    Prepares a single example for the AV-HuBERT model when using dataset.map() with batched=False.
+    Extracts audio and video features in the format expected by AV2TextForConditionalGeneration.
+    """
+    try:
+        # Initial debug info
+        logger.debug(f"Processing example with columns: {list(example.keys())}")
+        
+        # When batched=False, example is a single item, not a batch
+        audio_item = example.get(data_args.audio_column_name) # example["audio"]
+        video_item = example.get(data_args.video_column_name) # example["lip_video"]
+        transcript = example.get(data_args.text_column_name, "") # example["transcript"]
+        
+        logger.debug(f"Audio item: {type(audio_item)}, Video item: {type(video_item)}, Transcript: '{transcript[:30]}...'")
+        
+        if transcript is None or transcript == "":
+            logger.warning(f"Empty transcript found in example. Using empty string.")
+            transcript = ""
+
+        # Parse audio and video paths, handling potentially missing or invalid entries
+        current_audio_path = None
+        if audio_item is not None:
+            current_audio_path = audio_item["path"] if isinstance(audio_item, dict) and "path" in audio_item else audio_item
+            if current_audio_path and not isinstance(current_audio_path, str):
+                logger.warning(f"Invalid audio path type: {type(current_audio_path)}. Setting to None.")
+                current_audio_path = None
+            
+        current_video_path = None
+        if video_item is not None:
+            current_video_path = video_item["path"] if isinstance(video_item, dict) and "path" in video_item else video_item
+            if current_video_path and not isinstance(current_video_path, str):
+                logger.warning(f"Invalid video path type: {type(current_video_path)}. Setting to None.")
+                current_video_path = None
+                
+        logger.debug(f"Audio path: {current_audio_path}, Video path: {current_video_path}")
+
+        # Modality dropping for training
+        original_audio_path = current_audio_path
+        original_video_path = current_video_path
+        
+        if is_training:
+            if current_audio_path and model_args.use_audio and np.random.random() < data_args.audio_drop_prob:
+                current_audio_path = None
+            if current_video_path and model_args.use_visual and np.random.random() < data_args.visual_drop_prob:
+                current_video_path = None
+            # Ensure at least one modality is present if both were initially available and dropped
+            if not current_audio_path and not current_video_path:
+                if original_audio_path:
+                    current_audio_path = original_audio_path
+                    logger.debug(f"Restored dropped audio to ensure at least one modality")
+                elif original_video_path:
+                    current_video_path = original_video_path
+                    logger.debug(f"Restored dropped video to ensure at least one modality")
+                    
+        # If both modalities were dropped, log a message
+        if original_audio_path and original_video_path and not current_audio_path and not current_video_path:
+            logger.debug("Both modalities were dropped")
+
+        # Process audio
+        audio_feats = None
+        if current_audio_path and model_args.use_audio:
+            try:
+                # Load audio features and convert to tensor
+                audio_feats_np = load_audio_features(current_audio_path, target_sr=TARGET_AUDIO_SR)
+                if audio_feats_np is not None:
+                    audio_feats = torch.from_numpy(audio_feats_np.astype(np.float32))
+                    logger.debug(f"Loaded audio features with shape: {audio_feats.shape}")
+                    # Layer norm as in original AV-HuBERT's load_feature
+                    with torch.no_grad():
+                        audio_feats = F.layer_norm(audio_feats, audio_feats.shape[1:])
+                    # Expected shape by AV2TextForConditionalGeneration: [F, T] for single example
+                    audio_feats = audio_feats.transpose(0, 1)  # From [T, F] to [F, T]
+                    logger.debug(f"Transposed audio features to shape: {audio_feats.shape}")
+                else:
+                    logger.warning(f"Failed to load audio features from {current_audio_path}")
+            except Exception as e:
+                logger.error(f"Error loading audio {current_audio_path}: {e}")
+                audio_feats = None
+        
+        # Process video
+        video_feats = None
+        if current_video_path and model_args.use_visual:
+            try:
+                # Load video features and convert to tensor
+                video_feats_np = load_video_features(current_video_path)
+                if video_feats_np is not None:
+                    video_feats = torch.from_numpy(video_feats_np.astype(np.float32))
+                    logger.debug(f"Loaded video features with shape: {video_feats.shape}")
+                    # Expected shape: [C, T, H, W]
+                    video_feats = video_feats.permute(3, 0, 1, 2)  # From [T, H, W, C] to [C, T, H, W]
+                    logger.debug(f"Permuted video features to shape: {video_feats.shape}")
+                else:
+                    logger.warning(f"Failed to load video features from {current_video_path}")
+            except Exception as e:
+                logger.error(f"Error loading video {current_video_path}: {e}")
+                video_feats = None
+
+        # Check if at least one modality was loaded successfully
+        if audio_feats is None and video_feats is None:
+            logger.warning(f"Both audio and video features are None. This example will be processed with empty features.")
+
+        # Align audio and video lengths (temporal dimension T) if both are available
+        if audio_feats is not None and video_feats is not None:
+            # audio_feats: [F, T_audio], video_feats: [C, T_video, H, W]
+            t_audio = audio_feats.shape[1]
+            t_video = video_feats.shape[1]
+            diff = t_audio - t_video
+            
+            logger.debug(f"Aligning audio ({t_audio}) and video ({t_video}) temporal dimensions")
+            
+            # Log significant discrepancies between modality lengths
+            if abs(diff) > min(t_audio, t_video) * 0.5:  # If difference is more than 50% of the shorter modality
+                logger.warning(f"Large difference between audio ({t_audio}) and video ({t_video}) lengths.")
+                
+            if diff < 0: # video is longer
+                # Pad audio features (pad the time dimension, which is dim 1)
+                padding = torch.zeros((audio_feats.shape[0], -diff), dtype=audio_feats.dtype)
+                audio_feats = torch.cat([audio_feats, padding], dim=1)
+                logger.debug(f"Padded audio features to match video length: {audio_feats.shape}")
+            elif diff > 0: # audio is longer
+                # Truncate audio features to match video length
+                audio_feats = audio_feats[:, :t_video]
+                logger.debug(f"Truncated audio features to match video length: {audio_feats.shape}")
+
+        # Tokenize transcript
+        labels = tokenizer(transcript).input_ids
+        logger.debug(f"Tokenized transcript with {len(labels)} tokens")
+
+        # Return a dictionary for a single example
+        return {
+            "input_values": audio_feats,  # For audio, expected by model
+            "video": video_feats,        # For video, expected by model
+            "labels": labels,
+        }
+    except Exception as e:
+        logger.error(f"Unexpected error processing example: {e}")
+        # Return a placeholder with empty features but valid labels to avoid breaking the dataset
+        return {
+            "input_values": None,
+            "video": None,
+            "labels": tokenizer("").input_ids,  # Empty transcript
+        }
+
 def main():
     #=================================================================================================================
     #                               SETUP DEVICE
@@ -475,9 +749,14 @@ def main():
         datefmt="%m/%d/%Y %H:%M:%S",
         handlers=[logging.StreamHandler(sys.stdout)],
     )
-    log_level = training_args.get_process_log_level()
+    # Set debug mode based on command line argument
+    if model_args.debug_mode:
+        log_level = logging.DEBUG
+        logger.info("Debug mode enabled - setting log level to DEBUG")
+    else:
+        log_level = training_args.get_process_log_level()
+        
     logger.setLevel(log_level)
-
     datasets.utils.logging.set_verbosity(log_level)
     transformers.utils.logging.set_verbosity(log_level)
     transformers.utils.logging.enable_default_handler()
@@ -514,9 +793,9 @@ def main():
     #================================================================================================================
 
     # Load config
-    if model_args.config_yaml:
+    if model_args.config_yaml and os.path.exists(model_args.config_yaml):
         logger.info(f"Loading configuration from YAML file {model_args.config_yaml}")
-        config = AV2TextConfig.from_yaml(model_args.config_yaml)
+        config = load_config_from_yaml(model_args.config_yaml)
     elif model_args.config_name:
         config = AV2TextConfig.from_pretrained(
             model_args.config_name,
@@ -636,6 +915,26 @@ def main():
             # Second attempt: try loading from local checkpoint files
             logger.info(f"Failed to load model from {model_args.model_name_or_path}: {e}")
             logger.info("Attempting to load from local checkpoint files...")
+            
+            # Check if model files exist locally
+            local_checkpoint_dir = os.path.expanduser(model_args.model_name_or_path)
+            local_weights_file = os.path.join(local_checkpoint_dir, "pytorch_model.bin")
+            
+            if os.path.exists(local_weights_file):
+                try:
+                    # Load model with local file protocol
+                    model = AV2TextForConditionalGeneration.from_pretrained(
+                        local_checkpoint_dir,
+                        config=config,
+                        local_files_only=True,
+                    )
+                    logger.info(f"Successfully loaded model from local checkpoint: {local_checkpoint_dir}")
+                except Exception as local_err:
+                    raise RuntimeError(f"Failed to load model from local checkpoint: {local_err}")
+            else:
+                # Create a new model with the specified config
+                logger.info(f"No checkpoint found at {local_checkpoint_dir}, initializing from scratch")
+                model = AV2TextForConditionalGeneration(config)
     else:
         logger.info("Training new model from scratch")
         model = AV2TextForConditionalGeneration(config)
@@ -660,159 +959,98 @@ def main():
     #                                   SETUP DATASET (LOAD, SPLIT, SAVE)
     #============================================================================================================
 
-    ami_train_path = os.path.join("data", data_args.dataset_name, "av_hubert", "train")
-    ami_val_path = os.path.join("data", data_args.dataset_name, "av_hubert", "validation")
-    ami_test_path = os.path.join("data", data_args.dataset_name, "av_hubert", "test")
+    ami_train_path = os.path.join("data", data_args.dataset_name, "av_hubert", "train") # data/ami/av_hubert/train
+    ami_val_path = os.path.join("data", data_args.dataset_name, "av_hubert", "validation") # data/ami/av_hubert/validation
+    ami_test_path = os.path.join("data", data_args.dataset_name, "av_hubert", "test") # data/ami/av_hubert/test
 
-    ami_train = load_from_disk(ami_train_path)
-    ami_val = load_from_disk(ami_val_path)
-    ami_test = load_from_disk(ami_test_path)
-
+    # Check if dataset paths exist
+    paths_exist = all(os.path.exists(path) for path in [ami_train_path, ami_val_path, ami_test_path])
     
-    # logger.info dataset info
-    logger.info(f"Training dataset: {ami_train}")
-    logger.info(f"Validation dataset: {ami_val}")
-    logger.info(f"Test dataset: {ami_test}")
-    # -----------------------------------------------------------------------------------------------------------------
+    if not paths_exist:
+        logger.warning(f"One or more dataset paths don't exist. Creating directories if needed.")
+        # Create dataset directories
+        for path in [ami_train_path, ami_val_path, ami_test_path]:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+        
+        # Here you would typically load and process the raw dataset
+        # For this implementation, we'll just log an error if the paths don't exist
+        if not os.path.exists(ami_train_path):
+            raise FileNotFoundError(f"Training dataset not found at {ami_train_path}. Please prepare the dataset first.")
+
+    # Try to load the datasets
+    try:
+        ami_train = load_from_disk(ami_train_path)
+        ami_val = load_from_disk(ami_val_path)
+        ami_test = load_from_disk(ami_test_path)
+        
+        # logger.info dataset info
+        logger.info(f"Training dataset: {ami_train}")
+        logger.info(f"Validation dataset: {ami_val}")
+        logger.info(f"Test dataset: {ami_test}")
+    except Exception as e:
+        raise RuntimeError(f"Failed to load datasets: {e}")
+
     
     #============================================================================================================
     #                                  SETUP DATASETS AND PROCESS DATASET
     #============================================================================================================
-    # Define `prepare_dataset` function for batching
-    def prepare_dataset(
-            batch,
-            tokenizer,
-            data_args,
-            model_args,
-            is_training=True
-        ):
-        """
-        Prepares a single batch of data for AV-HuBERT model using dataset.map().
-        This replicates the functionality of load_feature in avhubert's dataset loader,
-        extracting audio and video features in the format expected by AV2TextForConditionalGeneration.
-        """
-                
-        processed_examples = []
-        for i in range(len(batch["transcript"])):
-            audio_item = batch["audio"][i] if "audio" in batch else None
-            video_item = batch["lip_video"][i] if "lip_video" in batch else None
-            transcript = batch["transcript"][i]
-
-            current_audio_path = audio_item["path"] if isinstance(audio_item, dict) and "path" in audio_item else audio_item
-            current_video_path = video_item["path"] if isinstance(video_item, dict) and "path" in video_item else video_item
-
-            # Modality dropping for training
-            if is_training:
-                if current_audio_path and model_args.use_audio and np.random.random() < data_args.audio_drop_prob:
-                    current_audio_path = None
-                if current_video_path and model_args.use_visual and np.random.random() < data_args.visual_drop_prob:
-                    current_video_path = None
-                # Ensure at least one modality is present if both were initially available and dropped
-                if not current_audio_path and not current_video_path:
-                    original_audio_path = audio_item["path"] if isinstance(audio_item, dict) and "path" in audio_item else audio_item
-                    original_video_path = video_item["path"] if isinstance(video_item, dict) and "path" in video_item else video_item
-                    if original_audio_path:
-                        current_audio_path = original_audio_path
-                    elif original_video_path:
-                        current_video_path = original_video_path
-
-            # Process audio like in the original AVHuBERT implementation
-            audio_feats = None
-            if current_audio_path and model_args.use_audio:
-                try:
-                    audio_feats = load_audio_features(current_audio_path, target_sr=TARGET_AUDIO_SR)
-                except Exception as e:
-                    logger.error(f"Error loading audio {current_audio_path}: {e}")
-            
-            # Process video like in the original AVHuBERT implementation
-            video_feats = None
-            if current_video_path and model_args.use_visual:
-                video_feats = load_video_features(current_video_path)  # [T, H, W, 1]
-            
-
-            # ---------------------------------------------------------------------------------------------------------
-            # Align audio and video lengths as in AVHuBERT's load_feature
-            if audio_feats is not None and video_feats is not None:
-                diff = len(audio_feats) - len(video_feats)
-                if diff < 0:
-                    audio_feats = np.concatenate([audio_feats, np.zeros([-diff, audio_feats.shape[-1]], dtype=audio_feats.dtype)])
-                elif diff > 0:
-                    audio_feats = audio_feats[:-diff]
-            # ---------------------------------------------------------------------------------------------------------
-            
-            
-            #---------------------------------------------------------------------------------------------------------
-            # Convert audio / video features to torch tensors and normalise
-            # - FIXME: CHECK IF THIS IS CORRECT.
-            if audio_feats is not None:
-                audio_feats = torch.from_numpy(audio_feats.astype(np.float32))
-                with torch.no_grad():
-                    audio_feats = F.layer_norm(audio_feats, audio_feats.shape[1:])
-                # Shape to [batch=1, F, T]
-                audio_feats = audio_feats.permute(1, 0).unsqueeze(0)
-            
-            if video_feats is not None:
-                video_feats = torch.from_numpy(video_feats.astype(np.float32))
-                # Shape to [batch=1, C, T, H, W]
-                video_feats = video_feats.permute(3, 0, 1, 2).unsqueeze(0)
-
-            #---------------------------------------------------------------------------------------------------------
-            
-            
-            # Tokenize transcript
-            labels = tokenizer(transcript).input_ids
-
-            processed_examples.append({
-                "input_values": audio_feats,  # Expected input name for audio
-                "video": video_feats,  # Expected input name for video
-                "labels": labels,
-            })
-
-        batch_dict = {
-            "input_values": [ex["input_values"] for ex in processed_examples],
-            "video": [ex["video"] for ex in processed_examples],
-            "labels": [ex["labels"] for ex in processed_examples],
-        }
-        return batch_dict
-
-    #-------------------------------------------------------------------
-    # Create datasets
-    #-------------------------------------------------------------------
-    train_dataset = None
-    eval_dataset = None
+    logger.info("Processing datasets")
     
-    # Get dropout probabilities from config or command line args
-    audio_drop_prob = data_args.audio_drop_prob
-    visual_drop_prob = data_args.visual_drop_prob
-    # Get max_audio_length and max_video_frames
-    max_audio_length = int(data_args.max_duration_in_seconds * TARGET_AUDIO_SR)
-    max_video_frames = int(data_args.max_duration_in_seconds * 25)     # Default: 25 fps
-    
-    # For AVHuBERT's load_feature-like functionality, we only need tokenizer for labels
-    # The processing will be done in prepare_dataset function itself
-    
+    #------------------- PROCESS TRAINING DATASET -------------------
     if training_args.do_train:
-        train_dataset = ami_train.map(
-            prepare_dataset,
-            fn_kwargs={"tokenizer": tokenizer, "data_args": data_args, "model_args": model_args, "is_training": True}
-        )
+        logger.info("Processing training dataset")
+        try:
+            train_dataset = ami_train.map(
+                prepare_dataset,
+                fn_kwargs={"tokenizer": tokenizer, "data_args": data_args, "model_args": model_args, "is_training": True},
+                batched=False,  # Process one example at a time
+                remove_columns=ami_train.column_names,
+                num_proc=data_args.preprocessing_num_workers,
+                load_from_cache_file=not data_args.overwrite_cache,
+                desc="Processing train dataset",
+            )
+            logger.info(f"Processed training dataset: {train_dataset}")
+        except Exception as e:
+            logger.error(f"Failed to process training dataset: {e}")
+            raise RuntimeError(f"Failed to process training dataset: {e}")
+    else:
+        train_dataset = None
+
+    #------------------- PROCESS VALIDATION DATASET -------------------
     if training_args.do_eval:
-        eval_dataset = ami_val.map(
-            prepare_dataset,
-            fn_kwargs={"tokenizer": tokenizer, "data_args": data_args, "model_args": model_args, "is_training": False}
-        )
+        logger.info("Processing validation dataset")
+        try:
+            eval_dataset = ami_val.map(
+                prepare_dataset, 
+                fn_kwargs={"tokenizer": tokenizer, "data_args": data_args, "model_args": model_args, "is_training": False},
+                batched=False,  # Process one example at a time
+                remove_columns=ami_val.column_names,
+                num_proc=data_args.preprocessing_num_workers,
+                load_from_cache_file=not data_args.overwrite_cache,
+                desc="Processing eval dataset",
+            )
+            logger.info(f"Processed validation dataset: {eval_dataset}")
+        except Exception as e:
+            logger.error(f"Failed to process validation dataset: {e}")
+            raise RuntimeError(f"Failed to process validation dataset: {e}")
+    else:
+        eval_dataset = None
 
     
     #============================================================================================================
     #                                               SETUP DATA COLLATOR
     #============================================================================================================
+    # Calculate reasonable max lengths based on dataset and configuration
+    max_audio_length = int(data_args.max_duration_in_seconds * TARGET_AUDIO_SR / 4)  # Divide by 4 because of stacking
+    max_video_frames = int(data_args.max_duration_in_seconds * 25)  # Assuming 25 fps
+    
     # Data collator that handles batch creation
+    logger.info(f"Initializing data collator with max_audio_length={max_audio_length}, max_video_frames={max_video_frames}")
     data_collator = DataCollatorForAVSeq2Seq(
         tokenizer=tokenizer,
-        padding=True,
+        decoder_start_token_id=config.decoder_start_token_id, # Get from config
         max_audio_length=max_audio_length,
         max_video_frames=max_video_frames,
-        max_label_length=data_args.max_target_length
     )
     
     #============================================================================================================
@@ -852,6 +1090,26 @@ def main():
     #=================================================================================================================
     #                                               SETUP TRAINER
     #=================================================================================================================
+    # Define a callback for validating inputs
+    class InputValidationCallback(transformers.TrainerCallback):
+        def __init__(self, config):
+            self.config = config
+            self.validation_count = 0
+            
+        def on_step_begin(self, args, state, control, **kwargs):
+            # Only validate the first 5 batches to avoid excessive logging
+            if self.validation_count < 5 and kwargs.get("train_dataloader") is not None:
+                try:
+                    # Get a batch from the dataloader
+                    batch = next(iter(kwargs["train_dataloader"]))
+                    # Move to same device as model
+                    batch = {k: v.to(args.device) if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
+                    # Validate the batch
+                    validate_model_inputs(batch, self.config)
+                    self.validation_count += 1
+                except Exception as e:
+                    logger.warning(f"Input validation failed: {e}")
+    
     # Initialize Seq2SeqTrainer
     # Note: we don't need a processor since feature extraction is done in prepare_dataset
     trainer = Seq2SeqTrainer(
@@ -860,9 +1118,12 @@ def main():
         train_dataset=train_dataset if training_args.do_train else None,
         eval_dataset=eval_dataset if training_args.do_eval else None,
         tokenizer=tokenizer,  # Just need the tokenizer for generation
-        data_collator=data_collator, #FIXME: DO WE NEED THIS?
+        data_collator=data_collator,
         compute_metrics=compute_metrics if training_args.predict_with_generate else None,
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=5)],
+        callbacks=[
+            EarlyStoppingCallback(early_stopping_patience=5),
+            InputValidationCallback(config),
+        ],
     )
     
     # Set generation parameters
