@@ -178,6 +178,10 @@ class WhisperDataCollator:
         return batch
 
 def main():
+    # Disable wandb integration by setting environment variable
+    os.environ["WANDB_DISABLED"] = "true"
+    logger.info("Set WANDB_DISABLED=true to prevent wandb auto-initialization.")
+
     # Print all received command-line arguments for debugging
     logger.info(f"Raw command-line arguments (sys.argv): {sys.argv}")
 
@@ -191,6 +195,10 @@ def main():
 
     # Print parsed training_args.report_to for debugging
     logger.info(f"Parsed training_args.report_to: {training_args.report_to}")
+    # Ensure report_to is explicitly an empty list if it's None (though default_factory should handle this)
+    if training_args.report_to is None:
+        logger.info("training_args.report_to was None, setting to [].")
+        training_args.report_to = []
 
     #=================================================================================================================
     #                                       SETUP LOGGING

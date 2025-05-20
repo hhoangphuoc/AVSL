@@ -11,6 +11,7 @@ output/*
 
 # Ignore all files in the refs folder
 refs/*
+pretrained/*
 
 # Ignore cursor rules
 .cursorignore
@@ -24,3 +25,6 @@ checkpoints/*
 CLAUDE.md
 
 avhubert/
+avhubert_s2s/
+whisper_flamingo/
+avsl/models/

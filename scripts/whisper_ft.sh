@@ -34,7 +34,7 @@ source activate .venv
 # conda activate .venv
 
 # Go to project root directory
-cd /home/s2587130/AVSL
+cd /home/s2587130/AVSL/avsl
 
 # Set variables
 MODEL_NAME_OR_PATH="checkpoints/hf-whisper/whisper-large-v2"  # Or other model size: tiny, base, small, medium, large-v2
@@ -56,7 +56,7 @@ mkdir -p $OUTPUT_DIR
 mkdir -p logs
 
 # Run fine-tuning
-python finetune_whisper.py \
+python whisper_ft.py \
     --model_name_or_path $MODEL_NAME_OR_PATH \
     --cache_dir $CACHE_DIR \
     --output_dir $OUTPUT_DIR \

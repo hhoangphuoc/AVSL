@@ -54,8 +54,8 @@ from utils import (
 # from models.av_hubert_seq2seq_model import AVHuBERTForConditionalGeneration
 #-----------------------------Fall-back models------------------------------------------------------------------
 #- FIXME: Use this if the previous doesnt work
-from avhubert.src.model.avhubert2text import AV2TextForConditionalGeneration 
-from avhubert.src.model.av2text_config import AV2TextConfig
+from avhubert_s2s.src.model.avhubert2text import AV2TextForConditionalGeneration 
+from avhubert_s2s.src.model.av2text_config import AV2TextConfig
 #----------------------------------------------------------------------------------------------------------
 
 import datasets

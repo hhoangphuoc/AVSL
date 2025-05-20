@@ -32,7 +32,7 @@ from transformers.modeling_outputs import (
     ModelOutput,
 )
 from config.av_hubert_config import AVHuBERTConfig
-from models.av_hubert_model import AVHuBERTModel
+from modules.av_hubert_model import AVHuBERTModel
 from modules.av_hubert_decoder import AVHuBERTDecoder
 
 @dataclass
