@@ -1,29 +1,76 @@
 import os
 import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Add paths for whisper_flamingo and av_hubert ------------------------------------------------------------
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(current_dir)
+whisper_flamingo_path = os.path.join(project_root, 'whisper_flamingo')
+av_hubert_path = os.path.join(whisper_flamingo_path, 'av_hubert')
+
+# Add to Python path
+sys.path.insert(0, project_root)
+sys.path.insert(0, whisper_flamingo_path)
+sys.path.insert(0, av_hubert_path)
+
+# Ensure fairseq is properly accessible by adding the fairseq installation path
+# This makes the fairseq modules visible without import conflicts
+fairseq_path = os.path.join(av_hubert_path, 'fairseq')
+if os.path.exists(fairseq_path) and fairseq_path not in sys.path:
+    sys.path.insert(0, fairseq_path)
+    print(f"✓ Added fairseq path to sys.path: {fairseq_path}")
+
+# Set the correct av_hubert path for user module import
+# This should point to the avhubert directory within the av_hubert repository
+avhubert_user_dir = os.path.join(av_hubert_path, 'avhubert')
+print(f"✓ AV-HuBERT user dir set to: {avhubert_user_dir}")
+
+# Pre-import fairseq to ensure it's loaded correctly
+try:
+    import fairseq
+    print(f"✓ Fairseq imported successfully from: {fairseq.__file__}")
+    # Verify that the required modules are accessible
+    _ = fairseq.checkpoint_utils
+    _ = fairseq.utils
+    print("✓ Fairseq checkpoint_utils and utils are accessible")
+except Exception as e:
+    print(f"Warning: Fairseq import issue: {e}")
+    print("Continuing with the assumption that the original repository fix is in place...")
+
+
+#===============================================================================================================
+# FIXME: IS THIS NEEDED?
+# CRITICAL FIX: Add dummy argument to prevent AV-HuBERT duplicate model registration
+# This is a known issue with AV-HuBERT: https://github.com/facebookresearch/av_hubert/issues/36
+# The workaround is to add a dummy command line argument to prevent the registration conflict
+if 'dummy' not in sys.argv and len(sys.argv) == 2:  # Only if we have exactly one argument (the config file)
+    print("✓ Adding dummy argument to prevent AV-HuBERT task registration conflicts...")
+    sys.argv.append('dummy')
+    print(f"✓ sys.argv is now: {sys.argv}")
+elif 'dummy' in sys.argv:
+    print("✓ Dummy argument already present in sys.argv")
+else:
+    print(f"✓ sys.argv length is {len(sys.argv)}, no dummy argument modification needed")
+#===============================================================================================================
+
 import yaml
 import types
 import numpy as np
 import torch
 from torch import nn
+import cv2
 # from scipy.io import wavfile # Keep if AmiVideoHFDataset's add_noise needs it via utils
 import whisper_flamingo.whisper as whisper
 from torchaudio import transforms as T # For potential resampling
-import argparse
 from pytorch_lightning import LightningModule
 from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.strategies import DDPStrategy
 from tqdm import tqdm
 from datasets import load_from_disk # For loading Hugging Face datasets
 
-# Assuming hf_custom_datasets.py is in the same directory or PYTHONPATH
-from avsl.hf_custom_datasets import AmiVideoHFDataset
+
 from whisper_flamingo.spec_augment import spec_augment # Keep if AmiVideoHFDataset uses it directly or via config
 
 from whisper_flamingo.utils import (
-    # load_data, # Will be replaced by Hugging Face dataset loading
-    # load_wave, # AmiVideoHFDataset handles audio loading from HF dataset
-    # load_video_feats, # Used by AmiVideoHFDataset
     WhisperVideoCollatorWithPadding, # This should still be compatible
     whisper_optimizer,
     whisper_video_projection_optimizer,
@@ -39,13 +86,11 @@ AUDIO_HOP_LENGTH = 160 # For calculating number of frames from samples/duration
 SEED = 3407
 seed_everything(SEED, workers=True)
 
-# Assuming utils.py and spec_augment.py are in the same directory or accessible in PYTHONPATH
-# If not, adjust imports accordingly, e.g., from .utils import add_noise, load_video_feats
+
 try:
     from whisper_flamingo.utils import load_video_feats
     from whisper_flamingo.spec_augment import spec_augment
 except ImportError:
-
     print("Warning: Could not import helper functions from utils.py or spec_augment.py. Ensure they are in PYTHONPATH.")
 
 class AmiVideoHFDataset(torch.utils.data.Dataset):
@@ -64,9 +109,6 @@ class AmiVideoHFDataset(torch.utils.data.Dataset):
         self.lang_code = lang_code
         
         self.spec_augment_config = spec_augment_config
-        # self.noise_prob = noise_config.get("prob", 0) if noise_config else 0 #Probability of noise addition
-        # self.noise_files = noise_config.get("noise_files", []) if noise_config else [] #List of noise files
-        # self.noise_snr = noise_config.get("snr", 0) if noise_config else 0 #SNR config for noise addition
         
         self.train = train
 
@@ -152,6 +194,9 @@ class AmiVideoHFDataset(torch.utils.data.Dataset):
 
         # 2. Process Text --- WHISPER DECODER ------------------------------------------------------------
         text = item['transcript']
+        # For now, we'll keep laugh tokens as text (can be processed later if needed)
+        # text = text.replace("[laugh]", " laugh ").replace("(laugh)", " laugh ")
+
         # Prepare decoder inputs and labels, ensure lang_code is one of tokenizer.all_language_codes
         # Example: self.tokenizer.sot_sequence(language=self.lang_code)
         # Sot sequence with language, task (transcribe), and no_timestamps
@@ -209,17 +254,48 @@ class WhisperFlamingoModule(LightningModule):
         super().__init__()
         self.model_name = model_name
         print("Loading Whisper model and weights")
-        self.model = whisper.load_model(model_name,
-                                        device='cpu',
-                                        download_root=cfg.get('download_root', None), # Use .get for safety
-                                        dropout_rate=cfg.dropout_rate,
-                                        video=True,
-                                        video_model_path=cfg.video_model_ckpt, 
-                                        prob_av=cfg.prob_use_av, 
-                                        prob_a=cfg.prob_use_a,
-                                        av_hubert_encoder=cfg.use_av_hubert_encoder,
-                                        av_fusion=cfg.av_fusion,
-                                        add_gated_x_attn=cfg.add_gated_x_attn,)
+        #===============================================================================================================
+        # # Check if we have a local model file to load directly
+        # local_model_path = getattr(cfg, 'local_whisper_model', None)
+        # if local_model_path and os.path.exists(local_model_path):
+        #     print(f"Loading Whisper model from local file: {local_model_path}")
+        #     # Load the model from local checkpoint
+        #     self.model = whisper.load_model(local_model_path,
+        #                                     device='cpu',
+        #                                     download_root=getattr(cfg, 'download_root', None),
+        #                                     dropout_rate=getattr(cfg, 'dropout_rate', 0.0),
+        #                                     video=True,
+        #                                     video_model_path=getattr(cfg, 'video_model_ckpt', None), 
+        #                                     prob_av=getattr(cfg, 'prob_use_av', 0.5), 
+        #                                     prob_a=getattr(cfg, 'prob_use_a', 0.5),
+        #                                     av_hubert_encoder=getattr(cfg, 'use_av_hubert_encoder', False),
+        #                                     av_fusion=getattr(cfg, 'av_fusion', 'early'),
+        #                                     add_gated_x_attn=getattr(cfg, 'add_gated_x_attn', 0))
+        # else:
+            # Try to load from download_root or download if necessary
+        #===============================================================================================================
+        print("Loading Whisper model from download_root or download if necessary")
+        try:
+            self.model = whisper.load_model(model_name,
+                                            device='cpu',
+                                            download_root=getattr(cfg, 'download_root', None),
+                                            dropout_rate=getattr(cfg, 'dropout_rate', 0.0),
+                                            video=True,
+                                            video_model_path=getattr(cfg, 'video_model_ckpt', None), 
+                                            av_hubert_path=avhubert_user_dir,  # Use the correctly set path
+                                            prob_av=getattr(cfg, 'prob_use_av', 0.5), 
+                                            prob_a=getattr(cfg, 'prob_use_a', 0.5),
+                                            av_hubert_encoder=getattr(cfg, 'use_av_hubert_encoder', False),
+                                            av_fusion=getattr(cfg, 'av_fusion', 'early'),
+                                            add_gated_x_attn=getattr(cfg, 'add_gated_x_attn', 0))
+            print("✓ Whisper model loaded successfully")
+        except Exception as e:
+            print(f"Failed to load model {model_name}: {e}")
+            print("Please download the model manually or check your internet connection.")
+            raise e
+        #===============================================================================================================
+        
+        # Load pre-trained checkpoint if specified
         if cfg.pt_ckpt != '':
             state_dict = torch.load(cfg.pt_ckpt, map_location=torch.device('cpu'))
             state_dict = state_dict['state_dict']
@@ -235,10 +311,17 @@ class WhisperFlamingoModule(LightningModule):
         self.freeze_video_model = cfg.freeze_video_model
         self.freeze_video_batch_norm_stats = cfg.freeze_video_batch_norm_stats
         
-        # For AmiVideoHFDataset, lang is passed to tokenizer and dataset for prompt construction
         multilingual = True if 'large' in model_name or '.en' not in model_name else False
         print(f"Multilingual tokenizer : {multilingual}, Language for dataset: {lang}")
-        self.tokenizer = whisper.tokenizer.get_tokenizer(multilingual=multilingual, language=lang, task='transcribe')
+
+        # --- Use standard Whisper tokenizer (skip custom token for now) ------------------------------------------------------------
+        # For now, we'll use the standard Whisper tokenizer without custom tokens
+        # Custom tokens can be added later if needed for specific use cases
+        self.tokenizer = whisper.tokenizer.get_tokenizer(
+            multilingual=multilingual, language=lang, task='transcribe'
+        )
+        print(f"Using standard Whisper tokenizer with vocab size: {self.tokenizer.encoding.n_vocab}")
+        # --- End of tokenizer setup ------------------------------------------------------------
 
         self.loss_fn = nn.CrossEntropyLoss(ignore_index=-100) # Whisper's default ignore_index for padding
 
@@ -258,10 +341,10 @@ class WhisperFlamingoModule(LightningModule):
         self.val_audio_lengths = [int(d * (SAMPLE_RATE / AUDIO_HOP_LENGTH)) for d in self.val_hf_dataset['duration']]
         self.test_audio_lengths = [int(d * (SAMPLE_RATE / AUDIO_HOP_LENGTH)) for d in self.test_hf_dataset['duration']]
 
-        self.special_token_set = set(self.tokenizer.special_tokens.values())
+        self.special_token_set = set(self.tokenizer.special_tokens.values()) # Update this set with the new tokenizer
         
         # Dataset audio max length (for whisper.pad_or_trim) - typically 30s
-        self.dataset_audio_max_length = cfg.get('dataset_audio_max_length', whisper.audio.N_SAMPLES)
+        self.dataset_audio_max_length = getattr(cfg, 'dataset_audio_max_length', whisper.audio.N_SAMPLES)
 
 
     def forward(self, x): # This method seems unused in original script's training loop
@@ -481,7 +564,7 @@ if __name__ == "__main__":
         print(f"  {k}: {v}")
     
     print(f"Audio max length for batch sampler: {cfg.audio_max_length} samples")
-    dataset_audio_max_len_cfg = cfg.get('dataset_audio_max_length', whisper.audio.N_SAMPLES)
+    dataset_audio_max_len_cfg = getattr(cfg, 'dataset_audio_max_length', whisper.audio.N_SAMPLES)
     print(f"Audio max length for dataset (pad_or_trim): {dataset_audio_max_len_cfg} samples")
 
 
@@ -504,15 +587,26 @@ if __name__ == "__main__":
     # LengthBatchSampler helps but extreme outliers can still be an issue.
     # whisper.audio.N_SAMPLES is 30s. cfg.audio_max_length is for batcher in samples.
     # Max duration for filtering should be based on what the model can handle or what's practical.
-    max_duration_filter_sec = cfg.get('max_duration_filter_seconds', 30.0) # Max 30s by default
+    max_duration_filter_sec = getattr(cfg, 'max_duration_filter_seconds', 30.0) # Max 30s by default
     
-    train_hf_ds = train_hf_ds.filter(lambda x: x['duration'] <= max_duration_filter_sec)
-    val_hf_ds = val_hf_ds.filter(lambda x: x['duration'] <= max_duration_filter_sec)
-    test_hf_ds = test_hf_ds.filter(lambda x: x['duration'] <= max_duration_filter_sec)
+    # train_hf_ds = train_hf_ds.filter(lambda x: x['duration'] <= max_duration_filter_sec)
+    # val_hf_ds = val_hf_ds.filter(lambda x: x['duration'] <= max_duration_filter_sec)
+    # test_hf_ds = test_hf_ds.filter(lambda x: x['duration'] <= max_duration_filter_sec)
     
-    print(f"Train dataset size after filtering (<= {max_duration_filter_sec}s): {len(train_hf_ds)}")
-    print(f"Validation dataset size after filtering (<= {max_duration_filter_sec}s): {len(val_hf_ds)}")
-    print(f"Test dataset size after filtering (<= {max_duration_filter_sec}s): {len(test_hf_ds)}")
+    print(f"Train dataset size : {len(train_hf_ds)}")
+    print(f"Validation dataset : {len(val_hf_ds)}")
+    print(f"Test dataset size : {len(test_hf_ds)}")
+
+    # --- ONLY USE 10% OF DATA FOR TRAINING ------------------------------------------------------------
+    print("Slicing datasets to 10% for faster processing...")
+    train_hf_ds = train_hf_ds.shuffle(seed=SEED).select(range(min(len(train_hf_ds), int(len(train_hf_ds) * 0.1))))
+    val_hf_ds = val_hf_ds.shuffle(seed=SEED).select(range(min(len(val_hf_ds), int(len(val_hf_ds) * 0.1))))
+    test_hf_ds = test_hf_ds.shuffle(seed=SEED).select(range(min(len(test_hf_ds), int(len(test_hf_ds) * 0.1))))
+
+    print(f"Train dataset size after 10% slicing: {len(train_hf_ds)}")
+    print(f"Validation dataset size after 10% slicing: {len(val_hf_ds)}")
+    print(f"Test dataset size after 10% slicing: {len(test_hf_ds)}")
+    # --- End of 10% slicing ------------------------------------------------------------
 
 
     model = WhisperFlamingoModule(cfg, cfg.model_name, cfg.lang, 
@@ -535,20 +629,20 @@ if __name__ == "__main__":
 
 
     trainer = Trainer(
-        precision=cfg.get('precision', 16), # Default to 16
+        precision=getattr(cfg, 'precision', 16), # Default to 16
         strategy=strategy,
         accelerator="gpu", # Hardcoded, could be from cfg
         max_steps=cfg.num_train_steps,
         accumulate_grad_batches=cfg.gradient_accumulation_steps,
         logger=tflogger,
         callbacks=callback_list,
-        num_sanity_val_steps=cfg.get('num_sanity_val_steps', 0),
+        num_sanity_val_steps=getattr(cfg, 'num_sanity_val_steps', 0),
         devices=cfg.num_devices,
         val_check_interval=int(cfg.validate_every_n_batches * cfg.gradient_accumulation_steps),
         check_val_every_n_epoch=None,
-        reload_dataloaders_every_n_epochs=cfg.get('reload_dataloaders_every_n_epochs', 1),
+        reload_dataloaders_every_n_epochs=getattr(cfg, 'reload_dataloaders_every_n_epochs', 1),
         use_distributed_sampler=False, # Handled by DistributedSamplerWrapper
-        sync_batchnorm=cfg.get('sync_batchnorm', True),
+        sync_batchnorm=getattr(cfg, 'sync_batchnorm', True),
     )
 
     print(f"Train ID: {cfg.train_id}")

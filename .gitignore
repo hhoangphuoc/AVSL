@@ -24,7 +24,9 @@ checkpoints/*
 # Ignore all files in the Claude folder
 CLAUDE.md
 
-avhubert/
-avhubert_s2s/
-whisper_flamingo/
+av_hubert/
+avhuberts2s/
 avsl/models/
+
+#Ignore all files in the logs folder
+logs/*

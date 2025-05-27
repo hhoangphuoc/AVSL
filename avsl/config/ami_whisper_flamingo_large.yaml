@@ -1,9 +1,9 @@
 train_name: whisper_flamingo_large_ft_ami
 
 # Data paths for Hugging Face datasets (must be loadable by load_from_disk)
-train_data_path: "../data/ami/av_hubert/train" 
-val_data_path: "../data/ami/av_hubert/validation"
-test_data_path: "../data/ami/av_hubert/test"
+train_data_path: "/home/s2587130/AVSL/data/ami/av_hubert/train" 
+val_data_path: "/home/s2587130/AVSL/data/ami/av_hubert/validation"
+test_data_path: "/home/s2587130/AVSL/data/ami/av_hubert/test"
 
 # Max audio length for LengthBatchSampler (in samples, e.g., 15s * 16000 = 240000)
 # This is different from dataset_audio_max_length for pad_or_trim
@@ -27,17 +27,16 @@ num_devices: 1
 model_name: large-v2 # Whisper model size
 learning_rate: 1.0e-5 # Adjusted typical LR for fine-tuning large models
 
-batch_size: 8 # Adjusted for potentially larger memory footprint with HF datasets / video features
-eval_batch_size: 16 # Batch size for evaluation dataloaders
+batch_size: 2 # Reduced batch size for large model to avoid OOM
+eval_batch_size: 4 # Batch size for evaluation dataloaders
 
-num_train_steps: 20000 # Example, adjust based on dataset size and epochs
-warmup_steps: 5000
-gradient_accumulation_steps: 1 # batch_size * num_devices * grad_accum = effective_batch_size (8*1*2=16)
+num_train_steps: 8000 #20000 # Example, adjust based on dataset size and epochs
+warmup_steps: 1000 #5000
+gradient_accumulation_steps: 4 # Increased to maintain effective batch size
 
 monitor: 'val/wer_av' # Monitor WER on the validation set for AV model (now only one val set)
 
-
-video_model_ckpt: 'models/large_noise_pt_noise_ft_433h.pt' # Path to AV-HuBERT weights
+video_model_ckpt: '/home/s2587130/AVSL/avsl/models/large_noise_pt_noise_ft_433h_only_weights.pt' # Path to AV-HuBERT weights
 freeze_video_model: True
 freeze_video_batch_norm_stats: False 
 
@@ -45,7 +44,7 @@ spec_augment: "ls-basic" # SpecAugment config for AmiVideoHFDataset ("ls-double"
 dropout_rate: 0.1 # Dropout rate in Whisper model
 
 lang: en # Language is English for AMI dataset
-pt_ckpt: 'models/whisper_en_large.pt' # Path to pre-trained audio-only Whisper checkpoint (optional)
+pt_ckpt: '/home/s2587130/AVSL/avsl/models/whisper_en_large.pt' # Path to pre-trained audio-only Whisper checkpoint (optional)
 resume_training: False
 train_id: whisper-flamingo_large_ft_ami # Updated train_id
 
@@ -58,12 +57,15 @@ use_av_hubert_encoder: True
 add_gated_x_attn: 1 # 0 for False, 1 for True (enable Flamingo-style cross-attention)
 av_fusion: separate # AV fusion strategy
 
-log_output_dir: "output/train_whisper_flamingo_large_ft" # Directory for TensorBoard logs
-check_output_dir: "checkpoints/whisper_flamingo_large_ft"   # Directory for model checkpoints
+log_output_dir: "/home/s2587130/AVSL/avsl/output/train_whisper_flamingo_large_ft" # Directory for TensorBoard logs
+check_output_dir: "/home/s2587130/AVSL/avsl/checkpoints/whisper_flamingo_large_ft"   # Directory for model checkpoints
 
 num_sanity_val_steps: 2 # Number of sanity check batches before training
 precision: 16 # Mixed precision training (16 or bf16)
 reload_dataloaders_every_n_epochs: 1
 sync_batchnorm: True
 
-# download_root: 'models/whisper' # Optional: specify where Whisper models are downloaded/cached 
+# Use local model directory instead of downloading
+download_root: '/home/s2587130/AVSL/avsl/models/whisper' # Local directory where models are stored
+# # Option to load from a specific local model file (bypasses download)
+# local_whisper_model: '/home/s2587130/AVSL/avsl/models/whisper_en_large.pt' # Use existing model file 

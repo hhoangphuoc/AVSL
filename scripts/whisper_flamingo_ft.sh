@@ -3,7 +3,7 @@
 #SBATCH --output=logs/whisper_flamingo_ft_%j.log
 #SBATCH --error=logs/whisper_flamingo_ft_%j.err
 #SBATCH --gres=gpu:ampere:1
-#SBATCH --constraint=a100
+#SBATCH --constraint=a40
 #SBATCH --cpus-per-task=32
 #SBATCH --nodes=1
 #SBATCH --mem=100G
@@ -12,6 +12,10 @@
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=hohoangphuoc@student.utwente.nl
 
+mkdir -p logs
+
+# Initialize environment module system (if not already done by login shell)
+source /etc/profile.d/modules.sh
 
 # Load modules (adjust versions as needed)
 module purge # clean the environment before loading new modules
@@ -37,7 +41,9 @@ CONDA_ROOT=/home/s2587130/miniconda3/
 source ${CONDA_ROOT}/etc/profile.d/conda.sh
 conda activate $PYTHON_VIRTUAL_ENVIRONMENT
 
+conda list
+
 cd /home/s2587130/AVSL/avsl
 
 # srun python -u whisper_ft_muavic_video.py config/visual/v_en_large.yaml
-srun python -u whisper_flamingo_ft_ami.py config/ami_whisper_flamingo_large.yaml
+python -u whisper_flamingo_ft_ami.py config/ami_whisper_flamingo_large.yaml
