@@ -1,0 +1,130 @@
+(whisper-flamingo) (base) s2587130@hpc-head1:~/AVSL/avsl$ python test_av_hubert_fix.py config/ami_whisper_flamingo_large.yaml
+✓ Added fairseq path to sys.path: /home/s2587130/AVSL/whisper_flamingo/av_hubert/fairseq
+✓ AV-HuBERT user dir set to: /home/s2587130/AVSL/whisper_flamingo/av_hubert/avhubert
+✓ Fairseq imported successfully from: /home/s2587130/AVSL/whisper_flamingo/av_hubert/fairseq/fairseq/__init__.py
+✓ Fairseq checkpoint_utils and utils are accessible
+✓ Adding dummy argument to prevent AV-HuBERT task registration conflicts...
+✓ sys.argv is now: ['test_av_hubert_fix.py', 'config/ami_whisper_flamingo_large.yaml', 'dummy']
+============================================================
+Testing AV-HuBERT Task Registration Fix
+============================================================
+Loading configuration from: config/ami_whisper_flamingo_large.yaml
+Model configuration:
+  Model name: large-v2
+  Video model checkpoint: /home/s2587130/AVSL/avsl/models/large_noise_pt_noise_ft_433h_only_weights.pt
+  AV-HuBERT encoder: True
+  AV fusion: separate
+  Gated cross-attention: 1
+  AV-HuBERT user dir: /home/s2587130/AVSL/whisper_flamingo/av_hubert/avhubert
+
+----------------------------------------
+Step 1: Testing Whisper model loading without AV-HuBERT...
+/home/s2587130/AVSL/whisper_flamingo/whisper/__init__.py:157: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  checkpoint = torch.load(fp, map_location=device)
+Whisper dropout rate : 0.0
+✓ Audio-only Whisper model loaded successfully
+
+----------------------------------------
+Step 2: Testing Whisper model with AV-HuBERT encoder...
+Whisper dropout rate : 0.1
+Loading AV-HuBERT encoder
+/home/s2587130/AVSL/whisper_flamingo/av_hubert/fairseq/fairseq/checkpoint_utils.py:315: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  state = torch.load(f, map_location=torch.device("cpu"))
+2025-05-27 14:28:14 | INFO | avhubert.hubert_pretraining | current directory is /home/s2587130/AVSL/avsl
+2025-05-27 14:28:14 | INFO | avhubert.hubert_pretraining | AVHubertPretrainingTask Config {'_name': 'av_hubert_pretraining', 'data': '/checkpoint/bshi/data/lrs3//video/wav/all_tsv/', 'input_modality': '???', 'labels': ['wrd'], 'label_dir': '/checkpoint/bshi/data/lrs3//exp/ls-hubert/tune-modality/all_bpe/unigram1000/', 'label_rate': -1, 'sample_rate': 16000, 'normalize': True, 'enable_padding': False, 'max_sample_size': 500, 'min_sample_size': None, 'max_trim_sample_size': '${task.max_sample_size}', 'single_target': True, 'random_crop': False, 'pad_audio': True, 'pdb': False, 'stack_order_audio': 4, 'skip_verify': False, 'image_aug': True, 'image_crop_size': 88, 'image_mean': 0.421, 'image_std': 0.165, 'modalities': ['audio', 'video'], 'is_s2s': True, 'tokenizer_bpe_name': 'sentencepiece', 'tokenizer_bpe_model': '/checkpoint/bshi/data/lrs3//lang/spm/spm_unigram1000.model', 'noise_wav': '/checkpoint/bshi/data/lrs3//audio/noise/tsv/musan-lgall/', 'noise_prob': 0.25, 'noise_snr': '0', 'noise_num': 1, 'fine_tuning': True}
+2025-05-27 14:28:15 | INFO | avhubert.hubert_pretraining | current directory is /home/s2587130/AVSL/avsl
+2025-05-27 14:28:15 | INFO | avhubert.hubert_pretraining | AVHubertPretrainingTask Config {'_name': 'av_hubert_pretraining', 'data': '/checkpoint/bshi/data/lrs3//video/wav/all_tsv/', 'input_modality': 'image', 'labels': ['km'], 'label_dir': '/checkpoint/bshi/data/lrs3//video/hubert/stitch-iters/envox-iter4-l12c2000/', 'label_rate': 25, 'sample_rate': 25, 'normalize': True, 'enable_padding': False, 'max_sample_size': 2000, 'min_sample_size': 5, 'max_trim_sample_size': 400, 'single_target': False, 'random_crop': True, 'pad_audio': False, 'pdb': False, 'stack_order_audio': 4, 'skip_verify': False, 'image_aug': True, 'image_crop_size': 88, 'image_mean': 0.421, 'image_std': 0.165, 'modalities': ['audio', 'video'], 'is_s2s': False, 'tokenizer_bpe_name': None, 'tokenizer_bpe_model': None, 'noise_wav': '/checkpoint/bshi/data/lrs3//audio/noise/tsv/musan-lgall/', 'noise_prob': 0.25, 'noise_snr': '0', 'noise_num': 1, 'fine_tuning': False}
+2025-05-27 14:28:15 | INFO | avhubert.hubert | HubertModel Config: {'_name': 'av_hubert', 'label_rate': 25, 'input_modality': '${task.input_modality}', 'extractor_mode': default, 'encoder_layers': 24, 'encoder_embed_dim': 1024, 'encoder_ffn_embed_dim': 4096, 'encoder_attention_heads': 16, 'activation_fn': gelu, 'dropout': 0.1, 'attention_dropout': 0.1, 'activation_dropout': 0.0, 'encoder_layerdrop': 0.05, 'dropout_input': 0.1, 'dropout_features': 0.1, 'final_dim': 256, 'untie_final_proj': True, 'layer_norm_first': True, 'conv_feature_layers': '[(512,10,5)] + [(512,3,2)] * 4 + [(512,2,2)] * 2', 'conv_bias': False, 'logit_temp': 0.1, 'target_glu': False, 'feature_grad_mult': 0.1, 'mask_length_audio': 10, 'mask_prob_audio': 0.8, 'mask_length_image': 5, 'mask_prob_image': 0.3, 'mask_selection': static, 'mask_other': 0.0, 'no_mask_overlap': False, 'mask_min_space': 1, 'mask_channel_length': 10, 'mask_channel_prob': 0.0, 'mask_channel_selection': static, 'mask_channel_other': 0.0, 'no_mask_channel_overlap': False, 'mask_channel_min_space': 1, 'conv_pos': 128, 'conv_pos_groups': 16, 'latent_temp': [2.0, 0.5, 0.999995], 'skip_masked': False, 'skip_nomask': False, 'resnet_relu_type': 'prelu', 'resnet_weights': None, 'sim_type': 'cosine', 'sub_encoder_layers': 0, 'audio_feat_dim': 104, 'modality_dropout': 0.5, 'audio_dropout': 0.5, 'modality_fuse': 'concat', 'selection_type': 'same_seq', 'masking_type': 'input', 'decoder_embed_dim': 768, 'decoder_ffn_embed_dim': 3072, 'decoder_layers': 6, 'decoder_layerdrop': 0.0, 'decoder_attention_heads': 4, 'decoder_learned_pos': False, 'decoder_normalize_before': False, 'no_token_positional_embeddings': False, 'decoder_dropout': 0.1, 'decoder_attention_dropout': 0.1, 'decoder_activation_dropout': 0.0, 'max_target_positions': 2048, 'share_decoder_input_output_embed': False, 'no_scale_embedding': True, 'required_seq_len_multiple': 1, 'layer_type': transformer, 'checkpoint_activations': False}
+/home/s2587130/miniconda3/envs/whisper-flamingo/lib/python3.8/site-packages/torch/nn/utils/weight_norm.py:134: FutureWarning: `torch.nn.utils.weight_norm` is deprecated in favor of `torch.nn.utils.parametrizations.weight_norm`.
+  WeightNorm.apply(module, name, dim)
+Using AV-HuBERT encoder with parameters: 325136104
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+✓ Whisper model with AV-HuBERT loaded successfully!
+  Encoder type: <class 'whisper_flamingo.whisper.model.AudioEncoder'>
+  Video model type: <class 'avhubert.hubert_asr.HubertEncoderWrapper'>
+
+----------------------------------------
+Step 3: Testing multiple model loads (duplicate registration test)...
+/home/s2587130/AVSL/whisper_flamingo/whisper/__init__.py:157: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  checkpoint = torch.load(fp, map_location=device)
+Whisper dropout rate : 0.1
+Loading AV-HuBERT encoder
+2025-05-27 14:28:43 | INFO | avhubert.hubert_pretraining | current directory is /home/s2587130/AVSL/avsl
+2025-05-27 14:28:43 | INFO | avhubert.hubert_pretraining | AVHubertPretrainingTask Config {'_name': 'av_hubert_pretraining', 'data': '/checkpoint/bshi/data/lrs3//video/wav/all_tsv/', 'input_modality': '???', 'labels': ['wrd'], 'label_dir': '/checkpoint/bshi/data/lrs3//exp/ls-hubert/tune-modality/all_bpe/unigram1000/', 'label_rate': -1, 'sample_rate': 16000, 'normalize': True, 'enable_padding': False, 'max_sample_size': 500, 'min_sample_size': None, 'max_trim_sample_size': '${task.max_sample_size}', 'single_target': True, 'random_crop': False, 'pad_audio': True, 'pdb': False, 'stack_order_audio': 4, 'skip_verify': False, 'image_aug': True, 'image_crop_size': 88, 'image_mean': 0.421, 'image_std': 0.165, 'modalities': ['audio', 'video'], 'is_s2s': True, 'tokenizer_bpe_name': 'sentencepiece', 'tokenizer_bpe_model': '/checkpoint/bshi/data/lrs3//lang/spm/spm_unigram1000.model', 'noise_wav': '/checkpoint/bshi/data/lrs3//audio/noise/tsv/musan-lgall/', 'noise_prob': 0.25, 'noise_snr': '0', 'noise_num': 1, 'fine_tuning': True}
+2025-05-27 14:28:43 | INFO | avhubert.hubert_pretraining | current directory is /home/s2587130/AVSL/avsl
+2025-05-27 14:28:43 | INFO | avhubert.hubert_pretraining | AVHubertPretrainingTask Config {'_name': 'av_hubert_pretraining', 'data': '/checkpoint/bshi/data/lrs3//video/wav/all_tsv/', 'input_modality': 'image', 'labels': ['km'], 'label_dir': '/checkpoint/bshi/data/lrs3//video/hubert/stitch-iters/envox-iter4-l12c2000/', 'label_rate': 25, 'sample_rate': 25, 'normalize': True, 'enable_padding': False, 'max_sample_size': 2000, 'min_sample_size': 5, 'max_trim_sample_size': 400, 'single_target': False, 'random_crop': True, 'pad_audio': False, 'pdb': False, 'stack_order_audio': 4, 'skip_verify': False, 'image_aug': True, 'image_crop_size': 88, 'image_mean': 0.421, 'image_std': 0.165, 'modalities': ['audio', 'video'], 'is_s2s': False, 'tokenizer_bpe_name': None, 'tokenizer_bpe_model': None, 'noise_wav': '/checkpoint/bshi/data/lrs3//audio/noise/tsv/musan-lgall/', 'noise_prob': 0.25, 'noise_snr': '0', 'noise_num': 1, 'fine_tuning': False}
+2025-05-27 14:28:43 | INFO | avhubert.hubert | HubertModel Config: {'_name': 'av_hubert', 'label_rate': 25, 'input_modality': '${task.input_modality}', 'extractor_mode': default, 'encoder_layers': 24, 'encoder_embed_dim': 1024, 'encoder_ffn_embed_dim': 4096, 'encoder_attention_heads': 16, 'activation_fn': gelu, 'dropout': 0.1, 'attention_dropout': 0.1, 'activation_dropout': 0.0, 'encoder_layerdrop': 0.05, 'dropout_input': 0.1, 'dropout_features': 0.1, 'final_dim': 256, 'untie_final_proj': True, 'layer_norm_first': True, 'conv_feature_layers': '[(512,10,5)] + [(512,3,2)] * 4 + [(512,2,2)] * 2', 'conv_bias': False, 'logit_temp': 0.1, 'target_glu': False, 'feature_grad_mult': 0.1, 'mask_length_audio': 10, 'mask_prob_audio': 0.8, 'mask_length_image': 5, 'mask_prob_image': 0.3, 'mask_selection': static, 'mask_other': 0.0, 'no_mask_overlap': False, 'mask_min_space': 1, 'mask_channel_length': 10, 'mask_channel_prob': 0.0, 'mask_channel_selection': static, 'mask_channel_other': 0.0, 'no_mask_channel_overlap': False, 'mask_channel_min_space': 1, 'conv_pos': 128, 'conv_pos_groups': 16, 'latent_temp': [2.0, 0.5, 0.999995], 'skip_masked': False, 'skip_nomask': False, 'resnet_relu_type': 'prelu', 'resnet_weights': None, 'sim_type': 'cosine', 'sub_encoder_layers': 0, 'audio_feat_dim': 104, 'modality_dropout': 0.5, 'audio_dropout': 0.5, 'modality_fuse': 'concat', 'selection_type': 'same_seq', 'masking_type': 'input', 'decoder_embed_dim': 768, 'decoder_ffn_embed_dim': 3072, 'decoder_layers': 6, 'decoder_layerdrop': 0.0, 'decoder_attention_heads': 4, 'decoder_learned_pos': False, 'decoder_normalize_before': False, 'no_token_positional_embeddings': False, 'decoder_dropout': 0.1, 'decoder_attention_dropout': 0.1, 'decoder_activation_dropout': 0.0, 'max_target_positions': 2048, 'share_decoder_input_output_embed': False, 'no_scale_embedding': True, 'required_seq_len_multiple': 1, 'layer_type': transformer, 'checkpoint_activations': False}
+Using AV-HuBERT encoder with parameters: 325136104
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+Adding gated x attn layers
+✓ Second AV-HuBERT model loaded successfully!
+✓ No duplicate task registration error detected!
+
+============================================================
+🎉 ALL TESTS PASSED!
+✓ AV-HuBERT task registration fix is working correctly
+✓ Your whisper_flamingo_ft_ami.py should now work properly
+============================================================
+
+✅ Test completed successfully!
