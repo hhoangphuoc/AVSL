@@ -17,6 +17,14 @@ from .data_loading import (
     VIDEO_MEAN,
     VIDEO_STD,
 )
+from .hf_video_utils import (
+    create_robust_video_filter,
+    safe_load_video_feats_from_hf_object,
+    validate_hf_video_object,
+    debug_hf_video_object,
+    extract_video_path_from_hf_object,
+    load_video_feats_from_hf_object,
+)
 
 __all__ = [
     "create_dlib_detectors",
@@ -41,4 +49,12 @@ __all__ = [
     "VIDEO_CROP_SIZE",
     "VIDEO_MEAN",
     "VIDEO_STD",
+
+    # HF video utils
+    "create_robust_video_filter",
+    "safe_load_video_feats_from_hf_object",
+    "validate_hf_video_object",
+    "debug_hf_video_object",
+    "extract_video_path_from_hf_object",
+    "load_video_feats_from_hf_object",
 ]
