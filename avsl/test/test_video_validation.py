@@ -17,15 +17,15 @@ print(f"Project root: {project_root}")
 print(f"Parent dir: {parent_dir}")
 print(f"Current dir: {current_dir}")
 
-utils_path = os.path.join(parent_dir, 'utils')
-whisper_flamingo_path = os.path.join(project_root, 'whisper_flamingo')
-av_hubert_path = os.path.join(whisper_flamingo_path, 'av_hubert')
+utils_path = os.path.join(project_root, 'utils') # AVSL/utils
+whisper_flamingo_path = os.path.join(project_root, 'whisper_flamingo') # AVSL/whisper_flamingo
+av_hubert_path = os.path.join(whisper_flamingo_path, 'av_hubert') # AVSL/whisper_flamingo/av_hubert
 
 # Add to Python path (consistent with all test files)
 sys.path.insert(0, project_root)
-sys.path.insert(0, utils_path)
-sys.path.insert(0, whisper_flamingo_path)
-sys.path.insert(0, av_hubert_path)
+sys.path.insert(0, utils_path) # AVSL/utils
+sys.path.insert(0, whisper_flamingo_path) # AVSL/whisper_flamingo
+sys.path.insert(0, av_hubert_path) # AVSL/whisper_flamingo/av_hubert
 
 # Add parent directory for utils_hf_video import
 sys.path.insert(0, parent_dir)

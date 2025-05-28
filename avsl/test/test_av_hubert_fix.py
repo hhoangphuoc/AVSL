@@ -16,13 +16,20 @@ import types
 import torch
 
 # Add paths for whisper_flamingo and av_hubert (same as in whisper_flamingo_ft_ami.py)
-current_dir = os.path.dirname(os.path.abspath(__file__)) # avsl
-project_root = os.path.dirname(current_dir) # AVSL
+current_dir = os.path.dirname(os.path.abspath(__file__)) # avsl/test
+parent_dir = os.path.dirname(current_dir) # avsl
+project_root = os.path.dirname(parent_dir) # AVSL
+print(f"Project root: {project_root}")
+print(f"Parent dir: {parent_dir}")
+print(f"Current dir: {current_dir}")
+
+utils_path = os.path.join(project_root, 'utils') # AVSL/utils
 whisper_flamingo_path = os.path.join(project_root, 'whisper_flamingo') # AVSL/whisper_flamingo
 av_hubert_path = os.path.join(whisper_flamingo_path, 'av_hubert') # AVSL/whisper_flamingo/av_hubert
 
 # Add to Python path
 sys.path.insert(0, project_root) # AVSL
+sys.path.insert(0, utils_path) # AVSL/utils
 sys.path.insert(0, whisper_flamingo_path) # AVSL/whisper_flamingo
 sys.path.insert(0, av_hubert_path) # AVSL/whisper_flamingo/av_hubert
 
