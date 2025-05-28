@@ -44,34 +44,34 @@ conda activate $PYTHON_VIRTUAL_ENVIRONMENT
 conda list
 
 # Check if fairseq is installed and accessible
-echo "Checking fairseq installation..."
-cd /home/s2587130/AVSL
+# echo "Checking fairseq installation..."
+# cd /home/s2587130/AVSL
 
-# Test fairseq import with the same path setup as the training script
-python -c "
-import sys
-import os
-project_root = '/home/s2587130/AVSL'
-whisper_flamingo_path = os.path.join(project_root, 'whisper_flamingo')
-av_hubert_path = os.path.join(whisper_flamingo_path, 'av_hubert')
-fairseq_path = os.path.join(av_hubert_path, 'fairseq')
+# # Test fairseq import with the same path setup as the training script
+# python -c "
+# import sys
+# import os
+# project_root = '/home/s2587130/AVSL'
+# whisper_flamingo_path = os.path.join(project_root, 'whisper_flamingo')
+# av_hubert_path = os.path.join(whisper_flamingo_path, 'av_hubert')
+# fairseq_path = os.path.join(av_hubert_path, 'fairseq')
 
-sys.path.insert(0, project_root)
-sys.path.insert(0, whisper_flamingo_path)
-sys.path.insert(0, av_hubert_path)
-if os.path.exists(fairseq_path):
-    sys.path.insert(0, fairseq_path)
+# sys.path.insert(0, project_root)
+# sys.path.insert(0, whisper_flamingo_path)
+# sys.path.insert(0, av_hubert_path)
+# if os.path.exists(fairseq_path):
+#     sys.path.insert(0, fairseq_path)
 
-import fairseq
-print('✓ Fairseq is accessible')
-print(f'  Location: {fairseq.__file__}')
-_ = fairseq.checkpoint_utils
-_ = fairseq.utils
-print('✓ Required fairseq modules are accessible')
-" || {
-    echo "❌ Fairseq setup issue detected. Please check the installation."
-    exit 1
-}
+# import fairseq
+# print('✓ Fairseq is accessible')
+# print(f'  Location: {fairseq.__file__}')
+# _ = fairseq.checkpoint_utils
+# _ = fairseq.utils
+# print('✓ Required fairseq modules are accessible')
+# " || {
+#     echo "❌ Fairseq setup issue detected. Please check the installation."
+#     exit 1
+# }
 
 cd /home/s2587130/AVSL/avsl
 

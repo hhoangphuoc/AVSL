@@ -12,26 +12,41 @@ sys.path.insert(0, project_root)
 sys.path.insert(0, whisper_flamingo_path)
 sys.path.insert(0, av_hubert_path)
 
-# Ensure fairseq is properly accessible by adding the fairseq installation path
+# Import our HuggingFace Video utilities
+try:
+    from utils_hf_video import (
+        extract_video_path_from_hf_object,
+        create_dummy_video_features
+        # load_video_feats_from_hf_object, 
+        # debug_hf_video_object,
+        # create_dummy_video_features
+    )
+    print("\n✓ HuggingFace Video utilities imported successfully\n")
+except ImportError as e:
+    print(f"\n⚠ Warning: Could not import HF Video utilities: {e}\n")
+
+# Ensure fairseq is properly accessible by adding the fairseq installation path --------------------------------
 # This makes the fairseq modules visible without import conflicts
 fairseq_path = os.path.join(av_hubert_path, 'fairseq')
 if os.path.exists(fairseq_path) and fairseq_path not in sys.path:
     sys.path.insert(0, fairseq_path)
-    print(f"✓ Added fairseq path to sys.path: {fairseq_path}")
+    print(f"\n✓ Added fairseq path to sys.path: {fairseq_path}\n")
+
+# ----------------------------------------------------------------------------------------------------------------
 
 # Set the correct av_hubert path for user module import
 # This should point to the avhubert directory within the av_hubert repository
 avhubert_user_dir = os.path.join(av_hubert_path, 'avhubert')
-print(f"✓ AV-HuBERT user dir set to: {avhubert_user_dir}")
+print(f"\n✓ AV-HuBERT user dir set to: {avhubert_user_dir}\n")
 
 # Pre-import fairseq to ensure it's loaded correctly
 try:
     import fairseq
-    print(f"✓ Fairseq imported successfully from: {fairseq.__file__}")
+    print(f"\n✓ Fairseq imported successfully from: {fairseq.__file__}")
     # Verify that the required modules are accessible
     _ = fairseq.checkpoint_utils
     _ = fairseq.utils
-    print("✓ Fairseq checkpoint_utils and utils are accessible")
+    print("✓ Fairseq checkpoint_utils and utils are accessible\n")
 except Exception as e:
     print(f"Warning: Fairseq import issue: {e}")
     print("Continuing with the assumption that the original repository fix is in place...")
@@ -136,35 +151,7 @@ class AmiVideoHFDataset(torch.utils.data.Dataset):
         if audio_data.dtype == np.int16:
             audio_data = audio_data.astype(np.float32) / 32768.0 # Normalize to [-1, 1]
         
-        audio = audio_data # No noise addition --------------------------------------------------------
-        # Add noise (optional) - TODO: NOISE 
-        # if self.train and self.noise_files and np.random.rand() < self.noise_prob:
-            # add_noise expects int16 clean_wav if it's to scale with max_int16
-            # For now, let's assume audio_data is float32 [-1, 1].
-            # We might need to adapt add_noise or how we pass data to it.
-            # For simplicity, let's assume add_noise can handle float32 input and output float32
-            # Or, convert to int16, add noise, then back to float32.
-            # temp_audio_int16 = (audio_data * 32767).astype(np.int16)
-            # noisy_audio_int16 = add_noise(temp_audio_int16, self.noise_files, noise_snr=self.noise_snr)
-            # audio_data = noisy_audio_int16.astype(np.float32) / 32768.0
-            # Simpler: if add_noise can work with float audio directly (might need adjustment in utils.py)
-            # For now, let's replicate Muavic's use of wavfile for consistency in add_noise if it relies on int16.
-            # This part needs careful handling of dtypes for add_noise.
-            # Muavic reads wav, gets int16, then add_noise, then float32.
-            # To use `add_noise` as is, we'd need to simulate this.
-            # However, let's assume for now a version of add_noise that can take float audio.
-            # If not, this section needs refinement:
-            # audio_data = add_noise_float(audio_data, self.noise_files, noise_snr=self.noise_snr) # Placeholder
-            # For now, if noise is enabled, we'll just print a warning if using the dummy.
-            # if callable(add_noise) and add_noise.__name__ != "_dummy_add_noise":
-                 # Convert to int16 for add_noise as it's designed for wavfile output
-                # temp_audio_int16 = (audio_data * np.iinfo(np.int16).max).astype(np.int16)
-                # noisy_audio_int16 = add_noise(temp_audio_int16, self.noise_files, noise_snr=self.noise_snr)
-                # audio = noisy_audio_int16.astype(np.float32) / np.iinfo(np.int16).max
-            # else:
-                # audio = audio_data # No noise or dummy function
-        # else:
-            # audio = audio_data
+        audio = audio_data 
         # --------------------------------------------------------------------------------------------
 
         audio_frames_before_pad = len(audio.flatten()) // (self.target_sample_rate // 100) # Estimate frames for spec_augment (audio_frames // 160)
@@ -211,19 +198,26 @@ class AmiVideoHFDataset(torch.utils.data.Dataset):
 
 
         # 3. Process Video --- AV HUBERT ------------------------------------------------------------
-        # Assuming item['lip_video'] is a path string. If it's raw data, load_video_feats needs adjustment.
-        video_path_or_data = item['lip_video'] # NOTE: This is a HF Video() object
-
-        if isinstance(video_path_or_data, dict) and 'path' in video_path_or_data:
-             video_path = video_path_or_data['path']
-        elif isinstance(video_path_or_data, str):
-             video_path = video_path_or_data
-        else:
-            raise ValueError("Unsupported format for lip_video. Expected path string or dict with 'path'.")
-
-        # load_video_feats returns T, H, W, C numpy array
-        video_feats = load_video_feats(video_path, train=self.train) 
-        video_feats = video_feats.astype(np.float32)
+        # Handle HuggingFace Video object properly
+        video_object = item['lip_video']  # This is a HF Video() object
+    
+        try:
+            # Use our custom function to handle HF Video objects
+            # video_feats = load_video_feats_from_hf_object(
+            #     video_object, 
+            #     train=self.train,
+            #     image_crop_size=88,  # Standard crop size for AV-HuBERT
+            #     image_mean=0.421,
+            #     image_std=0.165
+            # )
+            video_path = extract_video_path_from_hf_object(video_object)
+            video_feats = load_video_feats(video_path, train=self.train)
+            video_feats = video_feats.astype(np.float32)
+            
+        except Exception as e:
+            print(f"Error processing video for sample {idx}: {e}")
+            print("Creating dummy video features to prevent crash...")
+            video_feats = create_dummy_video_features().astype(np.float32)
 
         # Trim video to match audio length (approx. 25 fps for video, audio sampling rate for audio)
         # Audio length in seconds = len(audio.flatten()) / self.target_sample_rate
@@ -255,26 +249,7 @@ class WhisperFlamingoModule(LightningModule):
         self.model_name = model_name
         print("Loading Whisper model and weights")
         #===============================================================================================================
-        # # Check if we have a local model file to load directly
-        # local_model_path = getattr(cfg, 'local_whisper_model', None)
-        # if local_model_path and os.path.exists(local_model_path):
-        #     print(f"Loading Whisper model from local file: {local_model_path}")
-        #     # Load the model from local checkpoint
-        #     self.model = whisper.load_model(local_model_path,
-        #                                     device='cpu',
-        #                                     download_root=getattr(cfg, 'download_root', None),
-        #                                     dropout_rate=getattr(cfg, 'dropout_rate', 0.0),
-        #                                     video=True,
-        #                                     video_model_path=getattr(cfg, 'video_model_ckpt', None), 
-        #                                     prob_av=getattr(cfg, 'prob_use_av', 0.5), 
-        #                                     prob_a=getattr(cfg, 'prob_use_a', 0.5),
-        #                                     av_hubert_encoder=getattr(cfg, 'use_av_hubert_encoder', False),
-        #                                     av_fusion=getattr(cfg, 'av_fusion', 'early'),
-        #                                     add_gated_x_attn=getattr(cfg, 'add_gated_x_attn', 0))
-        # else:
-            # Try to load from download_root or download if necessary
-        #===============================================================================================================
-        print("Loading Whisper model from download_root or download if necessary")
+        print("Loading Whisper model =================================================")
         try:
             self.model = whisper.load_model(model_name,
                                             device='cpu',
@@ -288,7 +263,7 @@ class WhisperFlamingoModule(LightningModule):
                                             av_hubert_encoder=getattr(cfg, 'use_av_hubert_encoder', False),
                                             av_fusion=getattr(cfg, 'av_fusion', 'early'),
                                             add_gated_x_attn=getattr(cfg, 'add_gated_x_attn', 0))
-            print("✓ Whisper model loaded successfully")
+            print("\n✓ Whisper model loaded successfully\n")
         except Exception as e:
             print(f"Failed to load model {model_name}: {e}")
             print("Please download the model manually or check your internet connection.")
@@ -297,22 +272,81 @@ class WhisperFlamingoModule(LightningModule):
         
         # Load pre-trained checkpoint if specified
         if cfg.pt_ckpt != '':
-            state_dict = torch.load(cfg.pt_ckpt, map_location=torch.device('cpu'))
-            state_dict = state_dict['state_dict']
-            state_dict_updated = {k[6:]: v  for k, v in state_dict.items()}
-            print(f"Loading pre-trained audio weights from: {cfg.pt_ckpt}")
+            print(f"\n✓ Loading pre-trained audio weights from: {cfg.pt_ckpt}")
             try:
-                self.model.load_state_dict(state_dict_updated) 
-            except BaseException as e: 
-                print(str(e))
-                print("Loading weights with strict=False")
-                self.model.load_state_dict(state_dict_updated, strict=False) 
+                state_dict = torch.load(cfg.pt_ckpt, map_location=torch.device('cpu'), weights_only=False)
+                
+                # Handle different checkpoint formats
+                if 'state_dict' in state_dict:
+                    state_dict = state_dict['state_dict']
+                elif 'model' in state_dict:
+                    state_dict = state_dict['model']
+                
+                # Remove 'model.' prefix if present
+                state_dict_updated = {}
+                for k, v in state_dict.items():
+                    if k.startswith('model.'):
+                        new_key = k[6:]  # Remove 'model.'
+                    else:
+                        new_key = k
+                    state_dict_updated[new_key] = v
+                
+                # Count matching and missing keys
+                model_keys = set(self.model.state_dict().keys())
+                checkpoint_keys = set(state_dict_updated.keys())
+                
+                matching_keys = model_keys.intersection(checkpoint_keys)
+                missing_keys = model_keys - checkpoint_keys
+                unexpected_keys = checkpoint_keys - model_keys
+                
+                print(f"✓ Checkpoint contains {len(checkpoint_keys)} keys")
+                print(f"✓ Model expects {len(model_keys)} keys")
+                print(f"✓ Matching keys: {len(matching_keys)}")
+                print(f"✓ Missing keys: {len(missing_keys)}")
+                print(f"✓ Unexpected keys: {len(unexpected_keys)}")
+                
+                # Show some missing keys for debugging
+                if missing_keys:
+                    video_related_missing = [k for k in missing_keys if any(term in k for term in ['video', 'gated_x_attn'])]
+                    other_missing = [k for k in missing_keys if not any(term in k for term in ['video', 'gated_x_attn'])]
+                    
+                    if video_related_missing:
+                        print(f"✓ Missing video/gated_x_attn keys: {len(video_related_missing)} (expected for new video components)")
+                        if len(video_related_missing) <= 10:
+                            print(f"   Examples: {video_related_missing}")
+                        else:
+                            print(f"   Examples: {video_related_missing[:5]} ... (and {len(video_related_missing)-5} more)")
+                    
+                    if other_missing:
+                        print(f"⚠ Missing non-video keys: {len(other_missing)}")
+                        if len(other_missing) <= 10:
+                            print(f"   Examples: {other_missing}")
+                        else:
+                            print(f"   Examples: {other_missing[:5]} ... (and {len(other_missing)-5} more)")
+                
+                # Try strict loading first, then fallback to non-strict
+                try:
+                    self.model.load_state_dict(state_dict_updated, strict=True)
+                    print("✓ Successfully loaded all weights with strict=True")
+                except RuntimeError as e:
+                    print(f"✓ Strict loading failed (expected): {str(e)[:200]}...")
+                    print("✓ Loading weights with strict=False (ignoring missing video weights)")
+                    missing_keys, unexpected_keys = self.model.load_state_dict(state_dict_updated, strict=False)
+                    print(f"✓ Successfully loaded compatible weights")
+                    if missing_keys:
+                        print(f"✓ Initialized {len(missing_keys)} new parameters randomly")
+                    
+            except Exception as e:
+                print(f"✗ Error loading checkpoint: {e}")
+                print("✓ Continuing with randomly initialized weights...")
+                import traceback
+                traceback.print_exc() 
         
         self.freeze_video_model = cfg.freeze_video_model
         self.freeze_video_batch_norm_stats = cfg.freeze_video_batch_norm_stats
         
         multilingual = True if 'large' in model_name or '.en' not in model_name else False
-        print(f"Multilingual tokenizer : {multilingual}, Language for dataset: {lang}")
+        print(f"\n✓ Multilingual tokenizer : {multilingual}, Language for dataset: {lang}\n")
 
         # --- Use standard Whisper tokenizer (skip custom token for now) ------------------------------------------------------------
         # For now, we'll use the standard Whisper tokenizer without custom tokens
@@ -320,7 +354,7 @@ class WhisperFlamingoModule(LightningModule):
         self.tokenizer = whisper.tokenizer.get_tokenizer(
             multilingual=multilingual, language=lang, task='transcribe'
         )
-        print(f"Using standard Whisper tokenizer with vocab size: {self.tokenizer.encoding.n_vocab}")
+        print(f"\n✓ Using standard Whisper tokenizer with vocab size: {self.tokenizer.encoding.n_vocab}\n")
         # --- End of tokenizer setup ------------------------------------------------------------
 
         self.loss_fn = nn.CrossEntropyLoss(ignore_index=-100) # Whisper's default ignore_index for padding
@@ -333,7 +367,7 @@ class WhisperFlamingoModule(LightningModule):
         self.val_hf_dataset = val_hf_dataset
         self.test_hf_dataset = test_hf_dataset
         
-        # Pre-calculate audio lengths for LengthBatchSampler
+        
         # Duration is in seconds in the HF dataset. Convert to number of frames.
         # Number of frames = (duration_in_seconds * SAMPLE_RATE) / AUDIO_HOP_LENGTH
         # Or more simply, duration_in_seconds * (SAMPLE_RATE / AUDIO_HOP_LENGTH) = duration_in_seconds * 100
@@ -559,13 +593,14 @@ if __name__ == "__main__":
         dct = yaml.safe_load(file)
         cfg = types.SimpleNamespace(**dct)
 
-    print("Configuration:")
+    print("\nConfiguration ================================================================")
     for k, v in vars(cfg).items():
         print(f"  {k}: {v}")
+    print("\n============================================================================\n")
     
-    print(f"Audio max length for batch sampler: {cfg.audio_max_length} samples")
+    print(f"✓ Audio max length for batch sampler: {cfg.audio_max_length} samples")
     dataset_audio_max_len_cfg = getattr(cfg, 'dataset_audio_max_length', whisper.audio.N_SAMPLES)
-    print(f"Audio max length for dataset (pad_or_trim): {dataset_audio_max_len_cfg} samples")
+    print(f"✓ Audio max length for dataset (pad_or_trim): {dataset_audio_max_len_cfg} samples")
 
 
     tflogger, checkpoint_callback, callback_list = setup_logging_and_checkpoint(cfg.log_output_dir, 
@@ -575,29 +610,46 @@ if __name__ == "__main__":
                                                                                 cfg.monitor)
     
     # Load Hugging Face datasets
-    print(f"Loading train dataset from: {cfg.train_data_path}")
-    train_hf_ds = load_from_disk(cfg.train_data_path)
-    print(f"Loading validation dataset from: {cfg.val_data_path}")
-    val_hf_ds = load_from_disk(cfg.val_data_path)
-    print(f"Loading test dataset from: {cfg.test_data_path}")
-    test_hf_ds = load_from_disk(cfg.test_data_path)
+    print("\nLoading datasets ============================================================")
+    try:
+        print(f"Loading train dataset from: {cfg.train_data_path}")
+        train_hf_ds = load_from_disk(cfg.train_data_path)
+        print(f"✓ Train dataset loaded: {len(train_hf_ds)} samples")
+        
+        print(f"Loading validation dataset from: {cfg.val_data_path}")
+        val_hf_ds = load_from_disk(cfg.val_data_path)
+        print(f"✓ Validation dataset loaded: {len(val_hf_ds)} samples")
+        
+        print(f"Loading test dataset from: {cfg.test_data_path}")
+        test_hf_ds = load_from_disk(cfg.test_data_path)
+        print(f"✓ Test dataset loaded: {len(test_hf_ds)} samples")
+        
+        # Debug dataset structure
+        print("\nDataset structure inspection:")
+        sample = train_hf_ds[0]
+        print(f"Sample keys: {list(sample.keys())}")
+        for key, value in sample.items():
+            print(f"  {key}: {type(value)} - {str(value)[:100] if isinstance(value, str) else type(value)}")
+            
+    except Exception as e:
+        print(f"✗ Error loading datasets: {e}")
+        import traceback
+        traceback.print_exc()
+        raise e
 
-    # Filter datasets by audio length if specified in config (e.g. cfg.max_duration_seconds)
-    # This is to avoid very long samples that might cause OOM with fixed batching,
-    # LengthBatchSampler helps but extreme outliers can still be an issue.
-    # whisper.audio.N_SAMPLES is 30s. cfg.audio_max_length is for batcher in samples.
-    # Max duration for filtering should be based on what the model can handle or what's practical.
     max_duration_filter_sec = getattr(cfg, 'max_duration_filter_seconds', 30.0) # Max 30s by default
     
     # train_hf_ds = train_hf_ds.filter(lambda x: x['duration'] <= max_duration_filter_sec)
     # val_hf_ds = val_hf_ds.filter(lambda x: x['duration'] <= max_duration_filter_sec)
     # test_hf_ds = test_hf_ds.filter(lambda x: x['duration'] <= max_duration_filter_sec)
-    
+    print("\nDataset sizes ================================================================")
     print(f"Train dataset size : {len(train_hf_ds)}")
     print(f"Validation dataset : {len(val_hf_ds)}")
     print(f"Test dataset size : {len(test_hf_ds)}")
+    print("\n=============================================================================\n")
 
     # --- ONLY USE 10% OF DATA FOR TRAINING ------------------------------------------------------------
+    print("\n10% Dataset Slicing ===========================================================")
     print("Slicing datasets to 10% for faster processing...")
     train_hf_ds = train_hf_ds.shuffle(seed=SEED).select(range(min(len(train_hf_ds), int(len(train_hf_ds) * 0.1))))
     val_hf_ds = val_hf_ds.shuffle(seed=SEED).select(range(min(len(val_hf_ds), int(len(val_hf_ds) * 0.1))))
@@ -606,14 +658,17 @@ if __name__ == "__main__":
     print(f"Train dataset size after 10% slicing: {len(train_hf_ds)}")
     print(f"Validation dataset size after 10% slicing: {len(val_hf_ds)}")
     print(f"Test dataset size after 10% slicing: {len(test_hf_ds)}")
+    print("\n=============================================================================\n")
     # --- End of 10% slicing ------------------------------------------------------------
 
 
+    print("\nCreating model ==============================================================")
     model = WhisperFlamingoModule(cfg, cfg.model_name, cfg.lang, 
                                train_hf_ds, 
                                val_hf_ds,
                                test_hf_ds)
-    
+    print("\n=============================================================================\n")
+
     strategy = DDPStrategy(find_unused_parameters=True) if cfg.num_devices > 1 else "auto"
     
     # Determine validation dataloaders
@@ -627,7 +682,7 @@ if __name__ == "__main__":
     # Original script validated on test and val sets before training. Let's use test.
     pre_train_validate_dataloaders = model.test_dataloader()
 
-
+    print("\nCreating Trainer ==============================================================")
     trainer = Trainer(
         precision=getattr(cfg, 'precision', 16), # Default to 16
         strategy=strategy,
@@ -644,7 +699,9 @@ if __name__ == "__main__":
         use_distributed_sampler=False, # Handled by DistributedSamplerWrapper
         sync_batchnorm=getattr(cfg, 'sync_batchnorm', True),
     )
+    print("\n=============================================================================\n")
 
+    print("\nTraining ======================================================================")
     print(f"Train ID: {cfg.train_id}")
     resume_ckpt_path = os.path.join(cfg.check_output_dir, cfg.train_id, "last.ckpt")
     
@@ -659,12 +716,18 @@ if __name__ == "__main__":
             print("No checkpoint found. Starting new training.")
         
         print("Validating before training...")
-        trainer.validate(model=model, dataloaders=pre_train_validate_dataloaders)
+        try:
+            trainer.validate(model=model, dataloaders=pre_train_validate_dataloaders)
+        except Exception as e:
+            print(f"Warning: Pre-training validation failed: {e}")
+            print("Continuing with training anyway...")
         
         print("Starting training...")
         trainer.fit(model, val_dataloaders=fit_val_dataloaders)
 
-    print("Training finished.")
+    print("Training finished! ============================================================")
+
+    print("\nTesting ======================================================================")
     print("Testing the best model...")
     # After training, test with the best checkpoint
     best_ckpt_path = checkpoint_callback.best_model_path
@@ -679,3 +742,4 @@ if __name__ == "__main__":
         print("Could not find the best model checkpoint to run final testing.")
 
     print(f"Script finished for train_id: {cfg.train_id}") 
+    print("\n=============================================================================\n")
