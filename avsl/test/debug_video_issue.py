@@ -35,11 +35,22 @@ def test_video_object_handling():
     print("=== Testing Video Object Handling ===")
     
     try:
-        # Import utilities
-        from utils import (
+        # Import utilities from AVSL/utils
+        import sys
+        # Temporarily modify import path to prioritize AVSL/utils
+        original_path = sys.path.copy()
+        # Remove whisper_flamingo from path temporarily to avoid conflicts
+        temp_path = [p for p in sys.path if 'whisper_flamingo' not in p]
+        sys.path = temp_path
+        
+        from hf_video_utils import (
             safe_load_video_feats_from_hf_object,
             extract_video_path_from_hf_object
         )
+        
+        # Restore original path
+        sys.path = original_path
+        
         print("✓ Video utilities imported successfully")
         
         # Load a small test dataset

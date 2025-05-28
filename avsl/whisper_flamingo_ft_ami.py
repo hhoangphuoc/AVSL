@@ -4,25 +4,38 @@ import sys
 # Add paths for whisper_flamingo and av_hubert ------------------------------------------------------------
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(current_dir)
+utils_path = os.path.join(project_root, 'utils')  # AVSL/utils
 whisper_flamingo_path = os.path.join(project_root, 'whisper_flamingo')
 av_hubert_path = os.path.join(whisper_flamingo_path, 'av_hubert')
 
 # Add to Python path
 sys.path.insert(0, project_root)
+sys.path.insert(0, utils_path)  # Add utils path to prioritize AVSL/utils
 sys.path.insert(0, whisper_flamingo_path)
 sys.path.insert(0, av_hubert_path)
 
 # Import our HuggingFace Video utilities
 try:
-    from utils_hf_video import (
-        extract_video_path_from_hf_object,
-        create_dummy_video_features
-        # load_video_feats_from_hf_object, 
-        # debug_hf_video_object,
-        # create_dummy_video_features
+    # Temporarily modify import path to prioritize AVSL/utils
+    original_path = sys.path.copy()
+    # Remove whisper_flamingo from path temporarily to avoid conflicts
+    temp_path = [p for p in sys.path if 'whisper_flamingo' not in p]
+    sys.path = temp_path
+    
+    from hf_video_utils import (
+        safe_load_video_feats_from_hf_object,
+        debug_hf_video_object,
+        create_robust_video_filter,
     )
-    print("\n✓ HuggingFace Video utilities imported successfully\n")
+    
+    # Restore original path
+    sys.path = original_path
+    
+    print("\n✅ HuggingFace Video utilities imported successfully\n")
 except ImportError as e:
+    # Restore original path if error occurred
+    if 'original_path' in locals():
+        sys.path = original_path
     print(f"\n⚠ Warning: Could not import HF Video utilities: {e}\n")
 
 # Ensure fairseq is properly accessible by adding the fairseq installation path --------------------------------
@@ -200,24 +213,25 @@ class AmiVideoHFDataset(torch.utils.data.Dataset):
         # 3. Process Video --- AV HUBERT ------------------------------------------------------------
         # Handle HuggingFace Video object properly
         video_object = item['lip_video']  # This is a HF Video() object
-    
+        
+        # Debug the video object for first few samples
+        if idx < 3:  # Debug first 3 samples
+            debug_hf_video_object(video_object, idx)
+        
         try:
-            # Use our custom function to handle HF Video objects
-            # video_feats = load_video_feats_from_hf_object(
-            #     video_object, 
-            #     train=self.train,
-            #     image_crop_size=88,  # Standard crop size for AV-HuBERT
-            #     image_mean=0.421,
-            #     image_std=0.165
-            # )
-            video_path = extract_video_path_from_hf_object(video_object)
-            video_feats = load_video_feats(video_path, train=self.train)
+            # Use our improved function to handle HF Video objects
+            video_feats = safe_load_video_feats_from_hf_object(
+                video_object, 
+                train=self.train,
+                image_crop_size=88,  # Standard crop size for AV-HuBERT
+                image_mean=0.421,
+                image_std=0.165
+            )
             video_feats = video_feats.astype(np.float32)
             
         except Exception as e:
             print(f"Error processing video for sample {idx}: {e}")
-            print("Creating dummy video features to prevent crash...")
-            video_feats = create_dummy_video_features().astype(np.float32)
+            raise e
 
         # Trim video to match audio length (approx. 25 fps for video, audio sampling rate for audio)
         # Audio length in seconds = len(audio.flatten()) / self.target_sample_rate
@@ -466,11 +480,18 @@ class WhisperFlamingoModule(LightningModule):
 
             o_list, l_list = [], []
             for o_tokens, l_tokens in zip(tokens, labels):
-                # Decode, removing all special tokens for WER/CER
-                o_list.append(self.tokenizer.decode([t for t in o_tokens if t.item() not in self.special_token_set]))
-                l_list.append(self.tokenizer.decode([t for t in l_tokens if t.item() not in self.special_token_set]))
-            
+                # Decode ================================================================
+                # Filter out negative tokens (like -100 used for ignore_index) and special tokens
+                valid_o_tokens = [t for t in o_tokens if t.item() >= 0 and t.item() not in self.special_token_set]
+                valid_l_tokens = [t for t in l_tokens if t.item() >= 0 and t.item() not in self.special_token_set]
+                
+                # Decode the tokens to text
+                o_list.append(self.tokenizer.decode(valid_o_tokens))
+                l_list.append(self.tokenizer.decode(valid_l_tokens))
+
+            # Calculate WER and CER ================================================================
             wer, cer = wer_cer(hypo=o_list, ref=l_list)
+            # =================================================================================
         
             if batch_id < 2 : # Print first 2 batches for inspection
                 print(f"Mod: {mod}, Dataloader Idx: {dataloader_idx}")
@@ -515,24 +536,9 @@ class WhisperFlamingoModule(LightningModule):
             self.t_total = self.cfg.num_train_steps
 
     def _create_dataloader(self, hf_dataset, audio_lengths, train_mode):
-        # Prepare noise_config for AmiVideoHFDataset - REMOVED
         if train_mode:
-            # noise_conf = {
-            #     "prob": self.cfg.noise_prob,
-            #     "noise_files": [self.cfg.noise_fn] if self.cfg.noise_fn else [],
-            #     "snr": self.cfg.noise_snr_train
-            # }
             spec_aug_conf = self.cfg.spec_augment
         else: 
-            # Validation/Test
-            # noise_fn_key = 'noise_fn_val' if 'val' in hf_dataset.split else 'noise_fn_test'
-            # current_noise_fn = getattr(self.cfg, noise_fn_key, None)
-            
-            # noise_conf = {
-            #     "prob": noise_override_prob if noise_override_prob is not None else 0, # Controlled by specific dataloader
-            #     "noise_files": [current_noise_fn] if current_noise_fn else [],
-            #     "snr": self.cfg.noise_snr_eval if hasattr(self.cfg, 'noise_snr_eval') else self.cfg.noise_snr_train # Default to train SNR if eval SNR not set
-            # }
             spec_aug_conf = False # No spec augment for val/test
 
         dataset = AmiVideoHFDataset(hf_dataset, 
@@ -542,7 +548,6 @@ class WhisperFlamingoModule(LightningModule):
                                     audio_max_length=self.dataset_audio_max_length, # For pad_or_trim
                                     lang_code=self.lang,
                                     spec_augment_config=spec_aug_conf,
-                                    # noise_config=None, # Noise config removed
                                     train=train_mode)
         
         # cfg.audio_max_length is for batch sampler (max samples per batch item, not total samples in batch)
@@ -614,22 +619,28 @@ if __name__ == "__main__":
     try:
         print(f"Loading train dataset from: {cfg.train_data_path}")
         train_hf_ds = load_from_disk(cfg.train_data_path)
-        print(f"✓ Train dataset loaded: {len(train_hf_ds)} samples")
+        print(f"✅ Train dataset loaded: {len(train_hf_ds)} samples")
         
         print(f"Loading validation dataset from: {cfg.val_data_path}")
         val_hf_ds = load_from_disk(cfg.val_data_path)
-        print(f"✓ Validation dataset loaded: {len(val_hf_ds)} samples")
+        print(f"✅ Validation dataset loaded: {len(val_hf_ds)} samples")
         
         print(f"Loading test dataset from: {cfg.test_data_path}")
         test_hf_ds = load_from_disk(cfg.test_data_path)
-        print(f"✓ Test dataset loaded: {len(test_hf_ds)} samples")
+        print(f"✅ Test dataset loaded: {len(test_hf_ds)} samples")
         
         # Debug dataset structure
         print("\nDataset structure inspection:")
         sample = train_hf_ds[0]
         print(f"Sample keys: {list(sample.keys())}")
         for key, value in sample.items():
-            print(f"  {key}: {type(value)} - {str(value)[:100] if isinstance(value, str) else type(value)}")
+            if key == 'audio':
+                print(f"  {key}: array shape {value['array'].shape}, sr={value['sampling_rate']}")
+            elif key == 'lip_video':
+                print(f"  {key}: {type(value)}")
+            else:
+                value_str = str(value)[:100] if isinstance(value, str) else str(type(value))
+                print(f"  {key}: {value_str}")
             
     except Exception as e:
         print(f"✗ Error loading datasets: {e}")
@@ -639,14 +650,73 @@ if __name__ == "__main__":
 
     max_duration_filter_sec = getattr(cfg, 'max_duration_filter_seconds', 30.0) # Max 30s by default
     
-    # train_hf_ds = train_hf_ds.filter(lambda x: x['duration'] <= max_duration_filter_sec)
-    # val_hf_ds = val_hf_ds.filter(lambda x: x['duration'] <= max_duration_filter_sec)
-    # test_hf_ds = test_hf_ds.filter(lambda x: x['duration'] <= max_duration_filter_sec)
-    print("\nDataset sizes ================================================================")
-    print(f"Train dataset size : {len(train_hf_ds)}")
-    print(f"Validation dataset : {len(val_hf_ds)}")
-    print(f"Test dataset size : {len(test_hf_ds)}")
-    print("\n=============================================================================\n")
+    # Filter by duration first (before robust video validation)
+    print(f"\nFiltering by duration (max {max_duration_filter_sec}s) ========================")
+    original_train_size = len(train_hf_ds)
+    original_val_size = len(val_hf_ds) 
+    original_test_size = len(test_hf_ds)
+    
+    train_hf_ds = train_hf_ds.filter(lambda x: x['duration'] <= max_duration_filter_sec)
+    val_hf_ds = val_hf_ds.filter(lambda x: x['duration'] <= max_duration_filter_sec)
+    test_hf_ds = test_hf_ds.filter(lambda x: x['duration'] <= max_duration_filter_sec)
+    
+    print(f"After duration filtering:")
+    print(f"  Train: {original_train_size} → {len(train_hf_ds)} ({len(train_hf_ds)/original_train_size*100:.1f}%)")
+    print(f"  Val: {original_val_size} → {len(val_hf_ds)} ({len(val_hf_ds)/original_val_size*100:.1f}%)")
+    print(f"  Test: {original_test_size} → {len(test_hf_ds)} ({len(test_hf_ds)/original_test_size*100:.1f}%)")
+
+    # Robust video validation and filtering
+    print("\nRobust video validation and filtering ====================================")
+    print("🔍 Validating videos to identify and remove corrupted files...")
+    print("⚠️  This may take a while but ensures stable training...")
+    
+    def filter_dataset_videos(dataset, dataset_name):
+        """Filter dataset to remove corrupted videos."""
+        print(f"\n📹 Processing {dataset_name} dataset ({len(dataset)} samples)...")
+        
+        # Use robust video filtering
+        valid_indices, corrupted_files = create_robust_video_filter(dataset)
+        
+        if corrupted_files:
+            print(f"🚨 Found {len(corrupted_files)} corrupted videos in {dataset_name}:")
+            
+            # Show corruption reasons summary
+            reasons = {}
+            for corrupted in corrupted_files:
+                reason = corrupted['reason'].split(':')[0]
+                reasons[reason] = reasons.get(reason, 0) + 1
+            
+            for reason, count in reasons.items():
+                print(f"   {reason}: {count} files")
+            
+            # Show some example files
+            if len(corrupted_files) <= 5:
+                print(f"   Corrupted files:")
+                for corrupted in corrupted_files:
+                    print(f"     Index {corrupted['index']}: {corrupted['file']}")
+            else:
+                print(f"   Example corrupted files (first 3):")
+                for corrupted in corrupted_files[:3]:
+                    print(f"     Index {corrupted['index']}: {corrupted['file']}")
+                print(f"     ... and {len(corrupted_files) - 3} more")
+        
+        if valid_indices:
+            clean_dataset = dataset.select(valid_indices)
+            print(f"✅ {dataset_name} clean dataset: {len(clean_dataset)} samples ({len(clean_dataset)/len(dataset)*100:.1f}% retention)")
+            return clean_dataset
+        else:
+            print(f"❌ No valid videos found in {dataset_name} dataset!")
+            raise ValueError(f"No valid videos in {dataset_name} dataset")
+    
+    # Filter each dataset
+    train_hf_ds = filter_dataset_videos(train_hf_ds, "train")
+    val_hf_ds = filter_dataset_videos(val_hf_ds, "validation") 
+    test_hf_ds = filter_dataset_videos(test_hf_ds, "test")
+
+    print("\nDataset sizes after robust filtering ====================================")
+    print(f"Train dataset size: {len(train_hf_ds)} samples")
+    print(f"Validation dataset size: {len(val_hf_ds)} samples")
+    print(f"Test dataset size: {len(test_hf_ds)} samples")
 
     # --- ONLY USE 10% OF DATA FOR TRAINING ------------------------------------------------------------
     print("\n10% Dataset Slicing ===========================================================")

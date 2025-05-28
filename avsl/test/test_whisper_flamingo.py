@@ -25,13 +25,13 @@ av_hubert_path = os.path.join(whisper_flamingo_path, 'av_hubert') # AVSL/whisper
 
 # Add to Python path (same as training script)
 sys.path.insert(0, project_root)
-sys.path.insert(0, utils_path) # AVSL/utils
-sys.path.insert(0, whisper_flamingo_path) # AVSL/whisper_flamingo
-sys.path.insert(0, av_hubert_path) # AVSL/whisper_flamingo/av_hubert
+sys.path.insert(0, utils_path)
+sys.path.insert(0, whisper_flamingo_path)
+sys.path.insert(0, av_hubert_path)
 
 
 #===============================================================================================================
-#                                   ADD FAIRSEQ AND AV-HUBERT PATHS
+#                           ADD FAIRSEQ AND AV-HUBERT PATHS
 # Apply the same fairseq path setup as training script
 fairseq_path = os.path.join(av_hubert_path, 'fairseq')
 if os.path.exists(fairseq_path) and fairseq_path not in sys.path:

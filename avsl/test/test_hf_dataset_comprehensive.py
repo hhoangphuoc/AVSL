@@ -35,15 +35,20 @@ fairseq_path = os.path.join(av_hubert_path, 'fairseq')
 if os.path.exists(fairseq_path) and fairseq_path not in sys.path:
     sys.path.insert(0, fairseq_path)
 
-# Add parent directory for utils_hf_video import
-sys.path.insert(0, parent_dir)
-
 # Import video utilities with comprehensive fallbacks
 VIDEO_UTILS_AVAILABLE = False
 ROBUST_VIDEO_UTILS_AVAILABLE = False
 
 try:
-    from utils import (
+    # Import from AVSL/utils using sys.path setup
+    import sys
+    # Temporarily modify import path to prioritize AVSL/utils
+    original_path = sys.path.copy()
+    # Remove whisper_flamingo from path temporarily to avoid conflicts
+    temp_path = [p for p in sys.path if 'whisper_flamingo' not in p]
+    sys.path = temp_path
+    
+    from hf_video_utils import (
         # Robust/new functions
         validate_hf_video_object,
         safe_load_video_feats_from_hf_object,
@@ -52,10 +57,17 @@ try:
         debug_hf_video_object,
         extract_video_path_from_hf_object   
     )
+    
+    # Restore original path
+    sys.path = original_path
+    
     VIDEO_UTILS_AVAILABLE = True
     ROBUST_VIDEO_UTILS_AVAILABLE = True
     print("✅ Full HuggingFace Video utilities imported successfully")
 except ImportError as e:
+    # Restore original path if error occurred
+    if 'original_path' in locals():
+        sys.path = original_path
     print(f"⚠️ Full video utilities not available: {e}")
 
 def test_dataset_structure_and_loading():

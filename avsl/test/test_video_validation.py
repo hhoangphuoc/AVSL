@@ -27,17 +27,29 @@ sys.path.insert(0, utils_path) # AVSL/utils
 sys.path.insert(0, whisper_flamingo_path) # AVSL/whisper_flamingo
 sys.path.insert(0, av_hubert_path) # AVSL/whisper_flamingo/av_hubert
 
-# Add parent directory for utils_hf_video import
-sys.path.insert(0, parent_dir)
-
 # Import utilities
 try:
-    from utils import (
+    # Import from AVSL/utils using sys.path setup
+    import sys
+    # Temporarily modify import path to prioritize AVSL/utils
+    original_path = sys.path.copy()
+    # Remove whisper_flamingo from path temporarily to avoid conflicts
+    temp_path = [p for p in sys.path if 'whisper_flamingo' not in p]
+    sys.path = temp_path
+    
+    from hf_video_utils import (
         safe_load_video_feats_from_hf_object,
         create_robust_video_filter,
     )
+    
+    # Restore original path
+    sys.path = original_path
+    
     print("✅ HuggingFace Video utilities imported successfully")
 except ImportError as e:
+    # Restore original path if error occurred
+    if 'original_path' in locals():
+        sys.path = original_path
     print(f"❌ Could not import HF Video utilities: {e}")
     print("💡 Note: Use test_hf_dataset_comprehensive.py for more robust testing")
     sys.exit(1)
