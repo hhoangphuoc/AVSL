@@ -11,14 +11,15 @@ import numpy as np
 import traceback
 from datasets import load_from_disk
 
+#===============================================================================================================
+#                           PATH SETUP
+#===============================================================================================================
 # Consistent path setup (same across all test files)
-current_dir = os.path.dirname(os.path.abspath(__file__))  # avsl/test
-parent_dir = os.path.dirname(current_dir)  # avsl
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # avsl
 project_root = os.path.dirname(parent_dir)  # AVSL
 
 print(f"Project root: {project_root}")
 print(f"Parent dir: {parent_dir}")
-print(f"Current dir: {current_dir}")
 
 utils_path = os.path.join(project_root, 'utils') # AVSL/utils
 whisper_flamingo_path = os.path.join(project_root, 'whisper_flamingo') # AVSL/whisper_flamingo
@@ -26,6 +27,7 @@ av_hubert_path = os.path.join(whisper_flamingo_path, 'av_hubert') # AVSL/whisper
 
 # Add to Python path (consistent with all test files)
 sys.path.insert(0, project_root)
+sys.path.insert(0, parent_dir)  # avsl
 sys.path.insert(0, utils_path) # AVSL/utils
 sys.path.insert(0, whisper_flamingo_path)
 sys.path.insert(0, av_hubert_path)
@@ -41,7 +43,6 @@ ROBUST_VIDEO_UTILS_AVAILABLE = False
 
 try:
     # Import from AVSL/utils using sys.path setup
-    import sys
     # Temporarily modify import path to prioritize AVSL/utils
     original_path = sys.path.copy()
     # Remove whisper_flamingo from path temporarily to avoid conflicts
@@ -70,6 +71,9 @@ except ImportError as e:
         sys.path = original_path
     print(f"⚠️ Full video utilities not available: {e}")
 
+#===============================================================================================================
+#                           TEST 1: Dataset Structure and Loading
+#===============================================================================================================
 def test_dataset_structure_and_loading():
     """Test basic dataset loading and structure inspection."""
     print("="*80)
@@ -148,6 +152,9 @@ def test_dataset_structure_and_loading():
     return any(status == "success" for status in results.values())
 
 
+#===============================================================================================================
+#                           TEST 2: Video Processing Detailed
+#===============================================================================================================
 def test_video_processing_detailed(dataset_path, num_samples=5):
     """Detailed test of video processing for a specific dataset."""
     print(f"\n--- Detailed Video Processing Test: {os.path.basename(dataset_path)} ---")
@@ -266,6 +273,9 @@ def test_video_processing_detailed(dataset_path, num_samples=5):
         return False
 
 
+#===============================================================================================================
+#                           TEST 3: Robust Video Filtering
+#===============================================================================================================
 def test_robust_video_filtering():
     """Test robust video filtering on the main dataset."""
     print("="*80)
@@ -276,7 +286,7 @@ def test_robust_video_filtering():
         print("⚠️ Robust video utilities not available, skipping this test")
         return True  # Don't fail the test if utilities aren't available
     
-    dataset_path = "/home/s2587130/AVSL/data/ami/av_hubert/test"
+    dataset_path = "/home/s2587130/AVSL/data/ami/av_hubert/test_clean" #NOTE: This load from test_clean dataset (After running first test: `test_video_validation.py`)
     
     try:
         if not os.path.exists(dataset_path):
@@ -337,6 +347,9 @@ def test_robust_video_filtering():
         return False
 
 
+#===============================================================================================================
+#                           TEST 4: AmiVideoHFDataset Creation
+#===============================================================================================================
 def test_ami_dataset_creation():
     """Test creating AmiVideoHFDataset class from the training script."""
     print("="*80)
@@ -442,6 +455,9 @@ def test_ami_dataset_creation():
         return False
 
 
+#===============================================================================================================
+#                           TEST 5: Dataset Compatibility
+#===============================================================================================================
 def test_dataset_compatibility():
     """Test compatibility between different dataset formats."""
     print("="*80)

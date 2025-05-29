@@ -15,24 +15,26 @@ import yaml
 import types
 import torch
 
+#===============================================================================================================
+#                           PATH SETUP
+#===============================================================================================================
 # Add paths for whisper_flamingo and av_hubert (same as in whisper_flamingo_ft_ami.py)
-current_dir = os.path.dirname(os.path.abspath(__file__)) # avsl/test
-parent_dir = os.path.dirname(current_dir) # avsl
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # avsl
 project_root = os.path.dirname(parent_dir) # AVSL
 print(f"Project root: {project_root}")
 print(f"Parent dir: {parent_dir}")
-print(f"Current dir: {current_dir}")
 
 whisper_flamingo_path = os.path.join(project_root, 'whisper_flamingo') # AVSL/whisper_flamingo
 av_hubert_path = os.path.join(whisper_flamingo_path, 'av_hubert') # AVSL/whisper_flamingo/av_hubert
 
 # Add to Python path
 sys.path.insert(0, project_root) # AVSL
+sys.path.insert(0, parent_dir)  # avsl
 sys.path.insert(0, whisper_flamingo_path) # AVSL/whisper_flamingo
 sys.path.insert(0, av_hubert_path) # AVSL/whisper_flamingo/av_hubert
 
 
-#===============================================================================================================
+#=================================================================
 fairseq_path = os.path.join(av_hubert_path, 'fairseq')
 if os.path.exists(fairseq_path) and fairseq_path not in sys.path:
     sys.path.insert(0, fairseq_path)
@@ -42,7 +44,7 @@ if os.path.exists(fairseq_path) and fairseq_path not in sys.path:
 avhubert_user_dir = os.path.join(av_hubert_path, 'avhubert')
 print(f"✓ AV-HuBERT user dir set to: {avhubert_user_dir}")
 
-#===============================================================================================================
+#=================================================================
 # Pre-import fairseq to ensure it's loaded correctly
 try:
     import fairseq
@@ -67,12 +69,15 @@ if 'dummy' not in sys.argv:
     print(f"✓ sys.argv is now: {sys.argv}")
 else:
     print("✓ Dummy argument already present in sys.argv")
-#===============================================================================================================
+
 
 # Import the Whisper modules
 import whisper_flamingo.whisper as whisper
 
 
+#===============================================================================================================
+#                           TEST AV-HuBERT LOADING
+#===============================================================================================================
 def test_av_hubert_loading(config_path=None):
     """Test AV-HuBERT model loading with different configurations."""
     
@@ -208,6 +213,9 @@ def test_av_hubert_loading(config_path=None):
         return False
 
 
+#===============================================================================================================
+#                           MAIN FUNCTION
+#===============================================================================================================
 def main():
     """Main function for the test script."""
     config_path = None

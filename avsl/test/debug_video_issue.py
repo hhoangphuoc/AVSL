@@ -10,13 +10,14 @@ import numpy as np
 from datasets import load_from_disk
 import traceback   
 
+#===============================================================================================================
+#                           PATH SETUP
+#===============================================================================================================
 # Consistent path setup (same across all test files)
-current_dir = os.path.dirname(os.path.abspath(__file__))  # avsl/test
-parent_dir = os.path.dirname(current_dir)  # avsl
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # avsl
 project_root = os.path.dirname(parent_dir)  # AVSL
 print(f"Project root: {project_root}")
 print(f"Parent dir: {parent_dir}")
-print(f"Current dir: {current_dir}")
 
 utils_path = os.path.join(project_root, 'utils') # AVSL/utils
 whisper_flamingo_path = os.path.join(project_root, 'whisper_flamingo') # AVSL/whisper_flamingo
@@ -24,12 +25,13 @@ av_hubert_path = os.path.join(whisper_flamingo_path, 'av_hubert') # AVSL/whisper
 
 # Add to Python path (consistent with all test files)
 sys.path.insert(0, project_root)
-sys.path.insert(0, utils_path) # AVSL/utils
+sys.path.insert(0, parent_dir)  # avsl
 sys.path.insert(0, whisper_flamingo_path)
 sys.path.insert(0, av_hubert_path)
 
-
-
+#===============================================================================================================
+#                           TEST 1: Video Object Handling
+#===============================================================================================================
 def test_video_object_handling():
     """Test the improved video object handling"""
     print("=== Testing Video Object Handling ===")
@@ -43,7 +45,7 @@ def test_video_object_handling():
         temp_path = [p for p in sys.path if 'whisper_flamingo' not in p]
         sys.path = temp_path
         
-        from hf_video_utils import (
+        from utils import (
             safe_load_video_feats_from_hf_object,
             extract_video_path_from_hf_object
         )
@@ -54,7 +56,7 @@ def test_video_object_handling():
         print("✓ Video utilities imported successfully")
         
         # Load a small test dataset
-        dataset_path = "/home/s2587130/AVSL/data/ami/av_hubert/test"
+        dataset_path = "/home/s2587130/AVSL/data/ami/av_hubert/test_clean" #NOTE: This load from test_clean dataset (After running first test: `test_video_validation.py`)
         print(f"Loading dataset from: {dataset_path}")
         dataset = load_from_disk(dataset_path)
         print(f"✓ Dataset loaded: {len(dataset)} samples")
@@ -115,6 +117,9 @@ def test_video_object_handling():
         return False
 
 
+#===============================================================================================================
+#                           TEST 2: Tokenizer Fix
+#===============================================================================================================
 def test_tokenizer_fix():
     """Test the tokenizer fix for negative token IDs"""
     print("\n=== Testing Tokenizer Fix ===")

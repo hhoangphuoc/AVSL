@@ -9,13 +9,14 @@ import sys
 import json
 from datasets import load_from_disk
 
+#===============================================================================================================
+#                           PATH SETUP
+#===============================================================================================================
 # Consistent path setup (same across all test files)
-current_dir = os.path.dirname(os.path.abspath(__file__))  # avsl/test
-parent_dir = os.path.dirname(current_dir)  # avsl
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # avsl
 project_root = os.path.dirname(parent_dir)  # AVSL
 print(f"Project root: {project_root}")
 print(f"Parent dir: {parent_dir}")
-print(f"Current dir: {current_dir}")
 
 utils_path = os.path.join(project_root, 'utils') # AVSL/utils
 whisper_flamingo_path = os.path.join(project_root, 'whisper_flamingo') # AVSL/whisper_flamingo
@@ -23,6 +24,7 @@ av_hubert_path = os.path.join(whisper_flamingo_path, 'av_hubert') # AVSL/whisper
 
 # Add to Python path (consistent with all test files)
 sys.path.insert(0, project_root)
+sys.path.insert(0, parent_dir)  # avsl
 sys.path.insert(0, utils_path) # AVSL/utils
 sys.path.insert(0, whisper_flamingo_path) # AVSL/whisper_flamingo
 sys.path.insert(0, av_hubert_path) # AVSL/whisper_flamingo/av_hubert
@@ -37,7 +39,7 @@ try:
     temp_path = [p for p in sys.path if 'whisper_flamingo' not in p]
     sys.path = temp_path
     
-    from hf_video_utils import (
+    from utils import (
         safe_load_video_feats_from_hf_object,
         create_robust_video_filter,
     )
@@ -54,6 +56,9 @@ except ImportError as e:
     print("💡 Note: Use test_hf_dataset_comprehensive.py for more robust testing")
     sys.exit(1)
 
+#===============================================================================================================
+#                           TEST 1: Robust Video Validation
+#===============================================================================================================
 
 def save_corrupted_files_report(corrupted_files, output_path):
     """Save report of corrupted files."""
@@ -72,7 +77,8 @@ def test_video_validation():
     print("=" * 80)
     
     # Test on a small subset first
-    dataset_path = "/home/s2587130/AVSL/data/ami/av_hubert/test"
+    # dataset_path = "/home/s2587130/AVSL/data/ami/av_hubert/test"
+    dataset_path = "/home/s2587130/AVSL/data/ami/av_hubert/train"
     
     try:
         print(f"📂 Loading dataset from: {dataset_path}")
@@ -104,7 +110,7 @@ def test_video_validation():
                 print(f"   ... and {len(corrupted_files) - 5} more")
         
         # Save report
-        report_path = "output/test_scripts/corrupted_videos_report.json"
+        report_path = "output/test_scripts/train_dataset/corrupted_videos_report.json"
         save_corrupted_files_report(corrupted_files, report_path)
         
         # Test video loading on valid samples
@@ -138,14 +144,17 @@ def test_video_validation():
         traceback.print_exc()
         return False
 
-
+#===============================================================================================================
+#                           TEST 2: Full Dataset Validation
+#===============================================================================================================
 def test_full_dataset_validation():
     """Test validation on full dataset (may take longer)."""
     print("=" * 80)
     print("FULL DATASET VIDEO VALIDATION")
     print("=" * 80)
     
-    dataset_path = "/home/s2587130/AVSL/data/ami/av_hubert/test"
+    # dataset_path = "/home/s2587130/AVSL/data/ami/av_hubert/test"
+    dataset_path = "/home/s2587130/AVSL/data/ami/av_hubert/train"
     
     try:
         print(f"📂 Loading full dataset from: {dataset_path}")
@@ -170,13 +179,13 @@ def test_full_dataset_validation():
         print(f"   Success rate: {len(valid_indices)/len(dataset)*100:.1f}%")
         
         # Save comprehensive report
-        report_path = "output/test_scripts/full_dataset_corrupted_videos_report.json"
+        report_path = "output/test_scripts/train_dataset/full_dataset_corrupted_videos_report.json"
         save_corrupted_files_report(corrupted_files, report_path)
         
         # Create a clean dataset with only valid samples
         if valid_indices:
             clean_dataset = dataset.select(valid_indices)
-            clean_dataset_path = "/home/s2587130/AVSL/data/ami/av_hubert/test_clean"
+            clean_dataset_path = "/home/s2587130/AVSL/data/ami/av_hubert/train_clean"
             
             print(f"💾 Saving clean dataset to: {clean_dataset_path}")
             clean_dataset.save_to_disk(clean_dataset_path)
@@ -190,12 +199,14 @@ def test_full_dataset_validation():
         traceback.print_exc()
         return False
 
-
+#===============================================================================================================
+#                           MAIN FUNCTION
+#===============================================================================================================
 if __name__ == "__main__":
     print("🧪 Starting robust video validation tests...")
     
     # Create output directory
-    os.makedirs("output/test_scripts", exist_ok=True)
+    os.makedirs("output/test_scripts/train_dataset", exist_ok=True)
     
     # Run quick validation test
     quick_test_passed = test_video_validation()

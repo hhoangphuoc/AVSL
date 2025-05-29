@@ -11,13 +11,14 @@ import yaml
 import types
 from datasets import load_from_disk
 
+#===============================================================================================================
+#                           PATH SETUP
+#===============================================================================================================
 # Use the same path setup as the training script
-current_dir = os.path.dirname(os.path.abspath(__file__))  # avsl/test
-parent_dir = os.path.dirname(current_dir)  # avsl
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # avsl
 project_root = os.path.dirname(parent_dir)  # AVSL
 print(f"Project root: {project_root}")
 print(f"Parent dir: {parent_dir}")
-print(f"Current dir: {current_dir}")
 
 utils_path = os.path.join(project_root, 'utils') # AVSL/utils
 whisper_flamingo_path = os.path.join(project_root, 'whisper_flamingo') # AVSL/whisper_flamingo
@@ -25,13 +26,13 @@ av_hubert_path = os.path.join(whisper_flamingo_path, 'av_hubert') # AVSL/whisper
 
 # Add to Python path (same as training script)
 sys.path.insert(0, project_root)
+sys.path.insert(0, parent_dir)  # avsl
 sys.path.insert(0, utils_path)
 sys.path.insert(0, whisper_flamingo_path)
 sys.path.insert(0, av_hubert_path)
 
-
-#===============================================================================================================
-#                           ADD FAIRSEQ AND AV-HUBERT PATHS
+#   ADD FAIRSEQ AND AV-HUBERT PATHS
+#=======================================================
 # Apply the same fairseq path setup as training script
 fairseq_path = os.path.join(av_hubert_path, 'fairseq')
 if os.path.exists(fairseq_path) and fairseq_path not in sys.path:

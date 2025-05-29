@@ -121,7 +121,7 @@ echo "==========================================================================
 echo "Running test/test_whisper_flamingo.py..."
 echo ""
 
-python test_whisper_flamingo.py config/ami_whisper_flamingo_large.yaml
+python test/test_whisper_flamingo.py config/ami_whisper_flamingo_large.yaml
 TEST4_EXIT_CODE=$?
 
 echo ""
