@@ -22,7 +22,7 @@ try:
     temp_path = [p for p in sys.path if 'whisper_flamingo' not in p]
     sys.path = temp_path
     
-    from hf_video_utils import (
+    from utils import (
         safe_load_video_feats_from_hf_object,
         debug_hf_video_object,
         create_robust_video_filter,
@@ -106,6 +106,7 @@ from whisper_flamingo.utils import (
     setup_logging_and_checkpoint,
     wer_cer,
     DistributedSamplerWrapper,
+    load_video_feats,
 )
 from whisper_flamingo.utils_batch_samplers import LengthBatchSampler
 
@@ -116,7 +117,6 @@ seed_everything(SEED, workers=True)
 
 
 try:
-    from whisper_flamingo.utils import load_video_feats
     from whisper_flamingo.spec_augment import spec_augment
 except ImportError:
     print("Warning: Could not import helper functions from utils.py or spec_augment.py. Ensure they are in PYTHONPATH.")
@@ -142,8 +142,6 @@ class AmiVideoHFDataset(torch.utils.data.Dataset):
 
         print(f"AmiVideoHFDataset initialized for {'training' if train else 'evaluation'}.")
         print(f"Target sample rate: {self.target_sample_rate}, Audio max length: {self.audio_max_length}")
-        # if self.noise_files:
-            # print(f"Loaded {len(self.noise_files)} noise files for augmentation.")
 
     def __len__(self):
         return len(self.hf_dataset)
@@ -717,17 +715,26 @@ if __name__ == "__main__":
     print(f"Train dataset size: {len(train_hf_ds)} samples")
     print(f"Validation dataset size: {len(val_hf_ds)} samples")
     print(f"Test dataset size: {len(test_hf_ds)} samples")
+    print("\n=============================================================================\n")
+
+    # Save the filtered datasets
+    print("\nSaving filtered datasets ====================================================")
+    save_dir = '/home/s2587130/AVSL/data/ami/'
+    train_hf_ds.save_to_disk(os.path.join(save_dir, "train_clean"))
+    val_hf_ds.save_to_disk(os.path.join(save_dir, "val_clean"))
+    test_hf_ds.save_to_disk(os.path.join(save_dir, "test_clean"))
+    print("\n=============================================================================\n")
 
     # --- ONLY USE 10% OF DATA FOR TRAINING ------------------------------------------------------------
     print("\n10% Dataset Slicing ===========================================================")
-    print("Slicing datasets to 10% for faster processing...")
-    train_hf_ds = train_hf_ds.shuffle(seed=SEED).select(range(min(len(train_hf_ds), int(len(train_hf_ds) * 0.1))))
-    val_hf_ds = val_hf_ds.shuffle(seed=SEED).select(range(min(len(val_hf_ds), int(len(val_hf_ds) * 0.1))))
-    test_hf_ds = test_hf_ds.shuffle(seed=SEED).select(range(min(len(test_hf_ds), int(len(test_hf_ds) * 0.1))))
+    print("Slicing datasets to 20% for faster processing...")
+    train_hf_ds = train_hf_ds.shuffle(seed=SEED).select(range(min(len(train_hf_ds), int(len(train_hf_ds) * 0.2))))
+    val_hf_ds = val_hf_ds.shuffle(seed=SEED).select(range(min(len(val_hf_ds), int(len(val_hf_ds) * 0.2))))
+    test_hf_ds = test_hf_ds.shuffle(seed=SEED).select(range(min(len(test_hf_ds), int(len(test_hf_ds) * 0.2))))
 
-    print(f"Train dataset size after 10% slicing: {len(train_hf_ds)}")
-    print(f"Validation dataset size after 10% slicing: {len(val_hf_ds)}")
-    print(f"Test dataset size after 10% slicing: {len(test_hf_ds)}")
+    print(f"Train dataset size after 20% slicing: {len(train_hf_ds)}")
+    print(f"Validation dataset size after 20% slicing: {len(val_hf_ds)}")
+    print(f"Test dataset size after 20% slicing: {len(test_hf_ds)}")
     print("\n=============================================================================\n")
     # --- End of 10% slicing ------------------------------------------------------------
 
