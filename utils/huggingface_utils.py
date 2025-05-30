@@ -14,28 +14,6 @@ from requests.exceptions import HTTPError
 import re
 import evaluate
 #--------------------------------------------------------------------------------------------------
-# Load pretrained AVHuBERT2Text model from the HuggingFace Hub
-#--------------------------------------------------------------------------------------------------
-from avhubert.src.model.avhubert2text import AV2TextForConditionalGeneration
-from avhubert.src.model.av2text_config import AV2TextConfig
-from transformers import Speech2TextTokenizer, AutoImageProcessor
-
-model_name_or_path = "nguyenvulebinh/AV-HuBERT-MuAViC-en"
-def load_pretrained_avhubert2text(model_name_or_path=model_name_or_path, cache_dir="../checkpoints/hf-avhubert", token=None):
-    """
-    Load a pretrained AVHuBERT2Text model from the HuggingFace Hub.
-    """
-    model = AV2TextForConditionalGeneration.from_pretrained(model_name_or_path)
-    config = AV2TextConfig.from_pretrained(model_name_or_path)
-    tokenizer = Speech2TextTokenizer.from_pretrained(model_name_or_path)
-
-    # Save the model and tokenizer to the cache directory
-    model.save_pretrained(cache_dir)
-    config.save_pretrained(cache_dir)
-    tokenizer.save_pretrained(cache_dir)
-    return model, tokenizer, config
-
-#--------------------------------------------------------------------------------------------------
 # Create a HuggingFace dataset from the processed segments (audio, video, and lip videos), 
 #--------------------------------------------------------------------------------------------------
 
