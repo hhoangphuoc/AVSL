@@ -1,6 +1,10 @@
 import os
 import sys
 
+#=============================================================================================================================================================
+#                                           PATH SETUP AND IMPORTING UTILITIES
+#=============================================================================================================================================================  
+
 # Add paths for whisper_flamingo and av_hubert ------------------------------------------------------------
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(current_dir)
@@ -8,21 +12,18 @@ utils_path = os.path.join(project_root, 'utils')  # AVSL/utils
 whisper_flamingo_path = os.path.join(project_root, 'whisper_flamingo')
 av_hubert_path = os.path.join(whisper_flamingo_path, 'av_hubert')
 
-# Add to Python path
 sys.path.insert(0, project_root)
 sys.path.insert(0, utils_path)  # Add utils path to prioritize AVSL/utils
 sys.path.insert(0, whisper_flamingo_path)
 sys.path.insert(0, av_hubert_path)
+#----------------------------------------------------------------------------------------------------
 
-
-# Ensure fairseq is properly accessible by adding the fairseq installation path --------------------------------
+# Import fairseq and av_hubert modules ------------------------------------------------------------
 # This makes the fairseq modules visible without import conflicts
 fairseq_path = os.path.join(av_hubert_path, 'fairseq')
 if os.path.exists(fairseq_path) and fairseq_path not in sys.path:
     sys.path.insert(0, fairseq_path)
     print(f"\n✓ Added fairseq path to sys.path: {fairseq_path}\n")
-
-# ----------------------------------------------------------------------------------------------------------------
 
 # Set the correct av_hubert path for user module import
 # This should point to the avhubert directory within the av_hubert repository
@@ -40,10 +41,10 @@ try:
 except Exception as e:
     print(f"Warning: Fairseq import issue: {e}")
     print("Continuing with the assumption that the original repository fix is in place...")
+#----------------------------------------------------------------------------------------------------
 
-# ----------------------------------------------------------------------------------------------------------------
 
-# Import our HuggingFace Video utilities
+# Import video validation utilities -----------------------------------------------------------------
 try:
     # Temporarily modify import path to prioritize AVSL/utils
     original_path = sys.path.copy()
@@ -51,7 +52,7 @@ try:
     temp_path = [p for p in sys.path if 'whisper_flamingo' not in p]
     sys.path = temp_path
     
-    from utils import (
+    from utils.hf_video_utils import (
         safe_load_video_feats_from_hf_object,
         debug_hf_video_object,
         create_robust_video_filter,
@@ -94,7 +95,7 @@ except Exception as e:
     print("Continuing with the assumption that the original repository fix is in place...")
 
 
-#===============================================================================================================
+#----------------------------------------------------------------------------------------------------
 # FIXME: IS THIS NEEDED?
 # CRITICAL FIX: Add dummy argument to prevent AV-HuBERT duplicate model registration
 # This is a known issue with AV-HuBERT: https://github.com/facebookresearch/av_hubert/issues/36
@@ -107,8 +108,13 @@ elif 'dummy' in sys.argv:
     print("✓ Dummy argument already present in sys.argv")
 else:
     print(f"✓ sys.argv length is {len(sys.argv)}, no dummy argument modification needed")
-#===============================================================================================================
+#----------------------------------------------------------------------------------------------------
 
+
+
+#=============================================================================================================================================================
+#                                           IMPORTING UTILITIES
+#=============================================================================================================================================================
 import yaml
 import types
 import numpy as np
@@ -150,6 +156,10 @@ try:
 except ImportError:
     print("Warning: Could not import helper functions from utils.py or spec_augment.py. Ensure they are in PYTHONPATH.")
 
+
+#=============================================================================================================================================================
+#                                           DATASET CLASS
+#=============================================================================================================================================================
 class AmiVideoHFDataset(torch.utils.data.Dataset):
     def __init__(self, hf_dataset, tokenizer, sample_rate, model_name, 
                  audio_max_length, lang_code="en",
@@ -283,7 +293,10 @@ class AmiVideoHFDataset(torch.utils.data.Dataset):
             "video": torch.from_numpy(video_feats) # Video features (T, H, W, C)
         }
 
-#===============================================================================================================
+
+#=============================================================================================================================================================
+#                                           MODEL CLASS
+#=============================================================================================================================================================
 class WhisperFlamingoModule(LightningModule):
     def __init__(self, cfg, model_name, lang, train_hf_dataset, val_hf_dataset, test_hf_dataset) -> None:
         super().__init__()
@@ -615,6 +628,9 @@ class WhisperFlamingoModule(LightningModule):
         return [test_clean_loader]
 
 
+#=============================================================================================================================================================
+#                                           MAIN SCRIPT
+#=============================================================================================================================================================
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python whisper_flamingo_ft_ami.py <config_yaml_path>")
@@ -644,20 +660,21 @@ if __name__ == "__main__":
     # Load Hugging Face datasets
     print("\nLoading datasets ============================================================")
     try:
-        print(f"Loading train dataset from: {cfg.train_data_path}")
+        print("🔍 TRY: Loading validated videos (already processed)...")
+        print(f"Loading validated train dataset from: {cfg.train_data_path}") # NOTE: This is the path to the validated videos (/home/s2587130/AVSL/data/ami/av_hubert/train_clean)
         train_hf_ds = load_from_disk(cfg.train_data_path)
-        print(f"✅ Train dataset loaded: {len(train_hf_ds)} samples")
+        print(f"✅ Validated train dataset loaded: {len(train_hf_ds)} samples")
         
-        print(f"Loading validation dataset from: {cfg.val_data_path}")
+        print(f"Loading validated validation dataset from: {cfg.val_data_path}") # NOTE: This is the path to the validated videos (/home/s2587130/AVSL/data/ami/av_hubert/val_clean)
         val_hf_ds = load_from_disk(cfg.val_data_path)
-        print(f"✅ Validation dataset loaded: {len(val_hf_ds)} samples")
+        print(f"✅ Validated validation dataset loaded: {len(val_hf_ds)} samples")
         
-        print(f"Loading test dataset from: {cfg.test_data_path}")
+        print(f"Loading validated test dataset from: {cfg.test_data_path}") # NOTE: This is the path to the validated videos (/home/s2587130/AVSL/data/ami/av_hubert/test_clean)
         test_hf_ds = load_from_disk(cfg.test_data_path)
-        print(f"✅ Test dataset loaded: {len(test_hf_ds)} samples")
+        print(f"✅ Validated test dataset loaded: {len(test_hf_ds)} samples")
         
         # Debug dataset structure
-        print("\nDataset structure inspection:")
+        print("\nDataset structure inspection ===============================================")
         sample = train_hf_ds[0]
         print(f"Sample keys: {list(sample.keys())}")
         for key, value in sample.items():
@@ -668,17 +685,88 @@ if __name__ == "__main__":
             else:
                 value_str = str(value)[:100] if isinstance(value, str) else str(type(value))
                 print(f"  {key}: {value_str}")
-            
-    except Exception as e:
-        print(f"✗ Error loading datasets: {e}")
-        import traceback
-        traceback.print_exc()
-        raise e
+        print("\n=============================================================================\n")
 
+    except Exception as e:
+        print(f"✗ Error loading validated datasets: {e}")
+        print("🔍 TRY FALLBACK APPROACH:")
+        print("Step 1: Loading original videos (not processed)...")
+        train_hf_ds = load_from_disk(cfg.train_data_path_original) # ORIGINAL PATH: /home/s2587130/AVSL/data/ami/av_hubert/train
+        val_hf_ds = load_from_disk(cfg.val_data_path_original) # ORIGINAL PATH: /home/s2587130/AVSL/data/ami/av_hubert/validation
+        test_hf_ds = load_from_disk(cfg.test_data_path_original) # ORIGINAL PATH: /home/s2587130/AVSL/data/ami/av_hubert/test
+        
+        print(f"✅ Original train dataset loaded: {len(train_hf_ds)} samples")
+        print(f"✅ Original validation dataset loaded: {len(val_hf_ds)} samples")
+        print(f"✅ Original test dataset loaded: {len(test_hf_ds)} samples")
+
+        print("Step 2: Robust video validation and filtering =================================================")
+        print("🔍 Validating videos to identify and remove corrupted files...")
+        print("⚠️  This may take a while but ensures stable training...")
+    
+        def filter_dataset_videos(dataset, dataset_name):
+            """Filter dataset to remove corrupted videos."""
+            print(f"\n📹 Processing {dataset_name} dataset ({len(dataset)} samples)...")
+            
+            # Use robust video filtering
+            valid_indices, corrupted_files = create_robust_video_filter(dataset)
+            
+            if corrupted_files:
+                print(f"🚨 Found {len(corrupted_files)} corrupted videos in {dataset_name}:")
+                
+                # Show corruption reasons summary
+                reasons = {}
+                for corrupted in corrupted_files:
+                    reason = corrupted['reason'].split(':')[0]
+                    reasons[reason] = reasons.get(reason, 0) + 1
+                
+                for reason, count in reasons.items():
+                    print(f"   {reason}: {count} files")
+                
+                # Show some example files
+                if len(corrupted_files) <= 5:
+                    print(f"   Corrupted files:")
+                    for corrupted in corrupted_files:
+                        print(f"     Index {corrupted['index']}: {corrupted['file']}")
+                else:
+                    print(f"   Example corrupted files (first 3):")
+                    for corrupted in corrupted_files[:3]:
+                        print(f"     Index {corrupted['index']}: {corrupted['file']}")
+                    print(f"     ... and {len(corrupted_files) - 3} more")
+            
+            if valid_indices:
+                clean_dataset = dataset.select(valid_indices)
+                print(f"✅ {dataset_name} clean dataset: {len(clean_dataset)} samples ({len(clean_dataset)/len(dataset)*100:.1f}% retention)")
+                return clean_dataset
+            else:
+                print(f"❌ No valid videos found in {dataset_name} dataset!")
+                raise ValueError(f"No valid videos in {dataset_name} dataset")
+        
+        # Filter each dataset
+        train_hf_ds = filter_dataset_videos(train_hf_ds, "train")
+        val_hf_ds = filter_dataset_videos(val_hf_ds, "validation") 
+        test_hf_ds = filter_dataset_videos(test_hf_ds, "test")
+
+        print("\nDataset sizes after robust filtering ------------------")
+        print(f"Train dataset size: {len(train_hf_ds)} samples")
+        print(f"Validation dataset size: {len(val_hf_ds)} samples")
+        print(f"Test dataset size: {len(test_hf_ds)} samples")
+
+        # Save the filtered datasets
+        print("\nSaving filtered datasets ------------------------------")
+        save_dir = '/home/s2587130/AVSL/data/ami/'
+        train_hf_ds.save_to_disk(os.path.join(save_dir, "train_clean"))
+        val_hf_ds.save_to_disk(os.path.join(save_dir, "val_clean"))
+        test_hf_ds.save_to_disk(os.path.join(save_dir, "test_clean"))
+    
+    print("\n===============================================================================================\n")
+
+
+    # 2. Filter by duration (Second Filtering) ------------------------------------------------------------
+    print("\n 2. Filter by duration (Second Filtering) ======================================================")
     max_duration_filter_sec = getattr(cfg, 'max_duration_filter_seconds', 30.0) # Max 30s by default
     
     # Filter by duration first (before robust video validation)
-    print(f"\nFiltering by duration (max {max_duration_filter_sec}s) ========================")
+    print(f"\nFiltering by duration (max {max_duration_filter_sec}s)--------------------")
     original_train_size = len(train_hf_ds)
     original_val_size = len(val_hf_ds) 
     original_test_size = len(test_hf_ds)
@@ -691,71 +779,12 @@ if __name__ == "__main__":
     print(f"  Train: {original_train_size} → {len(train_hf_ds)} ({len(train_hf_ds)/original_train_size*100:.1f}%)")
     print(f"  Val: {original_val_size} → {len(val_hf_ds)} ({len(val_hf_ds)/original_val_size*100:.1f}%)")
     print(f"  Test: {original_test_size} → {len(test_hf_ds)} ({len(test_hf_ds)/original_test_size*100:.1f}%)")
+    print("\n===============================================================================================\n")
 
-    # Robust video validation and filtering
-    print("\nRobust video validation and filtering ====================================")
-    print("🔍 Validating videos to identify and remove corrupted files...")
-    print("⚠️  This may take a while but ensures stable training...")
-    
-    def filter_dataset_videos(dataset, dataset_name):
-        """Filter dataset to remove corrupted videos."""
-        print(f"\n📹 Processing {dataset_name} dataset ({len(dataset)} samples)...")
-        
-        # Use robust video filtering
-        valid_indices, corrupted_files = create_robust_video_filter(dataset)
-        
-        if corrupted_files:
-            print(f"🚨 Found {len(corrupted_files)} corrupted videos in {dataset_name}:")
-            
-            # Show corruption reasons summary
-            reasons = {}
-            for corrupted in corrupted_files:
-                reason = corrupted['reason'].split(':')[0]
-                reasons[reason] = reasons.get(reason, 0) + 1
-            
-            for reason, count in reasons.items():
-                print(f"   {reason}: {count} files")
-            
-            # Show some example files
-            if len(corrupted_files) <= 5:
-                print(f"   Corrupted files:")
-                for corrupted in corrupted_files:
-                    print(f"     Index {corrupted['index']}: {corrupted['file']}")
-            else:
-                print(f"   Example corrupted files (first 3):")
-                for corrupted in corrupted_files[:3]:
-                    print(f"     Index {corrupted['index']}: {corrupted['file']}")
-                print(f"     ... and {len(corrupted_files) - 3} more")
-        
-        if valid_indices:
-            clean_dataset = dataset.select(valid_indices)
-            print(f"✅ {dataset_name} clean dataset: {len(clean_dataset)} samples ({len(clean_dataset)/len(dataset)*100:.1f}% retention)")
-            return clean_dataset
-        else:
-            print(f"❌ No valid videos found in {dataset_name} dataset!")
-            raise ValueError(f"No valid videos in {dataset_name} dataset")
-    
-    # Filter each dataset
-    train_hf_ds = filter_dataset_videos(train_hf_ds, "train")
-    val_hf_ds = filter_dataset_videos(val_hf_ds, "validation") 
-    test_hf_ds = filter_dataset_videos(test_hf_ds, "test")
 
-    print("\nDataset sizes after robust filtering ====================================")
-    print(f"Train dataset size: {len(train_hf_ds)} samples")
-    print(f"Validation dataset size: {len(val_hf_ds)} samples")
-    print(f"Test dataset size: {len(test_hf_ds)} samples")
-    print("\n=============================================================================\n")
 
-    # Save the filtered datasets
-    print("\nSaving filtered datasets ====================================================")
-    save_dir = '/home/s2587130/AVSL/data/ami/'
-    train_hf_ds.save_to_disk(os.path.join(save_dir, "train_clean"))
-    val_hf_ds.save_to_disk(os.path.join(save_dir, "val_clean"))
-    test_hf_ds.save_to_disk(os.path.join(save_dir, "test_clean"))
-    print("\n=============================================================================\n")
-
-    # --- ONLY USE 10% OF DATA FOR TRAINING ------------------------------------------------------------
-    print("\n10% Dataset Slicing ===========================================================")
+    # 3. Dataset Slicing (Third Filtering) ------------------------------------------------------------
+    print("\n3. Dataset Slicing (Third Filtering) ===========================================================")
     print("Slicing datasets to 20% for faster processing...")
     train_hf_ds = train_hf_ds.shuffle(seed=SEED).select(range(min(len(train_hf_ds), int(len(train_hf_ds) * 0.2))))
     val_hf_ds = val_hf_ds.shuffle(seed=SEED).select(range(min(len(val_hf_ds), int(len(val_hf_ds) * 0.2))))
@@ -764,16 +793,15 @@ if __name__ == "__main__":
     print(f"Train dataset size after 20% slicing: {len(train_hf_ds)}")
     print(f"Validation dataset size after 20% slicing: {len(val_hf_ds)}")
     print(f"Test dataset size after 20% slicing: {len(test_hf_ds)}")
-    print("\n=============================================================================\n")
-    # --- End of 10% slicing ------------------------------------------------------------
+    print("\n===============================================================================================\n")
 
 
-    print("\nCreating model ==============================================================")
+    print("\nCreating model ==================================================================================")
     model = WhisperFlamingoModule(cfg, cfg.model_name, cfg.lang, 
                                train_hf_ds, 
                                val_hf_ds,
                                test_hf_ds)
-    print("\n=============================================================================\n")
+    print("\n===============================================================================================\n")
 
     strategy = DDPStrategy(find_unused_parameters=True) if cfg.num_devices > 1 else "auto"
     
@@ -788,7 +816,7 @@ if __name__ == "__main__":
     # Original script validated on test and val sets before training. Let's use test.
     pre_train_validate_dataloaders = model.test_dataloader()
 
-    print("\nCreating Trainer ==============================================================")
+    print("\nCreating Trainer ==================================================================================")
     trainer = Trainer(
         precision=getattr(cfg, 'precision', 16), # Default to 16
         strategy=strategy,
@@ -805,9 +833,9 @@ if __name__ == "__main__":
         use_distributed_sampler=False, # Handled by DistributedSamplerWrapper
         sync_batchnorm=getattr(cfg, 'sync_batchnorm', True),
     )
-    print("\n=============================================================================\n")
+    print("\n===============================================================================================\n")
 
-    print("\nTraining ======================================================================")
+    print("\nTraining ========================================================================================")
     print(f"Train ID: {cfg.train_id}")
     resume_ckpt_path = os.path.join(cfg.check_output_dir, cfg.train_id, "last.ckpt")
     
@@ -831,9 +859,9 @@ if __name__ == "__main__":
         print("Starting training...")
         trainer.fit(model, val_dataloaders=fit_val_dataloaders)
 
-    print("Training finished! ============================================================")
+    print("\nTraining finished! ==================================================================================")
 
-    print("\nTesting ======================================================================")
+    print("\nTesting =============================================================================================")
     print("Testing the best model...")
     # After training, test with the best checkpoint
     best_ckpt_path = checkpoint_callback.best_model_path
@@ -848,4 +876,4 @@ if __name__ == "__main__":
         print("Could not find the best model checkpoint to run final testing.")
 
     print(f"Script finished for train_id: {cfg.train_id}") 
-    print("\n=============================================================================\n")
+    print("\n===============================================================================================\n")

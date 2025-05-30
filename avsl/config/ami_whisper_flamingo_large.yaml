@@ -1,9 +1,14 @@
 train_name: whisper_flamingo_large_ft_ami
 
 # Data paths for Hugging Face datasets (must be loadable by load_from_disk)
-train_data_path: "/home/s2587130/AVSL/data/ami/av_hubert/train" 
-val_data_path: "/home/s2587130/AVSL/data/ami/av_hubert/validation"
-test_data_path: "/home/s2587130/AVSL/data/ami/av_hubert/test"
+# NOTE: This is the path to the validated videos
+train_data_path: "/home/s2587130/AVSL/data/ami/av_hubert/train_clean"  
+val_data_path: "/home/s2587130/AVSL/data/ami/av_hubert/validation_clean"
+test_data_path: "/home/s2587130/AVSL/data/ami/av_hubert/test_clean"
+# NOTE: This is the path to the original videos 
+train_data_path_original: "/home/s2587130/AVSL/data/ami/av_hubert/train"
+val_data_path_original: "/home/s2587130/AVSL/data/ami/av_hubert/validation"
+test_data_path_original: "/home/s2587130/AVSL/data/ami/av_hubert/test"
 
 # Max audio length for LengthBatchSampler (in samples, e.g., 15s * 16000 = 240000)
 # This is different from dataset_audio_max_length for pad_or_trim
@@ -57,8 +62,8 @@ use_av_hubert_encoder: True
 add_gated_x_attn: 1 # 0 for False, 1 for True (enable Flamingo-style cross-attention)
 av_fusion: separate # AV fusion strategy
 
-log_output_dir: "/home/s2587130/AVSL/avsl/output/train_whisper_flamingo_large_ft" # Directory for TensorBoard logs
-check_output_dir: "/home/s2587130/AVSL/avsl/checkpoints/whisper_flamingo_large_ft"   # Directory for model checkpoints
+log_output_dir: "/home/s2587130/AVSL/avsl/output/train_whisper_flamingo_ft" # Directory for TensorBoard logs
+check_output_dir: "/home/s2587130/AVSL/avsl/checkpoints/whisper_flamingo_ft"   # Directory for model checkpoints
 
 num_sanity_val_steps: 2 # Number of sanity check batches before training
 precision: 16 # Mixed precision training (16 or bf16)
