@@ -1,0 +1,242 @@
+Date              = Fri May 30 02:29:11 PM CEST 2025
+Hostname          = ctit086
+Working Directory = /home/s2587130/AVSL/avsl
+Name of nodes used          : ctit086
+Gpu devices                 : 3
+Starting worker: 
+Number of CPU cores = 16
+SLURM_CPUS_PER_TASK:          16
+# packages in environment at /home/s2587130/miniconda3/envs/whisper-flamingo:
+#
+# Name                    Version                   Build  Channel
+_libgcc_mutex             0.1                        main  
+_openmp_mutex             5.1                       1_gnu  
+aiohappyeyeballs          2.4.4                    pypi_0    pypi
+aiohttp                   3.10.11                  pypi_0    pypi
+aiosignal                 1.3.1                    pypi_0    pypi
+antlr4-python3-runtime    4.8                      pypi_0    pypi
+async-timeout             5.0.1                    pypi_0    pypi
+attrs                     25.3.0                   pypi_0    pypi
+audioread                 3.0.1                    pypi_0    pypi
+av                        12.3.0                   pypi_0    pypi
+bitarray                  3.4.1                    pypi_0    pypi
+bzip2                     1.0.8                h7f98852_4    conda-forge
+ca-certificates           2025.4.26            hbd8a1cb_0    conda-forge
+certifi                   2025.4.26                pypi_0    pypi
+cffi                      1.17.1                   pypi_0    pypi
+charset-normalizer        3.4.2                    pypi_0    pypi
+colorama                  0.4.6                    pypi_0    pypi
+cython                    3.1.1                    pypi_0    pypi
+datasets                  3.1.0                    pypi_0    pypi
+decorator                 5.2.1                    pypi_0    pypi
+decord                    0.6.0                    pypi_0    pypi
+dill                      0.3.8                    pypi_0    pypi
+dlib                      20.0.0                   pypi_0    pypi
+editdistance              0.6.0                    pypi_0    pypi
+evaluate                  0.4.3                    pypi_0    pypi
+fairseq                   1.0.0a0+272c4c5          pypi_0    pypi
+ffmpeg                    4.2.2                h167e202_0    conda-forge
+filelock                  3.16.1                   pypi_0    pypi
+freetype                  2.10.4               h0708190_1    conda-forge
+frozenlist                1.5.0                    pypi_0    pypi
+fsspec                    2024.9.0                 pypi_0    pypi
+gmp                       6.2.1                h58526e2_0    conda-forge
+gnutls                    3.6.13               h85f3911_1    conda-forge
+huggingface-hub           0.31.4                   pypi_0    pypi
+hydra-core                1.0.7                    pypi_0    pypi
+idna                      3.10                     pypi_0    pypi
+imageio                   2.35.1                   pypi_0    pypi
+importlib-metadata        8.5.0                    pypi_0    pypi
+importlib-resources       6.4.5                    pypi_0    pypi
+jinja2                    3.1.6                    pypi_0    pypi
+joblib                    1.4.2                    pypi_0    pypi
+lame                      3.100             h7f98852_1001    conda-forge
+lazy-loader               0.4                      pypi_0    pypi
+ld_impl_linux-64          2.40                 h12ee557_0  
+libffi                    3.4.4                h6a678d5_1  
+libgcc-ng                 11.2.0               h1234567_1  
+libgomp                   11.2.0               h1234567_1  
+libiconv                  1.17                 h166bdaf_0    conda-forge
+libpng                    1.6.37               h21135ba_2    conda-forge
+librosa                   0.11.0                   pypi_0    pypi
+libstdcxx-ng              11.2.0               h1234567_1  
+lightning-utilities       0.11.9                   pypi_0    pypi
+llvmlite                  0.41.1                   pypi_0    pypi
+lxml                      5.4.0                    pypi_0    pypi
+mad                       0.15.1b              h9c3ff4c_1    conda-forge
+markupsafe                2.1.5                    pypi_0    pypi
+more-itertools            10.5.0                   pypi_0    pypi
+mpmath                    1.3.0                    pypi_0    pypi
+msgpack                   1.1.0                    pypi_0    pypi
+multidict                 6.1.0                    pypi_0    pypi
+multiprocess              0.70.16                  pypi_0    pypi
+ncurses                   6.4                  h6a678d5_0  
+nettle                    3.6                  he412f7d_0    conda-forge
+networkx                  3.1                      pypi_0    pypi
+numba                     0.58.1                   pypi_0    pypi
+numpy                     1.24.4                   pypi_0    pypi
+nvidia-cublas-cu12        12.1.3.1                 pypi_0    pypi
+nvidia-cuda-cupti-cu12    12.1.105                 pypi_0    pypi
+nvidia-cuda-nvrtc-cu12    12.1.105                 pypi_0    pypi
+nvidia-cuda-runtime-cu12  12.1.105                 pypi_0    pypi
+nvidia-cudnn-cu12         9.1.0.70                 pypi_0    pypi
+nvidia-cufft-cu12         11.0.2.54                pypi_0    pypi
+nvidia-curand-cu12        10.3.2.106               pypi_0    pypi
+nvidia-cusolver-cu12      11.4.5.107               pypi_0    pypi
+nvidia-cusparse-cu12      12.1.0.106               pypi_0    pypi
+nvidia-nccl-cu12          2.20.5                   pypi_0    pypi
+nvidia-nvjitlink-cu12     12.9.41                  pypi_0    pypi
+nvidia-nvtx-cu12          12.1.105                 pypi_0    pypi
+omegaconf                 2.0.6                    pypi_0    pypi
+openai-whisper            20240930                 pypi_0    pypi
+opencv-python             4.5.4.60                 pypi_0    pypi
+openh264                  2.1.1                h780b84a_0    conda-forge
+openssl                   3.0.16               h5eee18b_0  
+packaging                 25.0                     pypi_0    pypi
+pandas                    2.0.3                    pypi_0    pypi
+pillow                    10.4.0                   pypi_0    pypi
+pip                       24.0                     pypi_0    pypi
+platformdirs              4.3.6                    pypi_0    pypi
+pooch                     1.8.2                    pypi_0    pypi
+portalocker               3.0.0                    pypi_0    pypi
+propcache                 0.2.0                    pypi_0    pypi
+protobuf                  5.29.4                   pypi_0    pypi
+pyarrow                   17.0.0                   pypi_0    pypi
+pycparser                 2.22                     pypi_0    pypi
+python                    3.8.20               he870216_0  
+python-dateutil           2.9.0.post0              pypi_0    pypi
+python-speech-features    0.6                      pypi_0    pypi
+pytorch-lightning         2.1.3                    pypi_0    pypi
+pytz                      2025.2                   pypi_0    pypi
+pywavelets                1.4.1                    pypi_0    pypi
+pyyaml                    6.0.2                    pypi_0    pypi
+readline                  8.2                  h5eee18b_0  
+regex                     2024.11.6                pypi_0    pypi
+requests                  2.32.3                   pypi_0    pypi
+sacrebleu                 2.5.1                    pypi_0    pypi
+safetensors               0.5.3                    pypi_0    pypi
+scikit-image              0.21.0                   pypi_0    pypi
+scikit-learn              1.3.2                    pypi_0    pypi
+scipy                     1.10.1                   pypi_0    pypi
+sentencepiece             0.1.96                   pypi_0    pypi
+setuptools                75.1.0           py38h06a4308_0  
+six                       1.17.0                   pypi_0    pypi
+soundfile                 0.13.1                   pypi_0    pypi
+sox                       14.4.2            h27f72bc_1013    conda-forge
+soxr                      0.3.7                    pypi_0    pypi
+sqlite                    3.45.3               h5eee18b_0  
+sympy                     1.13.3                   pypi_0    pypi
+tabulate                  0.9.0                    pypi_0    pypi
+tensorboardx              2.6.2.2                  pypi_0    pypi
+threadpoolctl             3.5.0                    pypi_0    pypi
+tifffile                  2023.7.10                pypi_0    pypi
+tiktoken                  0.5.2                    pypi_0    pypi
+tk                        8.6.14               h39e8969_0  
+tokenizers                0.15.2                   pypi_0    pypi
+torch                     2.4.1                    pypi_0    pypi
+torchaudio                2.4.1                    pypi_0    pypi
+torchmetrics              1.5.2                    pypi_0    pypi
+tqdm                      4.67.1                   pypi_0    pypi
+transformers              4.36.2                   pypi_0    pypi
+triton                    3.0.0                    pypi_0    pypi
+typing-extensions         4.13.2                   pypi_0    pypi
+tzdata                    2025.2                   pypi_0    pypi
+urllib3                   2.2.3                    pypi_0    pypi
+wheel                     0.44.0           py38h06a4308_0  
+x264                      1!152.20180806       h14c3975_0    conda-forge
+xxhash                    3.5.0                    pypi_0    pypi
+xz                        5.6.4                h5eee18b_1  
+yarl                      1.15.2                   pypi_0    pypi
+zipp                      3.20.2                   pypi_0    pypi
+zlib                      1.2.13               h5eee18b_1  
+==========================================================================
+TEST : Robust Video Validation and Corruption Detection
+==========================================================================
+Running test/test_video_validation.py...
+
+Project root: /home/s2587130/AVSL
+Parent dir: /home/s2587130/AVSL/avsl
+✅ HuggingFace Video utilities imported successfully
+🧪 Starting robust video validation tests...
+================================================================================
+ROBUST VIDEO VALIDATION TEST
+================================================================================
+📂 Loading dataset from: /home/s2587130/AVSL/data/ami/av_hubert/validation
+✅ Dataset loaded: 6675 samples
+🧪 Testing on first 100 samples
+🔍 Validating 100 video samples...
+✅ Validation complete: 80 valid, 20 corrupted
+
+📊 VALIDATION RESULTS:
+   Total samples tested: 100
+   Valid videos: 80
+   Corrupted videos: 20
+   Success rate: 80.0%
+
+🚨 CORRUPTED FILES DETAILS:
+   1. Index 5: video_object_is_none
+      File: unknown
+   2. Index 9: video_object_is_none
+      File: unknown
+   3. Index 13: video_object_is_none
+      File: unknown
+   4. Index 18: video_object_is_none
+      File: unknown
+   5. Index 20: video_object_is_none
+      File: unknown
+   ... and 15 more
+📄 Corrupted files report saved to: output/test_dataset/validation/corrupted_videos_report.json
+
+🎬 TESTING VIDEO LOADING:
+   Testing sample 0...
+   ✅ Loaded: (595, 88, 88, 1), dtype: float32
+   Testing sample 1...
+   ✅ Loaded: (45, 88, 88, 1), dtype: float32
+   Testing sample 2...
+   ✅ Loaded: (12, 88, 88, 1), dtype: float32
+   Testing sample 3...
+   ✅ Loaded: (38, 88, 88, 1), dtype: float32
+   Testing sample 4...
+   ✅ Loaded: (21, 88, 88, 1), dtype: float32
+
+📈 Video loading success rate: 5/5
+
+================================================================================
+QUICK TEST RESULTS:
+⚠️  Quick validation test found issues (expected)
+
+================================================================================
+RECOMMENDATION:
+Running full dataset validation to identify all corrupted files...
+================================================================================
+FULL DATASET VIDEO VALIDATION
+================================================================================
+📂 Loading full dataset from: /home/s2587130/AVSL/data/ami/av_hubert/validation
+✅ Dataset loaded: 6675 samples
+🔍 Validating 6675 video samples...
+   Progress: 0/6675 (0.0%), Valid: 1, Corrupted: 0
+   Progress: 1000/6675 (15.0%), Valid: 814, Corrupted: 187
+   Progress: 2000/6675 (30.0%), Valid: 1623, Corrupted: 378
+   Progress: 4000/6675 (59.9%), Valid: 3213, Corrupted: 788
+   Progress: 5000/6675 (74.9%), Valid: 4030, Corrupted: 971
+✅ Validation complete: 5378 valid, 1297 corrupted
+
+📊 FULL DATASET VALIDATION RESULTS:
+   Total samples: 6675
+   Valid videos: 5378
+   Corrupted videos: 1297
+   Success rate: 80.6%
+📄 Corrupted files report saved to: output/test_dataset/validation/full_dataset_corrupted_videos_report.json
+💾 Saving clean dataset to: /home/s2587130/AVSL/data/ami/av_hubert/validation_clean
+✅ Clean dataset saved: 5378 samples
+
+================================================================================
+FINAL RESULTS:
+Quick test: FOUND ISSUES
+Full test: FOUND ISSUES
+⚠️  Dataset contains corrupted videos (this is normal).
+   Clean dataset has been created for training.
+================================================================================
+
+⚠️  TEST COMPLETED: Corrupted videos identified and handled (expected)
+

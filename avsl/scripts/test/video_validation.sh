@@ -51,7 +51,7 @@ echo "==========================================================================
 echo "Running test/test_video_validation.py..."
 echo ""
 
-python test/test_video_validation.py
+python test/test_video_validation.py 
 TEST1_EXIT_CODE=$?
 
 echo ""

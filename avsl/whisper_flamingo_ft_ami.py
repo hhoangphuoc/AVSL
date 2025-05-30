@@ -14,6 +14,35 @@ sys.path.insert(0, utils_path)  # Add utils path to prioritize AVSL/utils
 sys.path.insert(0, whisper_flamingo_path)
 sys.path.insert(0, av_hubert_path)
 
+
+# Ensure fairseq is properly accessible by adding the fairseq installation path --------------------------------
+# This makes the fairseq modules visible without import conflicts
+fairseq_path = os.path.join(av_hubert_path, 'fairseq')
+if os.path.exists(fairseq_path) and fairseq_path not in sys.path:
+    sys.path.insert(0, fairseq_path)
+    print(f"\n✓ Added fairseq path to sys.path: {fairseq_path}\n")
+
+# ----------------------------------------------------------------------------------------------------------------
+
+# Set the correct av_hubert path for user module import
+# This should point to the avhubert directory within the av_hubert repository
+avhubert_user_dir = os.path.join(av_hubert_path, 'avhubert')
+print(f"\n✓ AV-HuBERT user dir set to: {avhubert_user_dir}\n")
+
+# Pre-import fairseq to ensure it's loaded correctly
+try:
+    import fairseq
+    print(f"\n✓ Fairseq imported successfully from: {fairseq.__file__}")
+    # Verify that the required modules are accessible
+    _ = fairseq.checkpoint_utils
+    _ = fairseq.utils
+    print("✓ Fairseq checkpoint_utils and utils are accessible\n")
+except Exception as e:
+    print(f"Warning: Fairseq import issue: {e}")
+    print("Continuing with the assumption that the original repository fix is in place...")
+
+# ----------------------------------------------------------------------------------------------------------------
+
 # Import our HuggingFace Video utilities
 try:
     # Temporarily modify import path to prioritize AVSL/utils
@@ -106,7 +135,7 @@ from whisper_flamingo.utils import (
     setup_logging_and_checkpoint,
     wer_cer,
     DistributedSamplerWrapper,
-    load_video_feats,
+    # load_video_feats,
 )
 from whisper_flamingo.utils_batch_samplers import LengthBatchSampler
 

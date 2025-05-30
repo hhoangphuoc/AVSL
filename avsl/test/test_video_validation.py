@@ -78,7 +78,7 @@ def test_video_validation():
     
     # Test on a small subset first
     # dataset_path = "/home/s2587130/AVSL/data/ami/av_hubert/test"
-    dataset_path = "/home/s2587130/AVSL/data/ami/av_hubert/train"
+    dataset_path = "/home/s2587130/AVSL/data/ami/av_hubert/validation"
     
     try:
         print(f"📂 Loading dataset from: {dataset_path}")
@@ -110,7 +110,7 @@ def test_video_validation():
                 print(f"   ... and {len(corrupted_files) - 5} more")
         
         # Save report
-        report_path = "output/test_scripts/train_dataset/corrupted_videos_report.json"
+        report_path = "output/test_dataset/validation/corrupted_videos_report.json"
         save_corrupted_files_report(corrupted_files, report_path)
         
         # Test video loading on valid samples
@@ -154,7 +154,7 @@ def test_full_dataset_validation():
     print("=" * 80)
     
     # dataset_path = "/home/s2587130/AVSL/data/ami/av_hubert/test"
-    dataset_path = "/home/s2587130/AVSL/data/ami/av_hubert/train"
+    dataset_path = "/home/s2587130/AVSL/data/ami/av_hubert/validation"
     
     try:
         print(f"📂 Loading full dataset from: {dataset_path}")
@@ -179,13 +179,13 @@ def test_full_dataset_validation():
         print(f"   Success rate: {len(valid_indices)/len(dataset)*100:.1f}%")
         
         # Save comprehensive report
-        report_path = "output/test_scripts/train_dataset/full_dataset_corrupted_videos_report.json"
+        report_path = "output/test_dataset/validation/full_dataset_corrupted_videos_report.json"
         save_corrupted_files_report(corrupted_files, report_path)
         
         # Create a clean dataset with only valid samples
         if valid_indices:
             clean_dataset = dataset.select(valid_indices)
-            clean_dataset_path = "/home/s2587130/AVSL/data/ami/av_hubert/train_clean"
+            clean_dataset_path = "/home/s2587130/AVSL/data/ami/av_hubert/validation_clean"
             
             print(f"💾 Saving clean dataset to: {clean_dataset_path}")
             clean_dataset.save_to_disk(clean_dataset_path)
@@ -206,7 +206,7 @@ if __name__ == "__main__":
     print("🧪 Starting robust video validation tests...")
     
     # Create output directory
-    os.makedirs("output/test_scripts/train_dataset", exist_ok=True)
+    os.makedirs("output/test_dataset/validation", exist_ok=True)
     
     # Run quick validation test
     quick_test_passed = test_video_validation()

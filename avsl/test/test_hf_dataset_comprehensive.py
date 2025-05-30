@@ -49,7 +49,7 @@ try:
     temp_path = [p for p in sys.path if 'whisper_flamingo' not in p]
     sys.path = temp_path
     
-    from hf_video_utils import (
+    from utils import (
         # Robust/new functions
         validate_hf_video_object,
         safe_load_video_feats_from_hf_object,

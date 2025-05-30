@@ -54,7 +54,7 @@ except Exception as e:
     print(f"Warning: Fairseq import issue: {e}")
     print("Continuing with tests...")
 
-#===============================================================================================================
+#=============================================================================================================================================================
 # CRITICAL FIX: Apply the same dummy argument fix that worked in test_av_hubert_fix.py
 if 'dummy' not in sys.argv and len(sys.argv) <= 2:  # Allow for config file argument
     print("✓ Adding dummy argument to prevent AV-HuBERT task registration conflicts...")
