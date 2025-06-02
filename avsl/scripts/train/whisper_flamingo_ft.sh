@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 #SBATCH --job-name=whisper_flamingo_ft  
 #SBATCH --output=logs/whisper_flamingo_ft_%j.log
 #SBATCH --error=logs/whisper_flamingo_ft_%j.err
@@ -12,7 +13,11 @@
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=hohoangphuoc@student.utwente.nl
 
-mkdir -p /home/s2587130/AVSL/avsl/logs
+# Define project root and log directory for clarity
+PROJECT_ROOT_ABS="/home/s2587130/AVSL"
+LOG_DIR_ABS="${PROJECT_ROOT_ABS}/avsl/logs"
+
+mkdir -p "${LOG_DIR_ABS}"
 
 # Initialize environment module system (if not already done by login shell)
 source /etc/profile.d/modules.sh
@@ -41,9 +46,16 @@ CONDA_ROOT=/home/s2587130/miniconda3/
 source ${CONDA_ROOT}/etc/profile.d/conda.sh
 conda activate $PYTHON_VIRTUAL_ENVIRONMENT
 
+# Set PYTHONPATH for project-specific modules
+export PYTHONPATH=${PROJECT_ROOT_ABS}/whisper_flamingo:${PYTHONPATH}
+export PYTHONPATH=${PROJECT_ROOT_ABS}/whisper_flamingo/av_hubert:${PYTHONPATH}
+export PYTHONPATH=${PROJECT_ROOT_ABS}/whisper_flamingo/av_hubert/fairseq:${PYTHONPATH}
+export PYTHONPATH=${PROJECT_ROOT_ABS}/utils:${PYTHONPATH}
+
+
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
-cd /home/s2587130/AVSL/avsl
+cd "${PROJECT_ROOT_ABS}/avsl"
 
 # srun python -u whisper_ft_muavic_video.py config/visual/v_en_large.yaml
-python -u whisper_flamingo_ft_ami.py config/ami_whisper_flamingo_large.yaml
+python -u whisper_flamingo_ft_ami.py ${PROJECT_ROOT_ABS}/config/ami_whisper_flamingo_large.yaml
