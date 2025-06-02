@@ -40,12 +40,12 @@ def av_to_hf_dataset(recordings, dataset_path=None, prefix="ami"):
             # Create a copy of the record to avoid modifying the original
             metadata = record.copy()
             
-            # Store relative paths instead of absolute paths
-            if 'audio' in metadata:
+            # Store relative paths instead of absolute paths (handle None values)
+            if 'audio' in metadata and metadata['audio'] is not None:
                 metadata['audio'] = os.path.basename(metadata['audio'])
-            if 'video' in metadata:
+            if 'video' in metadata and metadata['video'] is not None:
                 metadata['video'] = os.path.basename(metadata['video'])
-            if 'lip_video' in metadata:
+            if 'lip_video' in metadata and metadata['lip_video'] is not None:
                 metadata['lip_video'] = os.path.basename(metadata['lip_video'])
                 
             # Write the metadata as a JSON line
@@ -67,9 +67,19 @@ def av_to_hf_dataset(recordings, dataset_path=None, prefix="ami"):
 
     # save the dataframe to a csv file
     # NOTE: The CSV path is relative to the dataset_path, will be: 'data/...` instead of full path
-    df['audio'] = df['audio'].apply(lambda x: os.path.join('data', os.path.basename(x)))
-    df['video'] = df['video'].apply(lambda x: os.path.join('data', os.path.basename(x)))
-    df['lip_video'] = df['lip_video'].apply(lambda x: os.path.join('data', os.path.basename(x)))
+    # Handle None values properly
+    def safe_path_join(x):
+        if x is None or pd.isna(x):
+            return None
+        return os.path.join('data', os.path.basename(str(x)))
+    
+    if 'audio' in df.columns:
+        df['audio'] = df['audio'].apply(safe_path_join)
+    if 'video' in df.columns:
+        df['video'] = df['video'].apply(safe_path_join)
+    if 'lip_video' in df.columns:
+        df['lip_video'] = df['lip_video'].apply(safe_path_join)
+    
     csv_path = os.path.join(dataset_path, f'{prefix}-segmented-info.csv')
     print(f"Saving dataframe to csv file: {csv_path}")
     df.to_csv(csv_path, index=False)
@@ -107,9 +117,9 @@ def av_to_hf_dataset_with_shards(recordings, dataset_path=None, prefix="ami", fi
     
     # Estimate total number of media files for sharding calculation
     estimated_media_files = sum(
-        int(os.path.exists(record.get('audio', ''))) + 
-        int(os.path.exists(record.get('video', ''))) + 
-        int(os.path.exists(record.get('lip_video', ''))) 
+        int(bool(record.get('audio') and os.path.exists(record.get('audio', '')))) + 
+        int(bool(record.get('video') and os.path.exists(record.get('video', '')))) + 
+        int(bool(record.get('lip_video') and os.path.exists(record.get('lip_video', ''))))
         for record in recordings
     )
     num_shards = max(1, (estimated_media_files + files_per_shard - 1) // files_per_shard)
@@ -130,9 +140,9 @@ def av_to_hf_dataset_with_shards(recordings, dataset_path=None, prefix="ami", fi
         current_record_media_count = 0
         
         # ------------------------ Process and copy audio ----------------------------------------------
-        if 'audio' in metadata and metadata['audio'] and os.path.exists(metadata['audio']):
+        if 'audio' in metadata and metadata['audio'] and os.path.exists(str(metadata['audio'])):
             try:
-                audio_file = os.path.basename(metadata['audio'])
+                audio_file = os.path.basename(str(metadata['audio']))
                 destination_path = os.path.join(shard_dir_abs, audio_file)
                 if not os.path.exists(destination_path):
                     shutil.copy2(metadata['audio'], destination_path)
@@ -148,9 +158,9 @@ def av_to_hf_dataset_with_shards(recordings, dataset_path=None, prefix="ami", fi
              
 
         # ------------------------ Process and copy video ------------------------------------------------
-        if 'video' in metadata and metadata['video'] and os.path.exists(metadata['video']):
+        if 'video' in metadata and metadata['video'] and os.path.exists(str(metadata['video'])):
             try:
-                video_file = os.path.basename(metadata['video'])
+                video_file = os.path.basename(str(metadata['video']))
                 destination_path = os.path.join(shard_dir_abs, video_file)
                 if not os.path.exists(destination_path):
                     shutil.copy2(metadata['video'], destination_path)
@@ -167,9 +177,9 @@ def av_to_hf_dataset_with_shards(recordings, dataset_path=None, prefix="ami", fi
 
 
         # ------------------------ Process and copy lip_video -------------------------------------------
-        if 'lip_video' in metadata and metadata['lip_video'] and os.path.exists(metadata['lip_video']):
+        if 'lip_video' in metadata and metadata['lip_video'] and os.path.exists(str(metadata['lip_video'])):
              try:
-                lip_video_file = os.path.basename(metadata['lip_video'])
+                lip_video_file = os.path.basename(str(metadata['lip_video']))
                 destination_path = os.path.join(shard_dir_abs, lip_video_file)
                 if not os.path.exists(destination_path):
                     shutil.copy2(metadata['lip_video'], destination_path)
