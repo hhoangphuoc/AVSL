@@ -1,5 +1,6 @@
 {
     "python.analysis.extraPaths": [
-        "./whisper_flamingo/av_hubert/fairseq"
+        "./whisper_flamingo/av_hubert/fairseq",
+        "./utils"
     ]
 }
