@@ -1,4 +1,4 @@
-train_name: whisper_flamingo_large_ft_ami
+train_name: whisper_flamingo_ft_ami
 
 # Data paths for Hugging Face datasets (must be loadable by load_from_disk)
 # NOTE: This is the path to the validated videos
@@ -14,19 +14,18 @@ test_data_path_original: "/home/s2587130/AVSL/data/ami/av_hubert/test"
 # This is different from dataset_audio_max_length for pad_or_trim
 audio_max_length: 240000 
 
-# Max audio length for whisper.pad_or_trim (in samples, e.g., 30s * 16000 = 480000)
-# Defaults to whisper.audio.N_SAMPLES (480000) if not set in script.
-dataset_audio_max_length: 480000
+# Max audio length for whisper.pad_or_trim (in samples)
+dataset_audio_max_length: 320000  # 20s instead of 30s (480000)
 
 # Max duration in seconds to filter dataset samples before training/evaluation
-max_duration_filter_seconds: 30.0
+max_duration_filter_seconds: 20.0  # Reduced from 30.0 to match dataset_audio_max_length
 
 text_max_length: 350 # Max text length (not directly used by AmiVideoHFDataset, but good for reference)
 accelerator: auto
 weight_decay: 0.01
 adam_epsilon: 1.0e-8
-num_worker: 16 # Number of workers for DataLoader
-validate_every_n_batches: 1000
+num_worker: 8
+validate_every_n_batches: 2000  # Increased to validate less frequently
 num_devices: 1
 
 model_name: large-v2 # Whisper model size
@@ -35,9 +34,9 @@ learning_rate: 1.0e-5 # Adjusted typical LR for fine-tuning large models
 batch_size: 2 # Reduced batch size for large model to avoid OOM
 eval_batch_size: 4 # Batch size for evaluation dataloaders
 
-num_train_steps: 8000 #20000 # Example, adjust based on dataset size and epochs
-warmup_steps: 1000 #5000
-gradient_accumulation_steps: 4 # Increased to maintain effective batch size
+num_train_steps: 8000
+warmup_steps: 1000
+gradient_accumulation_steps: 8  # Increased from 4 to maintain effective batch size despite smaller batch_size
 
 monitor: 'val/wer_av' # Monitor WER on the validation set for AV model (now only one val set)
 
@@ -72,5 +71,4 @@ sync_batchnorm: True
 
 # Use local model directory instead of downloading
 download_root: '/home/s2587130/AVSL/avsl/models/whisper' # Local directory where models are stored
-# # Option to load from a specific local model file (bypasses download)
-# local_whisper_model: '/home/s2587130/AVSL/avsl/models/whisper_en_large.pt' # Use existing model file 
+enable_gradient_checkpointing: True

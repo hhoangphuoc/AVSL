@@ -1,18 +1,17 @@
 #!/bin/bash
 #SBATCH --job-name=laugh_dataset_process-chunked
-#SBATCH --output=logs/laugh_process-chunked-%j.log
-#SBATCH --error=logs/laugh_process-chunked-%j.err
+#SBATCH --output=/home/s2587130/AVSL/preprocess/logs/laugh_process-chunked-%j.log
+#SBATCH --error=/home/s2587130/AVSL/preprocess/logs/laugh_process-chunked-%j.err
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=32
+#SBATCH --cpus-per-task=16
 #SBATCH --mem=64G
 #SBATCH --gres=gpu:ampere:1
-#SBATCH --constraint=a40
 #SBATCH --time=240:00:00
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=hohoangphuoc@student.utwente.nl
 
 # Create logs directory if it doesn't exist
-mkdir -p logs
+mkdir -p /home/s2587130/AVSL/preprocess/logs
 
 # Load modules
 source /etc/profile.d/modules.sh
@@ -76,9 +75,9 @@ fi
 echo "All dependencies verified!"
 
 # Step 1: Run tests
-echo "============================================"
+echo "================================================================================================================"
 echo "Step 1: Running tests"
-echo "============================================"
+echo "================================================================================================================"
 
 # Run simple CSV test first
 echo "Running simple CSV structure test..."
@@ -102,9 +101,9 @@ fi
 echo "All tests passed!"
 
 # Step 2: Process dataset
-echo "============================================"
+echo "================================================================================================================"
 echo "Step 2: Processing laughter dataset"
-echo "============================================"
+echo "================================================================================================================"
 
 # Set processing parameters
 # CSV_PATH="/home/s2587130/AVSL/preprocess/ami_laugh_markers.csv"
@@ -193,23 +192,23 @@ fi
 
 # Check processing result
 if [ $PROCESS_RESULT -eq 0 ]; then
-    echo "============================================"
+    echo "================================================================================================================"
     echo "Processing completed successfully!"
     echo "End time: $(date)"
-    echo "============================================"
+    echo "================================================================================================================"
     
 else
-    echo "============================================"
+    echo "================================================================================================================"
     echo "Processing failed with exit code $PROCESS_RESULT"
     echo "End time: $(date)"
-    echo "============================================"
+    echo "================================================================================================================"
     exit $PROCESS_RESULT
 fi
 
 # Print final statistics
-echo "============================================"
+echo "================================================================================================================"
 echo "Final Statistics:"
-echo "============================================"
+echo "================================================================================================================"
 
 if [ -f "$OUTPUT_DIR/dataset_records.json" ]; then
     python -c "

@@ -1,6 +1,11 @@
 import os
 import sys
 
+# CRITICAL MEMORY OPTIMIZATIONS - Must be set before importing PyTorch
+os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
+os.environ['CUDA_LAUNCH_BLOCKING'] = '0'  # Disable for better performance
+os.environ['TORCH_CUDNN_DISABLE'] = '0'  # Keep cuDNN enabled for performance
+
 #=============================================================================================================================================================
 #                                           PATH SETUP AND IMPORTING UTILITIES
 #=============================================================================================================================================================  
@@ -121,6 +126,7 @@ import numpy as np
 import torch
 from torch import nn
 import cv2
+import gc  # For garbage collection
 # from scipy.io import wavfile # Keep if AmiVideoHFDataset's add_noise needs it via utils
 import whisper_flamingo.whisper as whisper
 from torchaudio import transforms as T # For potential resampling
@@ -144,6 +150,14 @@ from whisper_flamingo.utils import (
     # load_video_feats,
 )
 from whisper_flamingo.utils_batch_samplers import LengthBatchSampler
+
+# CRITICAL MEMORY OPTIMIZATIONS
+print("🔧 Applying memory optimizations...")
+torch.cuda.empty_cache()
+torch.backends.cudnn.enabled = True
+torch.backends.cudnn.benchmark = True  # Optimize for consistent input sizes
+torch.set_float32_matmul_precision('medium')  # Use Tensor Cores more efficiently
+print("==================================================================")
 
 SAMPLE_RATE = 16000 # Standard Whisper sample rate
 AUDIO_HOP_LENGTH = 160 # For calculating number of frames from samples/duration
@@ -251,8 +265,8 @@ class AmiVideoHFDataset(torch.utils.data.Dataset):
         # Handle HuggingFace Video object properly
         video_object = item['lip_video']  # This is a HF Video() object
         
-        # Debug the video object for first few samples
-        if idx < 3:  # Debug first 3 samples
+        # Debug the video object for first few samples only
+        if idx < 2:  # Reduced from 3 to 2 to save memory
             debug_hf_video_object(video_object, idx)
         
         try:
@@ -305,6 +319,10 @@ class WhisperFlamingoModule(LightningModule):
         #===============================================================================================================
         print("Loading Whisper model =================================================")
         try:
+            # Clear cache before loading large model
+            torch.cuda.empty_cache()
+            gc.collect()
+            
             self.model = whisper.load_model(model_name,
                                             device='cpu',
                                             download_root=getattr(cfg, 'download_root', None),
@@ -317,6 +335,15 @@ class WhisperFlamingoModule(LightningModule):
                                             av_hubert_encoder=getattr(cfg, 'use_av_hubert_encoder', False),
                                             av_fusion=getattr(cfg, 'av_fusion', 'early'),
                                             add_gated_x_attn=getattr(cfg, 'add_gated_x_attn', 0))
+            
+            # Enable gradient checkpointing if specified in config
+            if getattr(cfg, 'enable_gradient_checkpointing', False):
+                print("✓ Enabling gradient checkpointing for memory optimization")
+                if hasattr(self.model.encoder, 'gradient_checkpointing_enable'):
+                    self.model.encoder.gradient_checkpointing_enable()
+                if hasattr(self.model.decoder, 'gradient_checkpointing_enable'):
+                    self.model.decoder.gradient_checkpointing_enable()
+            
             print("\n✓ Whisper model loaded successfully\n")
         except Exception as e:
             print(f"Failed to load model {model_name}: {e}")
@@ -389,7 +416,7 @@ class WhisperFlamingoModule(LightningModule):
                     print(f"✓ Successfully loaded compatible weights")
                     if missing_keys:
                         print(f"✓ Initialized {len(missing_keys)} new parameters randomly")
-                    
+                
             except Exception as e:
                 print(f"✗ Error loading checkpoint: {e}")
                 print("✓ Continuing with randomly initialized weights...")
@@ -456,6 +483,10 @@ class WhisperFlamingoModule(LightningModule):
             for n, p in self.model.encoder.named_parameters():
                 if not any(nd in n for nd in video_projection_layers):
                     p.requires_grad = False
+        
+        # Clear cache before forward pass
+        if batch_id % 10 == 0:  # Clear cache every 10 batches
+            torch.cuda.empty_cache()
         
         features, x_v = self.model.encoder(input_ids, video, training=True, padding_mask=padding_mask)
         out = self.model.decoder(dec_input_ids, features, xv=x_v)
@@ -581,6 +612,10 @@ class WhisperFlamingoModule(LightningModule):
         else: 
             spec_aug_conf = False # No spec augment for val/test
 
+        # Clear cache before creating dataset
+        torch.cuda.empty_cache()
+        gc.collect()
+
         dataset = AmiVideoHFDataset(hf_dataset, 
                                     self.tokenizer, 
                                     SAMPLE_RATE,
@@ -608,7 +643,8 @@ class WhisperFlamingoModule(LightningModule):
                                            batch_sampler=length_sorter,
                                            num_workers=self.cfg.num_worker,
                                            collate_fn=WhisperVideoCollatorWithPadding(),
-                                           pin_memory=True) # Added pin_memory
+                                           pin_memory=True, # Added pin_memory
+                                           persistent_workers=True if self.cfg.num_worker > 0 else False) # Keep workers alive
 
     def train_dataloader(self):
         return self._create_dataloader(self.train_hf_dataset, self.train_audio_lengths, train_mode=True)
@@ -832,6 +868,14 @@ if __name__ == "__main__":
         reload_dataloaders_every_n_epochs=getattr(cfg, 'reload_dataloaders_every_n_epochs', 1),
         use_distributed_sampler=False, # Handled by DistributedSamplerWrapper
         sync_batchnorm=getattr(cfg, 'sync_batchnorm', True),
+        # MEMORY OPTIMIZATIONS
+        enable_checkpointing=True,
+        # enable_progress_bar=True,
+        # log_every_n_steps=50,  # Reduce logging frequency
+        # # enable_model_summary=True,
+        # deterministic=False,  # Allow non-deterministic for better performance
+        # detect_anomaly=False,  # Disable anomaly detection for performance
+        # benchmark=True,  # Enable cuDNN benchmark for consistent input sizes
     )
     print("\n===============================================================================================\n")
 

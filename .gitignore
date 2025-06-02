@@ -32,5 +32,4 @@ avhuberts2s/
 avsl/models/
 
 #Ignore all files in the logs and output folder
-**/logs/*
 **/output/*

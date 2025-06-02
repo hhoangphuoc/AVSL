@@ -12,7 +12,7 @@
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=hohoangphuoc@student.utwente.nl
 
-mkdir -p logs
+mkdir -p /home/s2587130/AVSL/avsl/logs
 
 # Initialize environment module system (if not already done by login shell)
 source /etc/profile.d/modules.sh
@@ -41,37 +41,7 @@ CONDA_ROOT=/home/s2587130/miniconda3/
 source ${CONDA_ROOT}/etc/profile.d/conda.sh
 conda activate $PYTHON_VIRTUAL_ENVIRONMENT
 
-conda list
-
-# Check if fairseq is installed and accessible
-# echo "Checking fairseq installation..."
-# cd /home/s2587130/AVSL
-
-# # Test fairseq import with the same path setup as the training script
-# python -c "
-# import sys
-# import os
-# project_root = '/home/s2587130/AVSL'
-# whisper_flamingo_path = os.path.join(project_root, 'whisper_flamingo')
-# av_hubert_path = os.path.join(whisper_flamingo_path, 'av_hubert')
-# fairseq_path = os.path.join(av_hubert_path, 'fairseq')
-
-# sys.path.insert(0, project_root)
-# sys.path.insert(0, whisper_flamingo_path)
-# sys.path.insert(0, av_hubert_path)
-# if os.path.exists(fairseq_path):
-#     sys.path.insert(0, fairseq_path)
-
-# import fairseq
-# print('✓ Fairseq is accessible')
-# print(f'  Location: {fairseq.__file__}')
-# _ = fairseq.checkpoint_utils
-# _ = fairseq.utils
-# print('✓ Required fairseq modules are accessible')
-# " || {
-#     echo "❌ Fairseq setup issue detected. Please check the installation."
-#     exit 1
-# }
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
 cd /home/s2587130/AVSL/avsl
 
