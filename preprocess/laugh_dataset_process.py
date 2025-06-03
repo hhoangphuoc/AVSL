@@ -13,6 +13,7 @@ from collections import defaultdict
 import json
 import argparse
 import time
+import shutil # For disk_usage
 
 from preprocess.constants import (
     DATA_PATH, 
@@ -27,12 +28,25 @@ from preprocess.video_process import batch_segment_video, extract_and_save_lip_v
 from utils import av_to_hf_dataset, av_to_hf_dataset_with_shards
 
 
-def load_laughter_markers(csv_path):
+def log_disk_space(path_to_check, label):
+    try:
+        usage = shutil.disk_usage(path_to_check)
+        gb_free = usage.free / (1024**3)
+        gb_total = usage.total / (1024**3)
+        print(f"Disk space for {label} ({path_to_check}): {gb_free:.2f}GB free out of {gb_total:.2f}GB")
+    except FileNotFoundError:
+        print(f"Warning: Could not check disk space for {label}. Path not found: {path_to_check}")
+    except Exception as e:
+        print(f"Warning: Error checking disk space for {label} ({path_to_check}): {e}")
+
+
+def load_laughter_markers(csv_path, balance=False):
     """
     Load the laughter markers CSV file containing disfluency and laughter annotations.
     
     Args:
         csv_path: Path to the ami_laugh_markers.csv file
+        balance: Whether to balance the dataset by number of segments per disfluency type
         
     Returns:
         DataFrame with columns: meeting_id, speaker_id, word, start_time, end_time, disfluency_type
@@ -48,9 +62,21 @@ def load_laughter_markers(csv_path):
     df = df.dropna(subset=['start_time', 'end_time'])
     df = df[df['end_time'] > df['start_time']]
     
+    print(f"-"*30)
     print(f"Loaded {len(df)} valid segments")
-    print(f"Disfluency types: {df['disfluency_type'].value_counts().to_dict()}")
+    print(f"Total Disfluency types: {df['disfluency_type'].value_counts().to_dict()}")
+    print(f"-"*30)
     
+    if balance:
+        print(f"-"*30)
+        print(f"Balancing dataset by number of segments per disfluency type...")
+        min_type_count = df['disfluency_type'].value_counts().min() # Get the minimum number of segments per disfluency type
+        # Balance the dataset by number of segments per disfluency type
+        df = df.groupby('disfluency_type').apply(lambda x: x.sample(n=min_type_count)).reset_index(drop=True)
+        print(f"Balanced dataset to {min_type_count} segments per disfluency type")
+        print(f"Disfluency types: {df['disfluency_type'].value_counts().to_dict()}")
+        print(f"-"*30)
+
     return df
 
 
@@ -137,34 +163,35 @@ def collect_segments_by_source(df_markers):
     return audio_segments_by_source, video_segments_by_source, segment_info
 
 
-def process_laughter_dataset(
-    csv_path,
+def _process_media_segments(
+    segment_info,
+    audio_segments_by_source,
+    video_segments_by_source,
     output_dir,
-    dataset_path=None,
     extract_lip_videos=True,
     to_grayscale=True,
     batch_size=8,
-    use_shards=True,
-    files_per_shard=2000,
     use_parallel=None,
     num_workers=None,
     max_tasks_per_child=10
 ):
     """
-    Main function to process laughter and fluent speech segments into a HuggingFace dataset.
+    Core media processing function that handles audio, video, and lip video extraction.
     
     Args:
-        csv_path: Path to ami_laugh_markers.csv
-        output_dir: Directory to save processed audio/video segments
-        dataset_path: Path to save HuggingFace dataset
+        segment_info: Dictionary of segment metadata
+        audio_segments_by_source: Dictionary of audio segments by source file
+        video_segments_by_source: Dictionary of video segments by source file
+        output_dir: Directory to save processed segments
         extract_lip_videos: Whether to extract lip regions from videos
         to_grayscale: Whether to save lip videos in grayscale
         batch_size: Batch size for lip extraction
-        use_shards: Whether to use sharded dataset format
-        files_per_shard: Number of files per shard if using sharded format
-        use_parallel: Whether to use parallel processing for lip extraction (None=auto)
-        num_workers: Number of worker processes (None=auto)
+        use_parallel: Whether to use parallel processing for lip extraction
+        num_workers: Number of worker processes
         max_tasks_per_child: Maximum tasks per worker before respawning
+        
+    Returns:
+        Tuple of (audio_results, video_results, lip_results, successful_audio, successful_video, successful_lip)
     """
     # Create output directories
     audio_segment_dir = os.path.join(output_dir, 'audio_segments')
@@ -175,16 +202,6 @@ def process_laughter_dataset(
     os.makedirs(video_segment_dir, exist_ok=True)
     if lip_video_dir:
         os.makedirs(lip_video_dir, exist_ok=True)
-    
-    # Load laughter markers
-    df_markers = load_laughter_markers(csv_path)
-    
-    # Filter to only laughter and fluent segments
-    df_markers = df_markers[df_markers['disfluency_type'].isin(['laughter', 'fluent'])]
-    print(f"Processing {len(df_markers)} laughter/fluent segments")
-    
-    # Group segments by source
-    audio_segments_by_source, video_segments_by_source, segment_info = collect_segments_by_source(df_markers)
     
     # Process audio segments
     print("\n=========================================== Processing Audio Segments ============================================\n")
@@ -337,7 +354,22 @@ def process_laughter_dataset(
         
         print(f"Successfully processed {successful_lip}/{len(video_results)} lip videos (Success rate: {successful_lip/len(video_results)*100:.1f}%)")
     
-    # Create dataset records
+    return audio_results, video_results, lip_results, successful_audio, successful_video, successful_lip
+
+
+def _create_dataset_records(segment_info, audio_results, video_results, lip_results):
+    """
+    Create dataset records from segment info and processing results.
+    
+    Args:
+        segment_info: Dictionary of segment metadata
+        audio_results: Dictionary of audio processing results
+        video_results: Dictionary of video processing results
+        lip_results: Dictionary of lip video processing results
+        
+    Returns:
+        List of dataset records
+    """
     print("\n=========================================== Creating Dataset Records ============================================\n")
     dataset_records = []
     
@@ -388,56 +420,72 @@ def process_laughter_dataset(
         
         dataset_records.append(record)
     
-    print(f"Created {len(dataset_records)} dataset records")
+    return dataset_records
+
+
+def _create_huggingface_dataset(dataset_records, dataset_path, use_shards=True, files_per_shard=2000):
+    """
+    Create a HuggingFace dataset from dataset records.
     
-    # Save dataset records to JSON
-    records_path = os.path.join(output_dir, 'dataset_records.json')
-    with open(records_path, 'w') as f:
-        json.dump(dataset_records, f, indent=2)
-    print(f"Saved dataset records to {records_path}")
-    
-    # Create HuggingFace dataset
-    if dataset_path:
-        print(f"\n=========================================== Creating HuggingFace Dataset ============================================\n")
-        os.makedirs(dataset_path, exist_ok=True)
+    Args:
+        dataset_records: List of dataset records
+        dataset_path: Path to save HuggingFace dataset
+        use_shards: Whether to use sharded dataset format
+        files_per_shard: Number of files per shard if using sharded format
         
-        # Filter out records with all None paths to avoid HuggingFace errors
-        valid_records = []
-        for record in dataset_records:
-            # Check if record has at least one valid media file
-            has_audio = record.get('audio') is not None
-            has_video = record.get('video_path') is not None  
-            has_lip = record.get('lip_video') is not None
+    Returns:
+        Boolean indicating success or failure
+    """
+    print(f"\n=========================================== Creating HuggingFace Dataset ============================================\n")
+    os.makedirs(dataset_path, exist_ok=True)
+    
+    # Filter out records with all None paths to avoid HuggingFace errors
+    valid_records = []
+    for record in dataset_records:
+        # Check if record has at least one valid media file
+        has_audio = record.get('audio') is not None
+        has_video = record.get('video_path') is not None  
+        has_lip = record.get('lip_video') is not None
+        
+        if has_audio or has_video or has_lip:
+            valid_records.append(record)
+    
+    print(f"Using {len(valid_records)} valid records (out of {len(dataset_records)}) for HuggingFace dataset")
+    
+    if valid_records:
+        try:
+            if use_shards:
+                av_to_hf_dataset_with_shards(
+                    valid_records,
+                    dataset_path=dataset_path,
+                    prefix="ami_laughter",
+                    files_per_shard=files_per_shard
+                )
+            else:
+                av_to_hf_dataset(
+                    valid_records,
+                    dataset_path=dataset_path,
+                    prefix="ami_laughter"
+                )
             
-            if has_audio or has_video or has_lip:
-                valid_records.append(record)
-        
-        print(f"Using {len(valid_records)} valid records (out of {len(dataset_records)}) for HuggingFace dataset")
-        
-        if valid_records:
-            try:
-                if use_shards:
-                    av_to_hf_dataset_with_shards(
-                        valid_records,
-                        dataset_path=dataset_path,
-                        prefix="ami_laughter",
-                        files_per_shard=files_per_shard
-                    )
-                else:
-                    av_to_hf_dataset(
-                        valid_records,
-                        dataset_path=dataset_path,
-                        prefix="ami_laughter"
-                    )
-                
-                print(f"Dataset saved to {dataset_path}")
-            except Exception as e:
-                print(f"Error creating HuggingFace dataset: {e}")
-                print("Saving dataset records only...")
-        else:
-            print("No valid records found with media files. Skipping HuggingFace dataset creation.")
+            print(f"Dataset saved to {dataset_path}")
+            return True
+        except Exception as e:
+            print(f"Error creating HuggingFace dataset: {e}")
+            print("Saving dataset records only...")
+            return False
+    else:
+        print("No valid records found with media files. Skipping HuggingFace dataset creation.")
+        return False
+
+
+def _print_statistics(dataset_records):
+    """
+    Print summary statistics for dataset records.
     
-    # Print summary statistics
+    Args:
+        dataset_records: List of dataset records
+    """
     print("\n=========================================== Summary Statistics ============================================")
     df_records = pd.DataFrame(dataset_records)
     
@@ -454,6 +502,96 @@ def process_laughter_dataset(
     print(f"Mean duration: {df_records['duration'].mean():.2f}s")
     print(f"Min duration: {df_records['duration'].min():.2f}s")
     print(f"Max duration: {df_records['duration'].max():.2f}s")
+
+
+def process_laughter_dataset(
+    csv_path,
+    output_dir,
+    dataset_path=None,
+    balance=False,
+    extract_lip_videos=True,
+    to_grayscale=True,
+    batch_size=8,
+    use_shards=True,
+    files_per_shard=2000,
+    use_parallel=None,
+    num_workers=None,
+    max_tasks_per_child=10
+):
+    """
+    Main function to process laughter and fluent speech segments into a HuggingFace dataset.
+    
+    Args:
+        csv_path: Path to ami_laugh_markers.csv
+        output_dir: Directory to save processed audio/video segments
+        dataset_path: Path to save HuggingFace dataset
+        balance: Whether to balance the dataset by number of segments per disfluency type
+        extract_lip_videos: Whether to extract lip regions from videos
+        to_grayscale: Whether to save lip videos in grayscale
+        batch_size: Batch size for lip extraction
+        use_shards: Whether to use sharded dataset format
+        files_per_shard: Number of files per shard if using sharded format
+        use_parallel: Whether to use parallel processing for lip extraction (None=auto)
+        num_workers: Number of worker processes (None=auto)
+        max_tasks_per_child: Maximum tasks per worker before respawning
+    """
+    # Check SOURCE_PATH
+    if not os.path.exists(SOURCE_PATH) or not os.path.isdir(SOURCE_PATH):
+        print(f"FATAL ERROR: SOURCE_PATH defined in constants.py does not exist or is not a directory: {SOURCE_PATH}")
+        sys.exit(1)
+    print(f"Verified SOURCE_PATH: {SOURCE_PATH}")
+
+    # Log initial disk space
+    log_disk_space(output_dir, "Output Directory")
+    if dataset_path:
+        log_disk_space(dataset_path, "Dataset Path (Final)")
+    
+    # Load laughter markers
+    df_markers = load_laughter_markers(csv_path, balance)
+    
+    # Filter to only laughter and fluent segments
+    df_markers = df_markers[df_markers['disfluency_type'].isin(['laughter', 'fluent'])]
+    print(f"Processing {len(df_markers)} laughter/fluent segments")
+    
+    # Group segments by source
+    audio_segments_by_source, video_segments_by_source, segment_info = collect_segments_by_source(df_markers)
+    
+    # Process all media segments
+    audio_results, video_results, lip_results, successful_audio, successful_video, successful_lip = _process_media_segments(
+        segment_info,
+        audio_segments_by_source,
+        video_segments_by_source,
+        output_dir,
+        extract_lip_videos,
+        to_grayscale,
+        batch_size,
+        use_parallel,
+        num_workers,
+        max_tasks_per_child
+    )
+    
+    # Create dataset records
+    dataset_records = _create_dataset_records(segment_info, audio_results, video_results, lip_results)
+    
+    print(f"Created {len(dataset_records)} dataset records")
+    
+    # Save dataset records to JSON
+    records_path = os.path.join(output_dir, 'dataset_records.json')
+    with open(records_path, 'w') as f:
+        json.dump(dataset_records, f, indent=2)
+    print(f"Saved dataset records to {records_path}")
+    
+    # Create HuggingFace dataset
+    if dataset_path:
+        _create_huggingface_dataset(
+            dataset_records, 
+            dataset_path, 
+            use_shards, 
+            files_per_shard
+        )
+    
+    # Print summary statistics
+    _print_statistics(dataset_records)
     
     return dataset_records
 
@@ -549,6 +687,7 @@ def process_laughter_dataset_in_chunks(
     csv_path,
     output_dir,
     dataset_path=None,
+    balance=False,
     chunk_size=1000,
     extract_lip_videos=True,
     to_grayscale=True,
@@ -566,6 +705,7 @@ def process_laughter_dataset_in_chunks(
         csv_path: Path to ami_laugh_markers.csv
         output_dir: Directory to save processed segments
         dataset_path: Path to save HuggingFace dataset
+        balance: Whether to balance the dataset by number of segments per disfluency type
         chunk_size: Number of segments per chunk
         extract_lip_videos: Whether to extract lip regions from videos
         to_grayscale: Whether to save lip videos in grayscale
@@ -576,6 +716,12 @@ def process_laughter_dataset_in_chunks(
         num_workers: Number of worker processes (None=auto)
         max_tasks_per_child: Maximum tasks per worker before respawning
     """
+    # Check SOURCE_PATH
+    if not os.path.exists(SOURCE_PATH) or not os.path.isdir(SOURCE_PATH):
+        print(f"FATAL ERROR: SOURCE_PATH defined in constants.py does not exist or is not a directory: {SOURCE_PATH}")
+        sys.exit(1)
+    print(f"Verified SOURCE_PATH: {SOURCE_PATH}")
+
     import math
     import datetime
     
@@ -584,7 +730,7 @@ def process_laughter_dataset_in_chunks(
     os.makedirs(checkpoint_dir, exist_ok=True)
     
     # Load laughter markers
-    df_markers = load_laughter_markers(csv_path)
+    df_markers = load_laughter_markers(csv_path, balance)
     
     # Filter to only laughter and fluent segments
     df_markers = df_markers[df_markers['disfluency_type'].isin(['laughter', 'fluent'])]
@@ -594,8 +740,10 @@ def process_laughter_dataset_in_chunks(
     total_segments = len(df_markers)
     num_chunks = math.ceil(total_segments / chunk_size)
     
+    print(f"-"*30)
     print(f"Total segments: {total_segments}")
     print(f"Number of chunks: {num_chunks}")
+    print(f"-"*30)
     
     # Find checkpoint
     resume_chunk, checkpoint_data = find_checkpoint(checkpoint_dir)
@@ -612,6 +760,11 @@ def process_laughter_dataset_in_chunks(
     
     all_dataset_records = []
     
+    # Log initial disk space (before loop, as checkpoint dir is inside output_dir)
+    log_disk_space(output_dir, "Main Output Directory (incl. checkpoints)")
+    if dataset_path:
+        log_disk_space(dataset_path, "Final Dataset Path")
+
     # Process each chunk
     for chunk_idx in range(num_chunks):
         # Skip chunks before resume point
@@ -645,6 +798,7 @@ def process_laughter_dataset_in_chunks(
                 csv_path=chunk_csv,
                 output_dir=chunk_output,
                 dataset_path=None,  # Don't create HF dataset for individual chunks
+                balance=balance,
                 extract_lip_videos=extract_lip_videos,
                 to_grayscale=to_grayscale,
                 batch_size=batch_size,
@@ -726,42 +880,12 @@ def process_laughter_dataset_in_chunks(
     # Create final HuggingFace dataset from all chunks
     if dataset_path and all_dataset_records:
         print(f"\nCreating final HuggingFace dataset with {len(all_dataset_records)} records...")
-        
-        # Filter out records with all None paths to avoid HuggingFace errors
-        valid_records = []
-        for record in all_dataset_records:
-            has_audio = record.get('audio') is not None
-            has_video = record.get('video_path') is not None  
-            has_lip = record.get('lip_video') is not None
-            
-            if has_audio or has_video or has_lip:
-                valid_records.append(record)
-        
-        print(f"Using {len(valid_records)} valid records for final dataset")
-        
-        if valid_records:
-            try:
-                os.makedirs(dataset_path, exist_ok=True)
-                
-                if use_shards:
-                    av_to_hf_dataset_with_shards(
-                        valid_records,
-                        dataset_path=dataset_path,
-                        prefix="ami_laughter",
-                        files_per_shard=files_per_shard
-                    )
-                else:
-                    av_to_hf_dataset(
-                        valid_records,
-                        dataset_path=dataset_path,
-                        prefix="ami_laughter"
-                    )
-                
-                print(f"Final dataset saved to {dataset_path}")
-            except Exception as e:
-                print(f"Error creating final HuggingFace dataset: {e}")
-                import traceback
-                traceback.print_exc()
+        _create_huggingface_dataset(
+            all_dataset_records,
+            dataset_path,
+            use_shards,
+            files_per_shard
+        )
     
     # Print final summary
     print("\n" + "="*80)
@@ -778,98 +902,186 @@ def process_laughter_dataset_in_chunks(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Create HuggingFace dataset for laughter and fluent speech segments')
+    # Add project root and utils to path for imports
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(script_dir)
+    utils_path = os.path.join(project_root, 'utils')
+    if utils_path not in sys.path:
+        sys.path.insert(0, utils_path)
     
-    parser.add_argument('--csv_path', type=str, 
-                       default=os.path.join(os.path.dirname(__file__), 'ami_laugh_markers.csv'),
-                       help='Path to ami_laugh_markers.csv file')
-    parser.add_argument('--output_dir', type=str,
-                       default=os.path.join(DATA_PATH, 'laughter_dataset', 'segments'),
-                       help='Directory to save processed segments')
-    parser.add_argument('--dataset_path', type=str,
-                       default="/home/s2587130/AVSL/data/ami_laugh/dataset",
-                       help='Path to save HuggingFace dataset')
-    parser.add_argument('--extract_lip_videos', action='store_true', default=True,
-                       help='Extract lip videos from video segments')
-    parser.add_argument('--no_lip_videos', dest='extract_lip_videos', action='store_false',
-                       help='Skip lip video extraction')
-    parser.add_argument('--to_grayscale', action='store_true', default=True,
-                       help='Convert lip videos to grayscale')
-    parser.add_argument('--batch_size', type=int, default=8,
-                       help='Batch size for lip extraction')
-    parser.add_argument('--use_shards', action='store_true', default=True,
-                       help='Use sharded dataset format')
-    parser.add_argument('--no_shards', dest='use_shards', action='store_false',
-                       help='Use standard dataset format')
-    parser.add_argument('--files_per_shard', type=int, default=2000,
-                       help='Number of files per shard')
+    # Import config utilities (with fallback if not available)
+    try:
+        from utils.config_utils import parse_args_with_config, load_yaml_config
+        from utils.path_utils import verify_path_exists, ensure_dir_exists
+        
+        # Add options for config file
+        parser = argparse.ArgumentParser(description='Create HuggingFace dataset for laughter and fluent speech segments')
+        parser.add_argument('--config_path', type=str, 
+                           help='Path to YAML configuration file')
+        parser.add_argument('--csv_path', type=str,
+                           help='Path to ami_laugh_markers.csv file')
+        parser.add_argument('--output_dir', type=str,
+                           help='Directory to save processed segments')
+        parser.add_argument('--dataset_path', type=str,
+                           help='Path to save HuggingFace dataset')
+        parser.add_argument('--extract_lip_videos', action='store_true',
+                           help='Extract lip videos from video segments')
+        parser.add_argument('--to_grayscale', action='store_true',
+                           help='Convert lip videos to grayscale')
+        parser.add_argument('--batch_size', type=int,
+                           help='Batch size for lip extraction')
+        parser.add_argument('--use_shards', action='store_true',
+                           help='Use sharded dataset format')
+        parser.add_argument('--files_per_shard', type=int,
+                           help='Number of files per shard')
+        parser.add_argument('--chunked', action='store_true',
+                           help='Process dataset in chunks with checkpointing')
+        parser.add_argument('--chunk_size', type=int,
+                           help='Number of segments per chunk (for chunked processing)')
+        parser.add_argument('--num_workers', type=int,
+                           help='Number of worker processes for parallel lip extraction (default: auto)')
+        parser.add_argument('--use_parallel', action='store_true',
+                           help='Force use of parallel processing for lip extraction')
+        parser.add_argument('--max_tasks_per_child', type=int,
+                           help='Maximum tasks per worker process before respawning')
+        
+        args = parser.parse_args()
+        
+        # Load config file if specified, otherwise use default
+        config = {}
+        default_config_path = os.path.join(project_root, 'config', 'laugh_dataset_process.yaml')
+        
+        # Try user-specified config first
+        if args.config_path and verify_path_exists(args.config_path, "Configuration"):
+            config = load_yaml_config(args.config_path)
+            print(f"Loaded configuration from: {args.config_path}")
+        # Then try default config path
+        elif verify_path_exists(default_config_path, "Default configuration"):
+            config = load_yaml_config(default_config_path)
+            print(f"Loaded default configuration from: {default_config_path}")
+        
+        # Override config with command-line args (only if provided) -----------------------------------
+        # FIXME: TO BE REMOVED
+        # args_dict = {k: v for k, v in vars(args).items() if v is not None and k != 'config_path'}
+        # print("Args dict:", args_dict)
+        # config.update(args_dict)
+        # --------------------------------------------------------------------------------------------
+
+        # Print final configuration
+        print("Final Config:", config)
+        
+    except ImportError:
+        # Fallback to standard argparse if config utils aren't available
+        parser = argparse.ArgumentParser(description='Create HuggingFace dataset for laughter and fluent speech segments')
+        
+        parser.add_argument('--csv_path', type=str, 
+                           default=os.path.join(os.path.dirname(__file__), 'ami_laugh_markers.csv'),
+                           help='Path to ami_laugh_markers.csv file')
+        parser.add_argument('--output_dir', type=str,
+                           default=os.path.join(DATA_PATH, 'laughter_dataset', 'segments'),
+                           help='Directory to save processed segments')
+        parser.add_argument('--dataset_path', type=str,
+                           default="/home/s2587130/AVSL/data/ami_laughter/dataset",
+                           help='Path to save HuggingFace dataset')
+        parser.add_argument('--balance', action='store_true', default=False,
+                           help='Balance the dataset by number of segments per disfluency type')
+        parser.add_argument('--extract_lip_videos', action='store_true', default=True,
+                           help='Extract lip videos from video segments')
+        parser.add_argument('--to_grayscale', action='store_true', default=True,
+                           help='Convert lip videos to grayscale')
+        parser.add_argument('--batch_size', type=int, default=8,
+                           help='Batch size for lip extraction')
+        parser.add_argument('--use_shards', action='store_true', default=True,
+                           help='Use sharded dataset format')
+        parser.add_argument('--files_per_shard', type=int, default=2000,
+                           help='Number of files per shard')
+        parser.add_argument('--chunked', action='store_true', default=False,
+                           help='Process dataset in chunks with checkpointing')
+        parser.add_argument('--chunk_size', type=int, default=1000,
+                           help='Number of segments per chunk (for chunked processing)')
+        parser.add_argument('--num_workers', type=int, default=None,
+                           help='Number of worker processes for parallel lip extraction (default: auto)')
+        parser.add_argument('--use_parallel', action='store_true', default=None,
+                           help='Force use of parallel processing for lip extraction')
+        parser.add_argument('--max_tasks_per_child', type=int, default=10,
+                           help='Maximum tasks per worker process before respawning')
+        
+        config = parser.parse_args()
     
-    # Chunked processing arguments
-    parser.add_argument('--chunked', action='store_true', default=False,
-                       help='Process dataset in chunks with checkpointing')
-    parser.add_argument('--chunk_size', type=int, default=1000,
-                       help='Number of segments per chunk (for chunked processing)')
-    
-    # Add parallel processing arguments
-    parser.add_argument('--num_workers', type=int, default=None,
-                       help='Number of worker processes for parallel lip extraction (default: auto)')
-    parser.add_argument('--use_parallel', action='store_true', default=None,
-                       help='Force use of parallel processing for lip extraction')
-    parser.add_argument('--no_parallel', dest='use_parallel', action='store_false',
-                       help='Disable parallel processing for lip extraction')
-    parser.add_argument('--max_tasks_per_child', type=int, default=10,
-                       help='Maximum tasks per worker process before respawning')
-    
-    args = parser.parse_args()
-    
+    # Add checks for critical dlib model files
+    critical_paths_to_check = {
+        "FACE_PREDICTOR_PATH": FACE_PREDICTOR_PATH,
+        "CNN_DETECTOR_PATH": CNN_DETECTOR_PATH,
+        "MEAN_FACE_PATH": MEAN_FACE_PATH
+    }
+    # Check if the critical files exist ------------------------------------------------------------
+    missing_critical_files = False
+    for name, path in critical_paths_to_check.items():
+        if not os.path.exists(path):
+            print(f"FATAL ERROR: Critical file for dlib processing not found: {name} at {path}")
+            missing_critical_files = True
+    if missing_critical_files:
+        print("Please ensure all critical model files for dlib are correctly specified in preprocess/constants.py and are accessible.")
+        sys.exit(1)
+    # --------------------------------------------------------------------------------------------
+    # Print configuration ------------------------------------------------------------------------
     print("="*50)
     print("AMI Laughter Dataset Processing")
     print("="*50)
-    print(f"CSV path: {args.csv_path}")
-    print(f"Output directory: {args.output_dir}")
-    print(f"Dataset path: {args.dataset_path}")
-    print(f"Extract lip videos: {args.extract_lip_videos}")
-    print(f"Grayscale lip videos: {args.to_grayscale}")
-    print(f"Use shards: {args.use_shards}")
-    print(f"Chunked processing: {args.chunked}")
-    if args.chunked:
-        print(f"Chunk size: {args.chunk_size}")
-    if args.extract_lip_videos:
-        print(f"Parallel processing: {args.use_parallel if args.use_parallel is not None else 'auto'}")
-        if args.num_workers:
-            print(f"Number of workers: {args.num_workers}")
+    print(f"CSV path: {config['csv_path']}")
+    print(f"Output directory: {config['output_dir']}")
+    print(f"Dataset path: {config['dataset_path']}")
+    print(f"Balance dataset: {config['balance']}")
+    print(f"Extract lip videos: {config['extract_lip_videos']}")
+    print(f"Grayscale lip videos: {config['to_grayscale']}")
+    print(f"Use shards: {config['use_shards']}")
+    print(f"Chunked processing: {config['chunked']}")
+    if config['chunked']:
+        print(f"Chunk size: {config['chunk_size']}")
+    if config['extract_lip_videos']:
+        print(f"Parallel processing: {config['use_parallel'] if config['use_parallel'] is not None else 'auto'}")
+        if config['num_workers']:
+            print(f"Number of workers: {config['num_workers']}")
     print("="*50)
+    # --------------------------------------------------------------------------------------------
+
+    # Create output directories if they don't exist
+    for path in [config['output_dir'], config['dataset_path']]:
+        if path:
+            os.makedirs(path, exist_ok=True)
     
-    if args.chunked:
+    if config['chunked']:
         # Use chunked processing with checkpointing
         print("Using chunked processing with checkpointing...")
         records = process_laughter_dataset_in_chunks(
-            csv_path=args.csv_path,
-            output_dir=args.output_dir,
-            dataset_path=args.dataset_path,
-            chunk_size=args.chunk_size,
-            extract_lip_videos=args.extract_lip_videos,
-            to_grayscale=args.to_grayscale,
-            batch_size=args.batch_size,
-            use_shards=args.use_shards,
-            files_per_shard=args.files_per_shard,
-            use_parallel=args.use_parallel,
-            num_workers=args.num_workers,
-            max_tasks_per_child=args.max_tasks_per_child
+            csv_path=config['csv_path'],
+            output_dir=config['output_dir'],
+            dataset_path=config['dataset_path'],
+            chunk_size=config['chunk_size'],
+            balance=config['balance'],
+            extract_lip_videos=config['extract_lip_videos'],
+            to_grayscale=config['to_grayscale'],
+            batch_size=config['batch_size'],
+            use_shards=config['use_shards'],
+            files_per_shard=config['files_per_shard'],
+            use_parallel=config['use_parallel'],
+            num_workers=config['num_workers'],
+            max_tasks_per_child=config['max_tasks_per_child']
         )
     else:
         # Use standard processing
         print("Using standard processing...")
         records = process_laughter_dataset(
-            csv_path=args.csv_path,
-            output_dir=args.output_dir,
-            dataset_path=args.dataset_path,
-            extract_lip_videos=args.extract_lip_videos,
-            to_grayscale=args.to_grayscale,
-            batch_size=args.batch_size,
-            use_shards=args.use_shards,
-            files_per_shard=args.files_per_shard,
-            use_parallel=args.use_parallel,
-            num_workers=args.num_workers,
-            max_tasks_per_child=args.max_tasks_per_child
+            csv_path=config['csv_path'],
+            output_dir=config['output_dir'],
+            dataset_path=config['dataset_path'],
+            balance=config['balance'],
+            extract_lip_videos=config['extract_lip_videos'],
+            to_grayscale=config['to_grayscale'],
+            batch_size=config['batch_size'],
+            use_shards=config['use_shards'],
+            files_per_shard=config['files_per_shard'],
+            use_parallel=config['use_parallel'],
+            num_workers=config['num_workers'],
+            max_tasks_per_child=config['max_tasks_per_child']
         ) 

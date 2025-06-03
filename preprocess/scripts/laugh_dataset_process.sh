@@ -1,12 +1,12 @@
 #!/bin/bash
-#SBATCH --job-name=laugh_dataset_process-chunked
-#SBATCH --output=/home/s2587130/AVSL/preprocess/logs/laugh_process-chunked-%j.log
-#SBATCH --error=/home/s2587130/AVSL/preprocess/logs/laugh_process-chunked-%j.err
+#SBATCH --job-name=laugh_dataset_process-chunked(fluent_laughter-balanced)
+#SBATCH --output=../logs/laugh_process-chunked-balance-%j.log
+#SBATCH --error=../logs/laugh_process-chunked-balance-%j.err
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=16
-#SBATCH --mem=64G
+#SBATCH --mem=32G
 #SBATCH --gres=gpu:ampere:1
-#SBATCH --time=240:00:00
+#SBATCH --cpus-per-task=16
+#SBATCH --time=12-00:00:00
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=hohoangphuoc@student.utwente.nl
 
@@ -41,38 +41,7 @@ export PYTHONUNBUFFERED=1
 # Change to preprocess directory
 cd /home/s2587130/AVSL/preprocess
 
-# Install/verify dependencies
-echo "Checking and installing dependencies..."
-
-# Install dlib if not already installed (handle the installation issue)
-echo "Checking dlib installation..."
-if ! python -c "import dlib" 2>/dev/null; then
-    echo "Installing dlib..."
-    # Try different installation methods
-    pip install dlib-bin 2>/dev/null || \
-    pip install dlib --no-cache-dir 2>/dev/null || \
-    conda install -c conda-forge dlib -y 2>/dev/null || \
-    echo "Warning: Could not install dlib automatically"
-fi
-
-# Test all dependencies
-echo "Testing all dependencies..."
-python test_dlib_install.py
-if [ $? -ne 0 ]; then
-    echo "Dependency check failed. Attempting to install missing packages..."
-    
-    # Try to install any missing packages
-    pip install pandas numpy tqdm librosa soundfile opencv-python datasets ffmpeg-python --upgrade
-    
-    # Test again
-    python test_dlib_install.py
-    if [ $? -ne 0 ]; then
-        echo "Failed to install all dependencies. Please check the error messages above."
-        exit 1
-    fi
-fi
-
-echo "All dependencies verified!"
+# echo "All dependencies verified!"
 
 # Step 1: Run tests
 echo "================================================================================================================"
@@ -81,7 +50,7 @@ echo "==========================================================================
 
 # Run simple CSV test first
 echo "Running simple CSV structure test..."
-python test_laugh_simple.py
+python test/test_laugh_simple.py
 if [ $? -ne 0 ]; then
     echo "Simple CSV test failed!"
     exit 1
@@ -89,7 +58,7 @@ fi
 
 # Run full test suite
 echo "Running full test suite..."
-python test_laugh_dataset.py
+python test/test_laugh_dataset.py
 TEST_RESULT=$?
 
 if [ $TEST_RESULT -ne 0 ]; then
@@ -105,39 +74,62 @@ echo "==========================================================================
 echo "Step 2: Processing laughter dataset"
 echo "================================================================================================================"
 
-# Set processing parameters
-# CSV_PATH="/home/s2587130/AVSL/preprocess/ami_laugh_markers.csv"
-# OUTPUT_DIR="/home/s2587130/AVSL/data/ami_laugh/segments"
-CSV_PATH="/deepstore/datasets/hmi/speechlaugh-corpus/ami/ami_laughter/ami_laugh_markers.csv"
-OUTPUT_DIR="/deepstore/datasets/hmi/speechlaugh-corpus/ami/ami_laughter/segments"
-DATASET_PATH="/home/s2587130/AVSL/data/ami_laughter/dataset"
+# Set config path
+CONFIG_PATH="/home/s2587130/AVSL/config/laugh_dataset_process.yaml"
 
-# Create output directories
-mkdir -p "$OUTPUT_DIR"
-mkdir -p "$DATASET_PATH"
+# Validate config path
+if [ ! -r "$CONFIG_PATH" ]; then
+    echo "WARNING: Config file not readable: $CONFIG_PATH"
+    echo "Will use default configuration or command-line arguments."
+    CONFIG_ARG=""
+else
+    CONFIG_ARG="--config $CONFIG_PATH"
+    echo "Using configuration file: $CONFIG_PATH"
+fi
 
 # Parse command line arguments for processing mode
-PROCESSING_MODE="standard"  # standard or chunked
+PROCESSING_MODE="chunked"  # standard or chunked
 CHUNK_SIZE=1000
 NUM_WORKERS=8
 BATCH_SIZE=16
+BALANCE=False
+ADDITIONAL_ARGS=""
 
 while [[ $# -gt 0 ]]; do
   case $1 in
     --chunked)
       PROCESSING_MODE="chunked"
+      ADDITIONAL_ARGS="$ADDITIONAL_ARGS --chunked"
       shift
       ;;
     --chunk_size=*)
       CHUNK_SIZE="${1#*=}"
+      ADDITIONAL_ARGS="$ADDITIONAL_ARGS --chunk_size=$CHUNK_SIZE"
       shift
       ;;
     --workers=*)
       NUM_WORKERS="${1#*=}"
+      ADDITIONAL_ARGS="$ADDITIONAL_ARGS --num_workers=$NUM_WORKERS"
       shift
       ;;
     --batch_size=*)
       BATCH_SIZE="${1#*=}"
+      ADDITIONAL_ARGS="$ADDITIONAL_ARGS --batch_size=$BATCH_SIZE"
+      shift
+      ;;
+    --output_dir=*)
+      OUTPUT_DIR="${1#*=}"
+      ADDITIONAL_ARGS="$ADDITIONAL_ARGS --output_dir=$OUTPUT_DIR"
+      shift
+      ;;
+    --dataset_path=*)
+      DATASET_PATH="${1#*=}"
+      ADDITIONAL_ARGS="$ADDITIONAL_ARGS --dataset_path=$DATASET_PATH"
+      shift
+      ;;
+    --balance)
+      BALANCE=true
+      ADDITIONAL_ARGS="$ADDITIONAL_ARGS --balance=$BALANCE"
       shift
       ;;
     *)
@@ -147,48 +139,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+echo "============================================"
 echo "Processing configuration:"
 echo "Mode: $PROCESSING_MODE"
 echo "Chunk size: $CHUNK_SIZE"
 echo "Workers: $NUM_WORKERS"
 echo "Batch size: $BATCH_SIZE"
+echo "Balance: $BALANCE"
+echo "Additional arguments: $ADDITIONAL_ARGS"
+echo "============================================"
 
-if [ "$PROCESSING_MODE" = "chunked" ]; then
-    # Use built-in chunked processing with checkpointing
-    echo "Using built-in chunked processing with checkpointing..."
-    
-    python laugh_dataset_process.py \
-        --csv_path "$CSV_PATH" \
-        --output_dir "$OUTPUT_DIR" \
-        --dataset_path "$DATASET_PATH" \
-        --chunked \
-        --chunk_size "$CHUNK_SIZE" \
-        --extract_lip_videos \
-        --to_grayscale \
-        --batch_size "$BATCH_SIZE" \
-        --use_shards \
-        --files_per_shard 2000 \
-        --num_workers "$NUM_WORKERS"
-    
-    PROCESS_RESULT=$?
-    
-else
-    # Standard processing - run the full dataset at once
-    echo "Using standard processing..."
-    
-    python laugh_dataset_process.py \
-        --csv_path "$CSV_PATH" \
-        --output_dir "$OUTPUT_DIR" \
-        --dataset_path "$DATASET_PATH" \
-        --extract_lip_videos \
-        --to_grayscale \
-        --batch_size "$BATCH_SIZE" \
-        --use_shards \
-        --files_per_shard 2000 \
-        --num_workers "$NUM_WORKERS"
-    
-    PROCESS_RESULT=$?
-fi
+# Run the processing script with the config file and any additional arguments
+echo "Running laugh_dataset_process.py with configuration..."
+python laugh_dataset_process.py $CONFIG_ARG $ADDITIONAL_ARGS
+
+PROCESS_RESULT=$?
 
 # Check processing result
 if [ $PROCESS_RESULT -eq 0 ]; then
