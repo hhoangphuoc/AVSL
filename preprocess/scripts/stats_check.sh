@@ -32,6 +32,53 @@ echo "Total size: $(du -sh /deepstore/datasets/hmi/speechlaugh-corpus/ami/video_
 
 # ================================================================================================================  
 
+
+
+# ================================================================================================================  
+
+# ------------------------------------------------------------------------------------------------
+#                       FOR CLEANED AUDIO/VIDEO SEGMENTED DATASET
+#               Path: /home/s2587130/AVSL/data/ami/ami_clean
+# ------------------------------------------------------------------------------------------------
+
+# Checking size of audio/video segments directories
+# OUTPUT:
+# Files count: 80,285
+# Total size: 13G
+echo "Files count: $(find /home/s2587130/AVSL/data/ami/ami_clean/audio_segments -type f | wc -l)"; 
+echo "Total size: $(du -sh /home/s2587130/AVSL/data/ami/ami_clean/audio_segments | cut -f1)"
+
+# ================================================================================================================  
+
+
+
+# ================================================================================================================  
+
+# ------------------------------------------------------------------------------------------------
+# FOR FLUENCY/LAUGHTER ONLY SEGMENTED DATASET
+# Directory: /deepstore/datasets/hmi/speechlaugh-corpus/ami/fluency_laughter/
+# ------------------------------------------------------------------------------------------------
+
+# Checking size of lips video segments for each type of fluency/laughter
+# OUTPUT:
+# Files count: 80,285
+# Total size: 13G 
+
+# Fluency
+echo "Files count: $(find /deepstore/datasets/hmi/speechlaugh-corpus/ami/fluent_laughter/segments/chunk_*/lip_segments -type f -name "*-*-*-*-fluent_lip.mp4" | wc -l)"; 
+echo "Total size: $(du -sh /deepstore/datasets/hmi/speechlaugh-corpus/ami/fluent_laughter/segments/chunk_*/lip_segments | cut -f1)"
+
+# Laughter
+echo "Files count: $(find /deepstore/datasets/hmi/speechlaugh-corpus/ami/fluent_laughter/segments/chunk_*/lip_segments -type f -name "*-*-*-*-laughter_lip.mp4" | wc -l)"; 
+echo "Total size: $(du -sh /deepstore/datasets/hmi/speechlaugh-corpus/ami/fluent_laughter/segments/chunk_*/lip_segments | cut -f1)"
+
+# ================================================================================================================  
+
+
+
+
+# ================================================================================================================  
+
 # ------------------------------------------------------------------------------------------------
 #                       FOR DISFLUENCY/LAUGHTER ONLY SEGMENTED DATASET
 #               Path: /deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl_laugh/
@@ -73,5 +120,11 @@ echo "Total size: $(du -sh /deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl/v
 # Total size: 104M
 echo "Files count: $(find /deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl/video_segments/dsfl_lips -type f | wc -l)"; 
 echo "Total size: $(du -sh /deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl/video_segments/dsfl_lips | cut -f1)"
+
+# ================================================================================================================  
+
+
+
+
 
 
