@@ -13,6 +13,14 @@ import random
 from requests.exceptions import HTTPError
 import re
 import evaluate
+
+#====================================================================================================
+# Validate Huggingface Audio and Video objects
+#--------------------------------------------------------------------------------------------------
+from utils.hf_video_utils import create_robust_video_filter
+
+
+#====================================================================================================
 #--------------------------------------------------------------------------------------------------
 # Create a HuggingFace dataset from the processed segments (audio, video, and lip videos), 
 #--------------------------------------------------------------------------------------------------
@@ -30,32 +38,16 @@ def av_to_hf_dataset(recordings, dataset_path=None, prefix="ami"):
     
     os.makedirs(dataset_path, exist_ok=True)
     
-    # GENERATE THE DATASET FROM THE RECORDINGS
+    # Create a dataframe from the recordings
     df = pd.DataFrame(recordings)
     
-    # Save metadata as JSON for easier handling during upload
-    metadata_path = os.path.join(dataset_path, 'metadata.jsonl')
-    with open(metadata_path, 'w') as f:
-        for record in recordings:
-            # Create a copy of the record to avoid modifying the original
-            metadata = record.copy()
-            
-            # Store relative paths instead of absolute paths (handle None values)
-            if 'audio' in metadata and metadata['audio'] is not None:
-                metadata['audio'] = os.path.basename(metadata['audio'])
-            if 'video' in metadata and metadata['video'] is not None:
-                metadata['video'] = os.path.basename(metadata['video'])
-            if 'lip_video' in metadata and metadata['lip_video'] is not None:
-                metadata['lip_video'] = os.path.basename(metadata['lip_video'])
-                
-            # Write the metadata as a JSON line
-            f.write(json.dumps(metadata) + '\n')
-    
-    # Create HuggingFace Dataset containing all recordings
+    # Create HuggingFace Dataset from the dataframe
     dataset = Dataset.from_pandas(df)
     
     # Cast audio and video features to HuggingFace Audio and Video
-    # NOTE: Dataset features casting required full path
+    print("\n" + "-"*40)
+    print("Casting to HuggingFace Audio and Video")
+    print("-"*40)
     if 'audio' in dataset.features: 
         dataset = dataset.cast_column('audio', Audio(sampling_rate=16000))
     
@@ -64,30 +56,53 @@ def av_to_hf_dataset(recordings, dataset_path=None, prefix="ami"):
         
     if 'lip_video' in dataset.features:
         dataset = dataset.cast_column('lip_video', Video())
+    
+    # --------------------------------------------------------------------------------------------------
+    # Validate Huggingface Audio and Video objects
+    print("\n" + "-"*40)
+    print("Filter corrupted video objects")
+    print("-"*40)
+    def progress_callback(current, total, valid_count, corrupted_count):
+        if current % 1000 == 0:
+            print(f"   Progress: {current}/{total} ({current/total*100:.1f}%), "
+                  f"Valid: {valid_count}, Corrupted: {corrupted_count}")
+    # Filter corrupted video objects
+    valid_indices, corrupted_files = create_robust_video_filter(
+        dataset,
+        video_column='lip_video',
+        progress_callback=progress_callback
+    )
+    print(f"✅ Validation complete: {len(valid_indices)} valid, {len(corrupted_files)} corrupted")
 
-    # save the dataframe to a csv file
-    # NOTE: The CSV path is relative to the dataset_path, will be: 'data/...` instead of full path
-    # Handle None values properly
-    def safe_path_join(x):
-        if x is None or pd.isna(x):
-            return None
-        return os.path.join('data', os.path.basename(str(x)))
+    # Create a clean dataset with only valid samples
+    if valid_indices:
+        clean_dataset = dataset.select(valid_indices)
+        clean_dataset_path = os.path.join(dataset_path, f'{prefix}-clean')
+        
+        print(f"💾 Saving clean dataset to: {clean_dataset_path}")
+        clean_dataset.save_to_disk(clean_dataset_path)
+
+        # Save the dataframe to a csv file
+        csv_path = os.path.join(clean_dataset_path, f'{prefix}-clean-info.csv')
+        print(f"Saving Clean HuggingFace Dataset to csv file: {csv_path}")
+        clean_dataset.to_csv(csv_path, index=False)
+
+        return clean_dataset
     
-    if 'audio' in df.columns:
-        df['audio'] = df['audio'].apply(safe_path_join)
-    if 'video' in df.columns:
-        df['video'] = df['video'].apply(safe_path_join)
-    if 'lip_video' in df.columns:
-        df['lip_video'] = df['lip_video'].apply(safe_path_join)
-    
-    csv_path = os.path.join(dataset_path, f'{prefix}-segmented-info.csv')
-    print(f"Saving dataframe to csv file: {csv_path}")
-    df.to_csv(csv_path, index=False)
-    
-    # Save the dataset
-    print(f"Saving dataset to {dataset_path}")
-    dataset.save_to_disk(dataset_path)
-    print(f"HuggingFace dataset saved: {dataset}")
+    else:
+        print(f"No valid samples found. Saving original dataset to {dataset_path}")
+        dataset.save_to_disk(dataset_path)
+        print(f"Original (not filtered) HuggingFace dataset saved: {dataset}")
+
+        # Save the dataframe to a csv file
+        csv_path = os.path.join(dataset_path, f'{prefix}-original-info.csv')
+        print(f"Saving original dataframe to csv file: {csv_path}")
+        dataset.to_csv(csv_path, index=False)
+
+        return dataset
+    # --------------------------------------------------------------------------------------------------
+
+
 
 #====================================================================================================
 

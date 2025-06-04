@@ -326,7 +326,7 @@ def safe_load_video_feats_from_hf_object(video_object: Any, train: bool = False,
         return None
 
 
-def create_robust_video_filter(dataset, progress_callback=None):
+def create_robust_video_filter(dataset, video_column='video', progress_callback=None):
     """
     Create a robust filter function that identifies valid video samples.
     
@@ -345,7 +345,7 @@ def create_robust_video_filter(dataset, progress_callback=None):
     for idx in tqdm(range(len(dataset)), desc="Validating videos"):
         try:
             sample = dataset[idx]
-            video_object = sample.get('lip_video')
+            video_object = sample.get(video_column, 'lip_video')
             
             if video_object is None:
                 corrupted_files.append({
@@ -377,7 +377,7 @@ def create_robust_video_filter(dataset, progress_callback=None):
             file_info = "unknown"
             try:
                 sample = dataset[idx]
-                video_object = sample.get('lip_video')
+                video_object = sample.get(video_column, 'lip_video')
                 if video_object:
                     file_info = extract_video_path_from_hf_object(video_object) or str(type(video_object))
             except:
