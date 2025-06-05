@@ -1,7 +1,7 @@
 # Configuration for processing laughter dataset
-csv_path: "/deepstore/datasets/hmi/speechlaugh-corpus/ami/fluent_laughter/ami_laugh_markers.csv"
-output_dir: "/deepstore/datasets/hmi/speechlaugh-corpus/ami/fluent_laughter/segments"
-dataset_path: "/home/s2587130/AVSL/data/ami/fluent_laughter/dataset"
+csv_path: "/deepstore/datasets/hmi/speechlaugh-corpus/ami/ami_laughter/fluent_laughter/fluent_laugh_markers.csv"
+output_dir: "/deepstore/datasets/hmi/speechlaugh-corpus/ami/ami_laughter/fluent_laughter/segments"
+dataset_path: "/deepstore/datasets/hmi/speechlaugh-corpus/ami/ami_laughter/fluent_laughter/dataset"
 
 # Processing configuration
 extract_lip_videos: True

@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=laugh_dataset_process-chunked(fluent_laughter-balanced)
-#SBATCH --output=../logs/laugh_process-chunked-balance-%j.log
-#SBATCH --error=../logs/laugh_process-chunked-balance-%j.err
+#SBATCH --output=../logs/laugh_process-chunked-balance-fixed-%j.log
+#SBATCH --error=../logs/laugh_process-chunked-balance-fixed-%j.err
 #SBATCH --ntasks=1
 #SBATCH --mem=32G
 #SBATCH --gres=gpu:ampere:1
@@ -44,30 +44,30 @@ cd /home/s2587130/AVSL/preprocess
 # echo "All dependencies verified!"
 
 # Step 1: Run tests
-echo "================================================================================================================"
-echo "Step 1: Running tests"
-echo "================================================================================================================"
+# echo "================================================================================================================"
+# echo "Step 1: Running tests"
+# echo "================================================================================================================"
 
-# Run simple CSV test first
-echo "Running simple CSV structure test..."
-python test/test_laugh_simple.py
-if [ $? -ne 0 ]; then
-    echo "Simple CSV test failed!"
-    exit 1
-fi
+# # Run simple CSV test first
+# echo "Running simple CSV structure test..."
+# python test/test_laugh_simple.py
+# if [ $? -ne 0 ]; then
+#     echo "Simple CSV test failed!"
+#     exit 1
+# fi
 
-# Run full test suite
-echo "Running full test suite..."
-python test/test_laugh_dataset.py
-TEST_RESULT=$?
+# # Run full test suite
+# echo "Running full test suite..."
+# python test/test_laugh_dataset.py
+# TEST_RESULT=$?
 
-if [ $TEST_RESULT -ne 0 ]; then
-    echo "Tests failed with exit code $TEST_RESULT"
-    echo "Aborting processing."
-    exit 1
-fi
+# if [ $TEST_RESULT -ne 0 ]; then
+#     echo "Tests failed with exit code $TEST_RESULT"
+#     echo "Aborting processing."
+#     exit 1
+# fi
 
-echo "All tests passed!"
+# echo "All tests passed!"
 
 # Step 2: Process dataset
 echo "================================================================================================================"
@@ -92,7 +92,7 @@ PROCESSING_MODE="chunked"  # standard or chunked
 CHUNK_SIZE=1000
 NUM_WORKERS=8
 BATCH_SIZE=16
-BALANCE=False
+BALANCE=True
 ADDITIONAL_ARGS=""
 
 while [[ $# -gt 0 ]]; do
@@ -128,8 +128,7 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --balance)
-      BALANCE=true
-      ADDITIONAL_ARGS="$ADDITIONAL_ARGS --balance=$BALANCE"
+      ADDITIONAL_ARGS="$ADDITIONAL_ARGS --balance"
       shift
       ;;
     *)

@@ -27,6 +27,8 @@ from preprocess.audio_process import batch_segment_audio
 from preprocess.video_process import batch_segment_video, extract_and_save_lip_video, batch_process_lip_videos
 from utils import av_to_hf_dataset, av_to_hf_dataset_with_shards
 
+punctuations = [".", "?", "!", ":", ";", ",", "(", ")", "[", "]", "{", "}", "~", "`"]
+
 
 def log_disk_space(path_to_check, label):
     try:
@@ -53,10 +55,14 @@ def load_laughter_markers(csv_path, balance=False):
     """
     print(f"Loading laughter markers from {csv_path}")
     df = pd.read_csv(csv_path)
+
+    # Filter out rows where the word is punctuation
+    df = df[~df['word'].isin(punctuations)]
     
     # Convert time columns to float
     df['start_time'] = pd.to_numeric(df['start_time'], errors='coerce')
     df['end_time'] = pd.to_numeric(df['end_time'], errors='coerce')
+
     
     # Filter out invalid rows
     df = df.dropna(subset=['start_time', 'end_time'])
@@ -311,10 +317,8 @@ def _process_media_segments(
                 )
                 
                 # Map results back to segment IDs
-                for i, (success, lip_path) in enumerate(results):
-                    if i < len(segment_ids_ordered):
-                        seg_id = segment_ids_ordered[i]
-                        lip_results[seg_id] = (success, lip_path)
+                for seg_id, (success, lip_path) in results.items():
+                    lip_results[seg_id] = (success, lip_path)
                         
                 successful_lip = successful_count
                 
@@ -390,23 +394,20 @@ def _create_dataset_records(segment_info, audio_results, video_results, lip_resu
             success, path = audio_results[seg_id]
             if success and path and os.path.exists(path):
                 record['audio'] = path
-                record['audio_path'] = path
             else:
                 record['audio'] = None
-                record['audio_path'] = None
         else:
             record['audio'] = None
-            record['audio_path'] = None
         
         # Add video information
         if seg_id in video_results:
             success, path = video_results[seg_id]
             if success and path and os.path.exists(path):
-                record['video_path'] = path
+                record['video'] = path
             else:
-                record['video_path'] = None
+                record['video'] = None
         else:
-            record['video_path'] = None
+            record['video'] = None
         
         # Add lip video information
         if seg_id in lip_results:
@@ -444,7 +445,7 @@ def _create_huggingface_dataset(dataset_records, dataset_path, use_shards=True, 
     for record in dataset_records:
         # Check if record has at least one valid media file
         has_audio = record.get('audio') is not None
-        has_video = record.get('video_path') is not None  
+        has_video = record.get('video') is not None  
         has_lip = record.get('lip_video') is not None
         
         if has_audio or has_video or has_lip:
@@ -458,14 +459,14 @@ def _create_huggingface_dataset(dataset_records, dataset_path, use_shards=True, 
                 av_to_hf_dataset_with_shards(
                     valid_records,
                     dataset_path=dataset_path,
-                    prefix="ami_laughter",
+                    prefix="fluent_laughter",
                     files_per_shard=files_per_shard
                 )
             else:
                 av_to_hf_dataset(
                     valid_records,
                     dataset_path=dataset_path,
-                    prefix="ami_laughter"
+                    prefix="fluent_laughter"
                 )
             
             print(f"Dataset saved to {dataset_path}")
@@ -495,7 +496,7 @@ def _print_statistics(dataset_records):
     
     print(f"\nMedia availability:")
     print(f"Has audio: {df_records['audio'].notna().sum()} ({df_records['audio'].notna().sum()/len(df_records)*100:.1f}%)")
-    print(f"Has video: {df_records['video_path'].notna().sum()} ({df_records['video_path'].notna().sum()/len(df_records)*100:.1f}%)")
+    print(f"Has video: {df_records['video'].notna().sum()} ({df_records['video'].notna().sum()/len(df_records)*100:.1f}%)")
     print(f"Has lip video: {df_records['lip_video'].notna().sum()} ({df_records['lip_video'].notna().sum()/len(df_records)*100:.1f}%)")
     
     print(f"\nDuration statistics:")
@@ -569,17 +570,27 @@ def process_laughter_dataset(
         num_workers,
         max_tasks_per_child
     )
-    
+    print(f"-"*30)
+    print(f"PROCESS MEDIA SEGMENTS STATISTICS:")
+    print(f"Processed {successful_audio}/{len(audio_results)} audio segments (Success rate: {successful_audio/len(audio_results)*100:.1f}%)")
+    print(f"Processed {successful_video}/{len(video_results)} video segments (Success rate: {successful_video/len(video_results)*100:.1f}%)")
+    print(f"Processed {successful_lip}/{len(lip_results)} lip video segments (Success rate: {successful_lip/len(lip_results)*100:.1f}%)")
+    print(f"Total successful segments: {successful_audio + successful_video + successful_lip}")
+    print(f"-"*30)
     # Create dataset records
     dataset_records = _create_dataset_records(segment_info, audio_results, video_results, lip_results)
     
+    print(f"-"*30)
+    print(f"CREATE DATASET RECORDS STATISTICS:")
     print(f"Created {len(dataset_records)} dataset records")
+
     
     # Save dataset records to JSON
     records_path = os.path.join(output_dir, 'dataset_records.json')
     with open(records_path, 'w') as f:
         json.dump(dataset_records, f, indent=2)
     print(f"Saved dataset records to {records_path}")
+    print(f"-"*30)
     
     # Create HuggingFace dataset
     if dataset_path:
@@ -589,7 +600,6 @@ def process_laughter_dataset(
             use_shards, 
             files_per_shard
         )
-    
     # Print summary statistics
     _print_statistics(dataset_records)
     
@@ -812,7 +822,7 @@ def process_laughter_dataset_in_chunks(
             # Calculate chunk statistics
             chunk_time = time.time() - chunk_start_time
             successful_audio = sum(1 for r in chunk_records if r.get('audio') is not None)
-            successful_video = sum(1 for r in chunk_records if r.get('video_path') is not None)
+            successful_video = sum(1 for r in chunk_records if r.get('video') is not None)
             successful_lip = sum(1 for r in chunk_records if r.get('lip_video') is not None)
             
             # Update overall statistics
@@ -938,6 +948,8 @@ if __name__ == "__main__":
                            help='Process dataset in chunks with checkpointing')
         parser.add_argument('--chunk_size', type=int,
                            help='Number of segments per chunk (for chunked processing)')
+        parser.add_argument('--balance', action='store_true',
+                           help='Balance the dataset by number of segments per disfluency type')
         parser.add_argument('--num_workers', type=int,
                            help='Number of worker processes for parallel lip extraction (default: auto)')
         parser.add_argument('--use_parallel', action='store_true',
@@ -983,7 +995,7 @@ if __name__ == "__main__":
         parser.add_argument('--dataset_path', type=str,
                            default="/home/s2587130/AVSL/data/ami_laughter/dataset",
                            help='Path to save HuggingFace dataset')
-        parser.add_argument('--balance', action='store_true', default=False,
+        parser.add_argument('--balance', action='store_true', default=True,
                            help='Balance the dataset by number of segments per disfluency type')
         parser.add_argument('--extract_lip_videos', action='store_true', default=True,
                            help='Extract lip videos from video segments')
@@ -1026,7 +1038,7 @@ if __name__ == "__main__":
     # --------------------------------------------------------------------------------------------
     # Print configuration ------------------------------------------------------------------------
     print("="*50)
-    print("AMI Laughter Dataset Processing")
+    print("AMI Laughter Dataset Processing Parameters:")
     print("="*50)
     print(f"CSV path: {config['csv_path']}")
     print(f"Output directory: {config['output_dir']}")
