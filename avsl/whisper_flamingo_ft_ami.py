@@ -15,11 +15,8 @@ try:
     setup_memory_optimizations()
 except ImportError:
     # Fallback to direct environment variable setting if utils not available
-    print("Warning: Could not import memory_utils. Using fallback memory optimizations.")
-    # CRITICAL MEMORY OPTIMIZATIONS - Must be set before importing PyTorch
-    os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
-    os.environ['CUDA_LAUNCH_BLOCKING'] = '0'  # Disable for better performance
-    os.environ['TORCH_CUDNN_DISABLE'] = '0'  # Keep cuDNN enabled for performance
+    print("Warning: Could not import memory_utils")
+
 
 #=============================================================================================================================================================
 #                                           PATH SETUP AND IMPORTING UTILITIES
@@ -535,8 +532,8 @@ class WhisperFlamingoModule(LightningModule):
         dec_input_ids = batch["dec_input_ids"].long()
         padding_mask = batch["padding_mask"]
 
-        features_av, x_norm, x_v_norm_pre, x_v_norm_post, x_v = self.model.encoder(input_ids, video, track_norm=True,
-                                                                              padding_mask=padding_mask)
+        features_av, x_v = self.model.encoder(input_ids, video, track_norm=False,
+                                              padding_mask=padding_mask)
         out_av = self.model.decoder(dec_input_ids, features_av, xv=x_v)
 
         # Original script had separate A-only and V-only paths for validation if add_gated_x_attn == 0
@@ -618,12 +615,18 @@ class WhisperFlamingoModule(LightningModule):
         
         # if dataloader_idx == log_prefix_map.inverse.get('val_clean', 3): # Log norms only for clean validation set
         # Simplified: log norms if it's the validation set (index 1 in the new map)
-        if dataloader_idx == 1: # Corresponds to 'val' in the new log_prefix_map
-            self.log("val/x_norm", x_norm, prog_bar=False, sync_dist=True, add_dataloader_idx=False)
-            self.log("val/x_v_norm_pre", x_v_norm_pre, prog_bar=False, sync_dist=True, add_dataloader_idx=False)
-            self.log("val/x_v_norm_post", x_v_norm_post, prog_bar=False, sync_dist=True, add_dataloader_idx=False)
+        # if dataloader_idx == 1: # Corresponds to 'val' in the new log_prefix_map
+        #     self.log("val/x_norm", x_norm, prog_bar=False, sync_dist=True, add_dataloader_idx=False)
+        #     self.log("val/x_v_norm_pre", x_v_norm_pre, prog_bar=False, sync_dist=True, add_dataloader_idx=False)
+        #     self.log("val/x_v_norm_post", x_v_norm_post, prog_bar=False, sync_dist=True, add_dataloader_idx=False)
         
         return # For validation_step, no loss needs to be returned for optimization
+
+    def on_validation_batch_end(self, outputs, batch, batch_idx, dataloader_idx=0):
+        # Clear CUDA cache after each validation batch to prevent OOM
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        gc.collect()
 
     def configure_optimizers(self):
         model = self.model
@@ -716,16 +719,10 @@ class WhisperFlamingoModule(LightningModule):
         return self._create_dataloader(self.train_hf_dataset, self.train_audio_lengths, train_mode=True)
 
     def val_dataloader(self):
-        # Returns a list of dataloaders for multiple validation sets
-        # Order: noisy, clean (to match log_prefix_map if used)
-        # val_noisy_loader = self._create_dataloader(self.val_hf_dataset, self.val_audio_lengths, train_mode=False, noise_override_prob=1.0)
         val_clean_loader = self._create_dataloader(self.val_hf_dataset, self.val_audio_lengths, train_mode=False)
-        return [val_clean_loader] # New order for log_prefix_map consistency, only clean
+        return [val_clean_loader] 
 
     def test_dataloader(self):
-        # Returns a list of dataloaders for multiple test sets
-        # Order: noisy, clean
-        # test_noisy_loader = self._create_dataloader(self.test_hf_dataset, self.test_audio_lengths, train_mode=False, noise_override_prob=1.0)
         test_clean_loader = self._create_dataloader(self.test_hf_dataset, self.test_audio_lengths, train_mode=False)
         return [test_clean_loader]
 
@@ -739,9 +736,30 @@ if __name__ == "__main__":
         sys.exit(1)
         
     cfg_yaml = sys.argv[1]
+    print(f"Loading configuration from: {cfg_yaml}")
+    
+    if not os.path.exists(cfg_yaml):
+        print(f"ERROR: Configuration file not found: {cfg_yaml}")
+        sys.exit(1)
+        
     with open(cfg_yaml, 'r') as file:
         dct = yaml.safe_load(file)
         cfg = types.SimpleNamespace(**dct)
+    
+    print(f"✅ Configuration loaded successfully")
+
+    # --- OOM Hotfix: Override configuration for memory saving ---
+    original_eval_batch_size = getattr(cfg, 'eval_batch_size', 'N/A')
+    original_sync_batchnorm = getattr(cfg, 'sync_batchnorm', 'N/A')
+    
+    cfg.eval_batch_size = 1
+    cfg.sync_batchnorm = False
+    
+    print("\n⚠️  OOM HOTFIX APPLIED ========================================================")
+    print(f"  - Overriding eval_batch_size: {original_eval_batch_size} -> {cfg.eval_batch_size}")
+    print(f"  - Overriding sync_batchnorm: {original_sync_batchnorm} -> {cfg.sync_batchnorm}")
+    print("============================================================================\n")
+
 
     print("\nConfiguration ================================================================")
     for k, v in vars(cfg).items():
@@ -753,9 +771,6 @@ if __name__ == "__main__":
         "train_data_path": getattr(cfg, 'train_data_path', None),
         "val_data_path": getattr(cfg, 'val_data_path', None),
         "test_data_path": getattr(cfg, 'test_data_path', None),
-        "train_data_path_original": getattr(cfg, 'train_data_path_original', None),
-        "val_data_path_original": getattr(cfg, 'val_data_path_original', None),
-        "test_data_path_original": getattr(cfg, 'test_data_path_original', None),
     }
     missing_essential_path = False
     for name, path_val in essential_paths_from_config.items():
@@ -778,6 +793,13 @@ if __name__ == "__main__":
     print(f"✓ Audio max length for dataset (pad_or_trim): {dataset_audio_max_len_cfg} samples")
 
 
+    # Ensure output directories exist
+    os.makedirs(cfg.log_output_dir, exist_ok=True)
+    os.makedirs(cfg.check_output_dir, exist_ok=True)
+    print(f"✅ Created/verified output directories:")
+    print(f"  Log output: {cfg.log_output_dir}")
+    print(f"  Checkpoint output: {cfg.check_output_dir}")
+    
     tflogger, checkpoint_callback, callback_list = setup_logging_and_checkpoint(cfg.log_output_dir, 
                                                                                 cfg.check_output_dir, 
                                                                                 cfg.train_name, 
@@ -787,6 +809,7 @@ if __name__ == "__main__":
     # Load Hugging Face datasets
     print("\nLoading datasets ============================================================")
     
+    #FIXME: IS THIS NEEDED?
     def verify_path_exists(path, description):
         """Verify a path exists and provide a helpful error if it doesn't."""
         if not os.path.exists(path):
@@ -817,56 +840,49 @@ if __name__ == "__main__":
             print(f"⚠️ Warning: Error inspecting {name} dataset sample: {e}")
     
     # Function to filter dataset videos
-    def filter_dataset_videos(dataset, dataset_name):
-        """Filter dataset to remove corrupted videos."""
-        print(f"\n📹 Processing {dataset_name} dataset ({len(dataset)} samples)...")
+    # def filter_dataset_videos(dataset, dataset_name):
+    #     """Filter dataset to remove corrupted videos."""
+    #     print(f"\n📹 Processing {dataset_name} dataset ({len(dataset)} samples)...")
         
-        # Use robust video filtering
-        valid_indices, corrupted_files = create_robust_video_filter(dataset)
+    #     # Use robust video filtering
+    #     valid_indices, corrupted_files = create_robust_video_filter(dataset)
         
-        if corrupted_files:
-            print(f"🚨 Found {len(corrupted_files)} corrupted videos in {dataset_name}:")
+    #     if corrupted_files:
+    #         print(f"🚨 Found {len(corrupted_files)} corrupted videos in {dataset_name}:")
             
-            # Show corruption reasons summary
-            reasons = {}
-            for corrupted in corrupted_files:
-                reason = corrupted['reason'].split(':')[0]
-                reasons[reason] = reasons.get(reason, 0) + 1
+    #         # Show corruption reasons summary
+    #         reasons = {}
+    #         for corrupted in corrupted_files:
+    #             reason = corrupted['reason'].split(':')[0]
+    #             reasons[reason] = reasons.get(reason, 0) + 1
             
-            for reason, count in reasons.items():
-                print(f"   {reason}: {count} files")
+    #         for reason, count in reasons.items():
+    #             print(f"   {reason}: {count} files")
             
-            # Show some example files
-            if len(corrupted_files) <= 5:
-                print(f"   Corrupted files:")
-                for corrupted in corrupted_files:
-                    print(f"     Index {corrupted['index']}: {corrupted['file']}")
-            else:
-                print(f"   Example corrupted files (first 3):")
-                for corrupted in corrupted_files[:3]:
-                    print(f"     Index {corrupted['index']}: {corrupted['file']}")
-                print(f"     ... and {len(corrupted_files) - 3} more")
+    #         # Show some example files
+    #         if len(corrupted_files) <= 5:
+    #             print(f"   Corrupted files:")
+    #             for corrupted in corrupted_files:
+    #                 print(f"     Index {corrupted['index']}: {corrupted['file']}")
+    #         else:
+    #             print(f"   Example corrupted files (first 3):")
+    #             for corrupted in corrupted_files[:3]:
+    #                 print(f"     Index {corrupted['index']}: {corrupted['file']}")
+    #             print(f"     ... and {len(corrupted_files) - 3} more")
         
-        if valid_indices:
-            clean_dataset = dataset.select(valid_indices)
-            print(f"✅ {dataset_name} clean dataset: {len(clean_dataset)} samples ({len(clean_dataset)/len(dataset)*100:.1f}% retention)")
-            return clean_dataset
-        else:
-            print(f"❌ No valid videos found in {dataset_name} dataset!")
-            raise ValueError(f"No valid videos in {dataset_name} dataset")
-    
-    # Define save paths upfront with validation
-    save_dir = os.path.join(project_root, 'data', 'ami')
-    train_clean_path = os.path.join(save_dir, "train_clean")
-    val_clean_path = os.path.join(save_dir, "val_clean")
-    test_clean_path = os.path.join(save_dir, "test_clean")
+    #     if valid_indices:
+    #         clean_dataset = dataset.select(valid_indices)
+    #         print(f"✅ {dataset_name} clean dataset: {len(clean_dataset)} samples ({len(clean_dataset)/len(dataset)*100:.1f}% retention)")
+    #         return clean_dataset
+    #     else:
+    #         print(f"❌ No valid videos found in {dataset_name} dataset!")
+    #         raise ValueError(f"No valid videos in {dataset_name} dataset")
     
     # First try: Load validated datasets
     datasets_loaded = False
     try:
         print("🔍 TRY: Loading validated videos (already processed)...")
-        
-        # Check if paths exist before attempting to load
+
         paths_valid = (
             verify_path_exists(cfg.train_data_path, "Train") and
             verify_path_exists(cfg.val_data_path, "Validation") and
@@ -876,8 +892,7 @@ if __name__ == "__main__":
         if not paths_valid:
             print("❌ One or more validated dataset paths do not exist. Trying fallback approach.")
             raise FileNotFoundError("One or more validated dataset paths do not exist")
-            
-        # Load datasets
+        
         print(f"Loading validated train dataset from: {cfg.train_data_path}")
         train_hf_ds = load_from_disk(cfg.train_data_path)
         print(f"✅ Validated train dataset loaded: {len(train_hf_ds)} samples")
@@ -890,15 +905,12 @@ if __name__ == "__main__":
         test_hf_ds = load_from_disk(cfg.test_data_path)
         print(f"✅ Validated test dataset loaded: {len(test_hf_ds)} samples")
         
-        # Debug dataset structure
         debug_dataset_sample(train_hf_ds, "Train")
         
-        # All datasets successfully loaded
         datasets_loaded = True
     
     except FileNotFoundError as e:
         print(f"❌ Path error loading validated datasets: {e}")
-        # Will continue to fallback approach
     
     except ImportError as e:
         print(f"❌ Import error loading datasets: {e}")
@@ -908,133 +920,20 @@ if __name__ == "__main__":
     except ValueError as e:
         print(f"❌ Value error loading datasets: {e}")
         print("This may be due to corrupted dataset files.")
-        # Will continue to fallback approach
         
     except Exception as e:
         print(f"❌ Unexpected error loading validated datasets: {e}")
         print(f"Error type: {type(e).__name__}")
-        # Will continue to fallback approach
-    
-    # Fallback approach: Load original datasets and filter them
-    if not datasets_loaded:
-        try:
-            print("\n🔍 TRY FALLBACK APPROACH:")
-            print("Step 1: Loading original videos (not processed)...")
-            
-            # Check if original paths exist before attempting to load
-            paths_valid = (
-                verify_path_exists(cfg.train_data_path_original, "Train original") and
-                verify_path_exists(cfg.val_data_path_original, "Validation original") and
-                verify_path_exists(cfg.test_data_path_original, "Test original")
-            )
-            
-            if not paths_valid:
-                raise FileNotFoundError("One or more original dataset paths do not exist")
-            
-            # Load original datasets
-            train_hf_ds = load_from_disk(cfg.train_data_path_original)
-            val_hf_ds = load_from_disk(cfg.val_data_path_original)
-            test_hf_ds = load_from_disk(cfg.test_data_path_original)
-            
-            print(f"✅ Original train dataset loaded: {len(train_hf_ds)} samples")
-            print(f"✅ Original validation dataset loaded: {len(val_hf_ds)} samples")
-            print(f"✅ Original test dataset loaded: {len(test_hf_ds)} samples")
-    
-            print("Step 2: Robust video validation and filtering =================================================")
-            print("🔍 Validating videos to identify and remove corrupted files...")
-            print("⚠️  This may take a while but ensures stable training...")
-        
-            # Apply robust video filtering
-            try:
-                train_hf_ds = filter_dataset_videos(train_hf_ds, "train")
-            except Exception as e:
-                print(f"❌ Error filtering train dataset: {e}")
-                print("Attempting to continue with other datasets...")
-            
-            try:
-                val_hf_ds = filter_dataset_videos(val_hf_ds, "validation")
-            except Exception as e:
-                print(f"❌ Error filtering validation dataset: {e}")
-                print("Attempting to continue with other datasets...")
-                
-            try:
-                test_hf_ds = filter_dataset_videos(test_hf_ds, "test")
-            except Exception as e:
-                print(f"❌ Error filtering test dataset: {e}")
-                print("Attempting to continue with other datasets...")
-    
-            print("\nDataset sizes after robust filtering ------------------")
-            print(f"Train dataset size: {len(train_hf_ds)} samples")
-            print(f"Validation dataset size: {len(val_hf_ds)} samples")
-            print(f"Test dataset size: {len(test_hf_ds)} samples")
-    
-            # Save the filtered datasets
-            print("\nSaving filtered datasets ------------------------------")
-            os.makedirs(save_dir, exist_ok=True)
-            
-            try:
-                train_hf_ds.save_to_disk(train_clean_path)
-                print(f"✅ Saved filtered train dataset to {train_clean_path}")
-            except Exception as e:
-                print(f"❌ Error saving filtered train dataset: {e}")
-                
-            try:
-                val_hf_ds.save_to_disk(val_clean_path)
-                print(f"✅ Saved filtered validation dataset to {val_clean_path}")
-            except Exception as e:
-                print(f"❌ Error saving filtered validation dataset: {e}")
-                
-            try:
-                test_hf_ds.save_to_disk(test_clean_path)
-                print(f"✅ Saved filtered test dataset to {test_clean_path}")
-            except Exception as e:
-                print(f"❌ Error saving filtered test dataset: {e}")
-                
-            datasets_loaded = True
-        
-        except FileNotFoundError as e:
-            print(f"❌ FATAL ERROR: {e}")
-            print("Both primary and fallback dataset paths are missing. Cannot continue.")
-            sys.exit(1)
-            
-        except ImportError as e:
-            print(f"❌ FATAL ERROR: Import error loading original datasets: {e}")
-            print("This may be due to a version mismatch in the datasets library.")
-            sys.exit(1)
-            
-        except Exception as e:
-            print(f"❌ FATAL ERROR: Unexpected error in fallback approach: {e}")
-            print(f"Error type: {type(e).__name__}")
-            import traceback
-            traceback.print_exc()
-            sys.exit(1)
     
     # Final verification
     if not datasets_loaded or len(train_hf_ds) == 0:
         print("❌ FATAL ERROR: Failed to load datasets or train dataset is empty")
         sys.exit(1)
-    
     print("\n===============================================================================================\n")
 
-
-    # 2. Filter by duration (Second Filtering) ------------------------------------------------------------
-    print("\n 2. Filter by duration (Second Filtering) ======================================================")
-    max_duration_filter_sec = getattr(cfg, 'max_duration_filter_seconds', 30.0) # Max 30s by default
-    
-    # Filter by duration first (before robust video validation)
-    print(f"\nFiltering by duration (max {max_duration_filter_sec}s)--------------------")
-    original_train_size = len(train_hf_ds)
-    original_val_size = len(val_hf_ds) 
-    original_test_size = len(test_hf_ds)
-    
-    train_hf_ds = train_hf_ds.filter(lambda x: x['duration'] <= max_duration_filter_sec)
-    val_hf_ds = val_hf_ds.filter(lambda x: x['duration'] <= max_duration_filter_sec)
-    test_hf_ds = test_hf_ds.filter(lambda x: x['duration'] <= max_duration_filter_sec)
-    
-    print(f"After duration filtering:")
-    print(f"  Train: {original_train_size} → {len(train_hf_ds)} ({len(train_hf_ds)/original_train_size*100:.1f}%)")
-    print(f"  Val: {original_val_size} → {len(val_hf_ds)} ({len(val_hf_ds)/original_val_size*100:.1f}%)")
-    print(f"  Test: {original_test_size} → {len(test_hf_ds)} ({len(test_hf_ds)/original_test_size*100:.1f}%)")
+    print(f"Train dataset size: {len(train_hf_ds)}")
+    print(f"Validation dataset size: {len(val_hf_ds)}")
+    print(f"Test dataset size: {len(test_hf_ds)}")
     print("\n===============================================================================================\n")
 
     # Check for empty datasets after all filtering
@@ -1081,16 +980,52 @@ if __name__ == "__main__":
     pre_train_validate_dataloaders = model.test_dataloader()
 
     print("\nCreating Trainer ==================================================================================")
+    
+    # GPU Detection and Configuration
+    print("🔍 GPU Detection and Configuration: ================================================================")
+    print(f"PyTorch CUDA available: {torch.cuda.is_available()}")
+    
+    # Check environment variables for GPU allocation
+    cuda_visible_devices = os.environ.get('CUDA_VISIBLE_DEVICES', 'Not set')
+    slurm_gpus = os.environ.get('SLURM_GPUS', 'Not set')
+    print(f"CUDA_VISIBLE_DEVICES: {cuda_visible_devices}")
+    print(f"SLURM_GPUS: {slurm_gpus}")
+    
+    if torch.cuda.is_available():
+        print(f"CUDA device count: {torch.cuda.device_count()}")
+        print(f"Current CUDA device: {torch.cuda.current_device()}")
+        print(f"CUDA device name: {torch.cuda.get_device_name()}")
+        
+        # Test basic GPU operations
+        try:
+            test_tensor = torch.randn(2, 2).cuda()
+            print("✅ GPU tensor creation successful")
+            accelerator_to_use = getattr(cfg, 'accelerator', 'gpu')
+            devices_to_use = getattr(cfg, 'num_devices', 1)
+        except Exception as e:
+            print(f"❌ GPU tensor creation failed: {e}")
+            print("⚠️ Falling back to CPU despite CUDA being available")
+            accelerator_to_use = 'cpu'
+            devices_to_use = 1
+    else:
+        print("⚠️ CUDA not available, falling back to CPU")
+        print("Note: Training on CPU will be extremely slow for this model size")
+        accelerator_to_use = 'cpu'
+        devices_to_use = 1
+    
+    print(f"Using accelerator: {accelerator_to_use}, devices: {devices_to_use}")
+    print("\n===============================================================================================\n")
+    
     trainer = Trainer(
         precision=getattr(cfg, 'precision', 16), # Default to 16
         strategy=strategy,
-        accelerator="gpu", # Hardcoded, could be from cfg
+        accelerator=accelerator_to_use,
         max_steps=cfg.num_train_steps,
         accumulate_grad_batches=cfg.gradient_accumulation_steps,
         logger=tflogger,
         callbacks=callback_list,
         num_sanity_val_steps=getattr(cfg, 'num_sanity_val_steps', 0),
-        devices=cfg.num_devices,
+        devices=devices_to_use,
         val_check_interval=int(cfg.validate_every_n_batches * cfg.gradient_accumulation_steps),
         check_val_every_n_epoch=None,
         reload_dataloaders_every_n_epochs=getattr(cfg, 'reload_dataloaders_every_n_epochs', 1),

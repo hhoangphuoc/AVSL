@@ -1,14 +1,10 @@
 train_name: whisper_flamingo_ft_ami
 
 # Data paths for Hugging Face datasets (must be loadable by load_from_disk)
-# NOTE: This is the path to the validated videos
-train_data_path: "/home/s2587130/AVSL/data/ami/av_hubert/train_clean"  
-val_data_path: "/home/s2587130/AVSL/data/ami/av_hubert/validation_clean"
-test_data_path: "/home/s2587130/AVSL/data/ami/av_hubert/test_clean"
-# NOTE: This is the path to the original videos 
-train_data_path_original: "/home/s2587130/AVSL/data/ami/av_hubert/train"
-val_data_path_original: "/home/s2587130/AVSL/data/ami/av_hubert/validation"
-test_data_path_original: "/home/s2587130/AVSL/data/ami/av_hubert/test"
+# NOTE: This is the path to the validated videos - FIXME: uncomment later after the clean dataset is splitted
+train_data_path: "/home/s2587130/AVSL/data/ami/ami_clean/train"  
+val_data_path: "/home/s2587130/AVSL/data/ami/ami_clean/val"
+test_data_path: "/home/s2587130/AVSL/data/ami/ami_clean/test"
 
 # Max audio length for LengthBatchSampler (in samples, e.g., 15s * 16000 = 240000)
 # This is different from dataset_audio_max_length for pad_or_trim
@@ -22,6 +18,7 @@ max_duration_filter_seconds: 20.0  # Reduced from 30.0 to match dataset_audio_ma
 
 text_max_length: 350 # Max text length (not directly used by AmiVideoHFDataset, but good for reference)
 accelerator: auto
+# accelerator: gpu
 weight_decay: 0.01
 adam_epsilon: 1.0e-8
 num_worker: 8
