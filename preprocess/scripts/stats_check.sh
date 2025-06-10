@@ -59,11 +59,6 @@ echo "Total size: $(du -sh /home/s2587130/AVSL/data/ami/ami_clean/audio_segments
 # Directory: /deepstore/datasets/hmi/speechlaugh-corpus/ami/fluency_laughter/
 # ------------------------------------------------------------------------------------------------
 
-# Checking size of lips video segments for each type of fluency/laughter
-# OUTPUT:
-# Files count: 80,285
-# Total size: 13G 
-
 # Fluency
 echo "Files count: $(find /deepstore/datasets/hmi/speechlaugh-corpus/ami/fluent_laughter/segments/chunk_*/lip_segments -type f -name "*-*-*-*-fluent_lip.mp4" | wc -l)"; 
 echo "Total size: $(du -sh /deepstore/datasets/hmi/speechlaugh-corpus/ami/fluent_laughter/segments/chunk_*/lip_segments | cut -f1)"
