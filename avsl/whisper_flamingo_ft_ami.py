@@ -1,5 +1,6 @@
 import os
 import sys
+import jiwer
 
 # Add project root to path to ensure utils are importable
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -117,7 +118,7 @@ from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.strategies import DDPStrategy
 from tqdm import tqdm
 from datasets import load_from_disk # For loading Hugging Face datasets
-
+import jiwer
 
 from whisper_flamingo.spec_augment import spec_augment # Keep if AmiVideoHFDataset uses it directly or via config
 
@@ -229,6 +230,26 @@ class AmiVideoHFDataset(torch.utils.data.Dataset):
 
         # 2. Process Text --- WHISPER DECODER ------------------------------------------------------------
         text = item['transcript']
+
+        # remove underscore from text
+        text = text.replace("_", "") #eg: This is L_C_D -> This is LCD
+        # preprocess text
+        text_transformation = jiwer.Compose([
+            jiwer.ExpandCommonEnglishContractions(),
+            jiwer.SubstituteWords({
+                "'cause": "because",
+                "cuz": "because",
+                "c'mon": "come on"
+            }),
+            jiwer.RemovePunctuation(),
+            jiwer.RemoveMultipleSpaces(),
+            jiwer.Strip(),
+            jiwer.ToLowerCase()
+        ])
+
+        # Normalize text: lowercase and standardize laugh tokens
+        text = text_transformation(text)
+
         # For now, we'll keep laugh tokens as text (can be processed later if needed)
         # text = text.replace("[laugh]", " laugh ").replace("(laugh)", " laugh ")
 
@@ -250,8 +271,8 @@ class AmiVideoHFDataset(torch.utils.data.Dataset):
         video_object = item['lip_video']  # This is a HF Video() object
         
         # Debug the video object for first few samples only
-        if idx < 2:  # Reduced from 3 to 2 to save memory
-            debug_hf_video_object(video_object, idx)
+        # if idx < 2:  # Reduced from 3 to 2 to save memory
+        #     debug_hf_video_object(video_object, idx)
         
         try:
             # Use our improved function to handle HF Video objects
@@ -436,6 +457,15 @@ class WhisperFlamingoModule(LightningModule):
         self.tokenizer = whisper.tokenizer.get_tokenizer(
             multilingual=multilingual, language=lang, task='transcribe'
         )
+        
+        # Add custom token for laughter
+        print("✓ Adding custom token <laugh> to tokenizer")
+        new_tokens = ['<laugh>']
+        self.tokenizer.add_tokens(new_tokens)
+        self.model.resize_token_embeddings(len(self.tokenizer))
+        laugh_token_id = self.tokenizer.convert_tokens_to_ids('<laugh>')
+        print(f"✓ The token ID for '<laugh>' is: {laugh_token_id}")
+
         print(f"\n✓ Using standard Whisper tokenizer with vocab size: {self.tokenizer.encoding.n_vocab}\n")
         # --- End of tokenizer setup ------------------------------------------------------------
 
@@ -532,96 +562,77 @@ class WhisperFlamingoModule(LightningModule):
         dec_input_ids = batch["dec_input_ids"].long()
         padding_mask = batch["padding_mask"]
 
-        features_av, x_v = self.model.encoder(input_ids, video, track_norm=False,
-                                              padding_mask=padding_mask)
-        out_av = self.model.decoder(dec_input_ids, features_av, xv=x_v)
-
-        # Original script had separate A-only and V-only paths for validation if add_gated_x_attn == 0
-        # This might need adjustment based on how AmiVideoHFDataset and the model handle this.
-        # For now, assuming we primarily evaluate the AV model.
-        mod_list = {"av": out_av}
+        # Only process AV modality as per config (add_gated_x_attn=1)
+        mod_list = {"av": None}
         
-        # If you need to evaluate A-only and V-only from the same batch, 
-        # ensure your model's encoder can be called with flags like `test_a=True` or `test_v=True`
-        # and that AmiVideoHFDataset provides inputs compatible with these modes if needed.
-        if self.cfg.add_gated_x_attn == 0: # Replicating original logic for A/V modalities
-            features_a, _ = self.model.encoder(input_ids, video, test_a=True, padding_mask=padding_mask) # video might be ignored by encoder in test_a mode
-            out_a = self.model.decoder(dec_input_ids, features_a)
-            mod_list["a"] = out_a
+        with torch.no_grad():
+            features_av, x_v = self.model.encoder(input_ids, video, track_norm=False, padding_mask=padding_mask)
+            out_av = self.model.decoder(dec_input_ids, features_av, xv=x_v)
+            loss = self.loss_fn(out_av.view(-1, out_av.size(-1)), labels.view(-1))
+        
+        tokens = torch.argmax(out_av, dim=2)
+        
+        # Immediately move results to CPU and clear GPU tensors
+        tokens_cpu = tokens.cpu()
+        labels_cpu = labels.cpu()
+        del video, input_ids, labels, dec_input_ids, padding_mask, features_av, x_v, out_av, tokens
+        
+        # Masking tokens after EOT on CPU
+        eot_find = (torch.where(tokens_cpu == self.tokenizer.eot, 1, 0))
+        if eot_find.shape[1] > 0:
+            first_eot = torch.argmax(torch.arange(eot_find.shape[1], 0, -1, device=tokens_cpu.device) * eot_find, dim=1, keepdim=True)
+            token_indices = torch.arange(eot_find.shape[1], device=tokens_cpu.device)
+            tokens_cpu[token_indices.unsqueeze(0) > first_eot] = self.tokenizer.eot
 
-            features_v, x_v_only = self.model.encoder(input_ids, video, test_v=True, padding_mask=padding_mask) # input_ids might be ignored by encoder in test_v mode
-            out_v = self.model.decoder(dec_input_ids, features_v, xv=x_v_only) # Pass x_v if relevant for V-only
-            mod_list["v"] = out_v
+        # Decode on CPU
+        o_list, l_list = [], []
+        for o_tokens, l_tokens in zip(tokens_cpu, labels_cpu):
+            valid_o_tokens = [t for t in o_tokens if t.item() >= 0 and t.item() not in self.special_token_set]
+            valid_l_tokens = [t for t in l_tokens if t.item() >= 0 and t.item() not in self.special_token_set]
+            o_list.append(self.tokenizer.decode(valid_o_tokens))
+            l_list.append(self.tokenizer.decode(valid_l_tokens))
 
+        # --- Text Normalization for WER/CER ---
+        
+        # Remove punctuation, substitute words, remove multiple spaces, strip, and lowercase
+        transformation = jiwer.Compose([
+            jiwer.ExpandCommonEnglishContractions(),
+            jiwer.RemovePunctuation(),
+            jiwer.SubstituteWords({
+                "'cause": "because",
+                "cuz": "because",
+                "c'mon": "come on"
+            }),
+            jiwer.RemoveMultipleSpaces(),
+            jiwer.Strip(),
+            jiwer.ToLowerCase()
+        ])
+        
+        norm_o_list = []
+        norm_l_list = []
+        for ref, hypo in zip(l_list, o_list):
+            if ref.strip() or hypo.strip(): # Process if at least one is not empty
+                norm_l_list.append(transformation(ref))
+                norm_o_list.append(transformation(hypo))
 
-        for mod, out in mod_list.items():
-            loss = self.loss_fn(out.view(-1, out.size(-1)), labels.view(-1))
-            tokens = torch.argmax(out, dim=2)
-
-            # Masking tokens after EOT
-            eot_find = (torch.where(tokens == self.tokenizer.eot, 1, 0))
-            if eot_find.shape[1] > 0 : # Ensure there are tokens to process
-                first_eot = torch.argmax(torch.arange(eot_find.shape[1], 0, -1, device=tokens.device) * eot_find, dim=1, keepdim=True)
-                token_indices = torch.arange(eot_find.shape[1], device=tokens.device)
-                tokens[token_indices.unsqueeze(0) > first_eot] = self.tokenizer.eot
-            else: # Handle cases with very short sequences or no EOT found within max length
-                 pass
-
-
-            # Calculate accuracy (excluding special tokens in prompt)
-            # Prompt is SOT, LANG, TASK, NO_TIMESTAMPS (4 tokens)
-            prompt_len = 4 
-            mask = ~(tokens[:, prompt_len:] == self.tokenizer.eot)
-            relevant_tokens = tokens[:, prompt_len:].masked_select(mask)
-            relevant_labels = labels[:, prompt_len:].masked_select(mask)
+        # Calculate WER and CER on normalized text
+        wer, cer = wer_cer(hypo=norm_o_list, ref=norm_l_list)
+        
+        if batch_id < 2:
+            print(f"Mod: av, Dataloader Idx: {dataloader_idx}")
+            for i, (hypo, ref) in enumerate(zip(norm_o_list, norm_l_list)): # Print normalized versions
+                print("-" * 10)
+                print(f"PRED ({i}): {hypo}")
+                print(f"REF  ({i}): {ref}")
+                if i == 1: break
+        
+        log_prefix_map = {0: 'test', 1: 'val'}
+        log_prefix = log_prefix_map.get(dataloader_idx, f'unknown_idx_{dataloader_idx}')
+        
+        self.log(f"{log_prefix}/loss_av", loss, prog_bar=True, sync_dist=True, add_dataloader_idx=False)
+        self.log(f"{log_prefix}/cer_av", cer, prog_bar=True, sync_dist=True, add_dataloader_idx=False)
+        self.log(f"{log_prefix}/wer_av", wer, prog_bar=True, sync_dist=True, add_dataloader_idx=False)
             
-            n_correct = torch.sum(relevant_tokens.eq(relevant_labels))
-            total = torch.sum(mask)
-            acc = n_correct.item()  / (total.item() + 1e-6)
-            acc = acc if acc <= 1 else 0 # Ensure acc is not > 1 due to empty selections
-
-            o_list, l_list = [], []
-            for o_tokens, l_tokens in zip(tokens, labels):
-                # Decode ================================================================
-                # Filter out negative tokens (like -100 used for ignore_index) and special tokens
-                valid_o_tokens = [t for t in o_tokens if t.item() >= 0 and t.item() not in self.special_token_set]
-                valid_l_tokens = [t for t in l_tokens if t.item() >= 0 and t.item() not in self.special_token_set]
-                
-                # Decode the tokens to text
-                o_list.append(self.tokenizer.decode(valid_o_tokens))
-                l_list.append(self.tokenizer.decode(valid_l_tokens))
-
-            # Calculate WER and CER ================================================================
-            wer, cer = wer_cer(hypo=o_list, ref=l_list)
-            # =================================================================================
-        
-            if batch_id < 2 : # Print first 2 batches for inspection
-                print(f"Mod: {mod}, Dataloader Idx: {dataloader_idx}")
-                for i, (hypo, ref) in enumerate(zip(o_list, l_list)):
-                    print("-"*10)
-                    print(f"PRED ({i}): {hypo}")
-                    print(f"REF  ({i}): {ref}")
-                    if i == 1: break # Print 2 examples per modality
-
-            # log_prefix_map = {0: 'test_noisy', 1: 'test_clean', 2: 'val_noisy', 3: 'val_clean'}
-            # Simplified logging since there's no noisy variant
-            log_prefix_map = {0: 'test', 1: 'val'} 
-            log_prefix = log_prefix_map.get(dataloader_idx, f'unknown_idx_{dataloader_idx}')
-            
-            self.log(f"{log_prefix}/loss_{mod}", loss, prog_bar=True, sync_dist=True, add_dataloader_idx=False)
-            self.log(f"{log_prefix}/cer_{mod}", cer, prog_bar=True, sync_dist=True, add_dataloader_idx=False)
-            self.log(f"{log_prefix}/wer_{mod}", wer, prog_bar=True, sync_dist=True, add_dataloader_idx=False)
-            self.log(f"{log_prefix}/acc_{mod}", acc, prog_bar=True, sync_dist=True, add_dataloader_idx=False)
-        
-        # if dataloader_idx == log_prefix_map.inverse.get('val_clean', 3): # Log norms only for clean validation set
-        # Simplified: log norms if it's the validation set (index 1 in the new map)
-        # if dataloader_idx == 1: # Corresponds to 'val' in the new log_prefix_map
-        #     self.log("val/x_norm", x_norm, prog_bar=False, sync_dist=True, add_dataloader_idx=False)
-        #     self.log("val/x_v_norm_pre", x_v_norm_pre, prog_bar=False, sync_dist=True, add_dataloader_idx=False)
-        #     self.log("val/x_v_norm_post", x_v_norm_post, prog_bar=False, sync_dist=True, add_dataloader_idx=False)
-        
-        return # For validation_step, no loss needs to be returned for optimization
-
     def on_validation_batch_end(self, outputs, batch, batch_idx, dataloader_idx=0):
         # Clear CUDA cache after each validation batch to prevent OOM
         if torch.cuda.is_available():
@@ -644,76 +655,37 @@ class WhisperFlamingoModule(LightningModule):
             self.t_total = self.cfg.num_train_steps
 
     def _create_dataloader(self, hf_dataset, audio_lengths, train_mode):
-        if train_mode:
-            spec_aug_conf = self.cfg.spec_augment
-        else: 
-            spec_aug_conf = False # No spec augment for val/test
-
-        # Clear memory before creating dataset
-        try:
-            clear_gpu_memory()
-            log_memory_stats(f"Before creating {'training' if train_mode else 'evaluation'} dataset")
-        except NameError:
-            # Fallback if memory utils aren't available
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-            gc.collect()
+        spec_aug_conf = self.cfg.spec_augment if train_mode else False
 
         dataset = AmiVideoHFDataset(hf_dataset, 
                                     self.tokenizer, 
                                     SAMPLE_RATE,
                                     self.model_name,
-                                    audio_max_length=self.dataset_audio_max_length, # For pad_or_trim
+                                    audio_max_length=self.dataset_audio_max_length,
                                     lang_code=self.lang,
                                     spec_augment_config=spec_aug_conf,
                                     train=train_mode)
         
-        # Determine batch size, potentially adapting to available memory
-        try:
-            from utils.memory_utils import limit_batch_size_to_memory
-            
-            base_batch_size = self.cfg.batch_size if train_mode else (
-                self.cfg.eval_batch_size if hasattr(self.cfg, 'eval_batch_size') else self.cfg.batch_size * 4
-            )
-            
-            # Estimate memory per item based on audio length
-            # For simplicity, we'll use a rough estimate
-            mem_per_item_gb = 0.25 if 'large' in self.model_name else 0.1
-            
-            # Potentially adjust batch size based on available memory
-            adjusted_batch_size = limit_batch_size_to_memory(
-                base_batch_size=base_batch_size,
-                required_memory_per_item=mem_per_item_gb,
-                safety_factor=0.8
-            )
-            
-            # Calculate batch bins with adjusted batch size
-            batch_bins = int(self.cfg.audio_max_length * adjusted_batch_size)
-            print(f"Using {'training' if train_mode else 'evaluation'} batch size: {adjusted_batch_size} (from base {base_batch_size})")
-            
-        except (ImportError, NameError):
-            # Fallback to original logic if memory utils aren't available
-            batch_bins = int(self.cfg.audio_max_length * (
-                self.cfg.batch_size if train_mode else (
-                    self.cfg.eval_batch_size if hasattr(self.cfg, 'eval_batch_size') else self.cfg.batch_size * 4
-                )
-            ))
+        batch_size = self.cfg.batch_size if train_mode else self.cfg.eval_batch_size
+        batch_bins = int(self.cfg.audio_max_length * batch_size)
+        print(f"Using {'training' if train_mode else 'evaluation'} batch size: {batch_size}")
         
         length_sorter = LengthBatchSampler(batch_bins=batch_bins,
-                                           shapes=audio_lengths, # Pre-calculated lengths
+                                           shapes=audio_lengths,
                                            sort_in_batch='descending',
                                            sort_batch='shuffle' if train_mode else 'descending',
-                                           drop_last=train_mode) # Drop last for training
+                                           drop_last=train_mode)
+        
         if self.cfg.num_devices > 1:
             print("Using distributed sampler for DDP.")
-            length_sorter = DistributedSamplerWrapper(length_sorter, shuffle=train_mode) # Shuffle for train
+            length_sorter = DistributedSamplerWrapper(length_sorter, shuffle=train_mode)
 
         return torch.utils.data.DataLoader(dataset,
                                            batch_sampler=length_sorter,
                                            num_workers=self.cfg.num_worker,
                                            collate_fn=WhisperVideoCollatorWithPadding(),
-                                           pin_memory=True, # Added pin_memory
-                                           persistent_workers=True if self.cfg.num_worker > 0 else False) # Keep workers alive
+                                           pin_memory=False, # Set to False to avoid potential instability with reload_dataloaders_every_n_epochs
+                                           persistent_workers=True if self.cfg.num_worker > 0 else False)
 
     def train_dataloader(self):
         return self._create_dataloader(self.train_hf_dataset, self.train_audio_lengths, train_mode=True)
@@ -747,19 +719,6 @@ if __name__ == "__main__":
         cfg = types.SimpleNamespace(**dct)
     
     print(f"✅ Configuration loaded successfully")
-
-    # --- OOM Hotfix: Override configuration for memory saving ---
-    original_eval_batch_size = getattr(cfg, 'eval_batch_size', 'N/A')
-    original_sync_batchnorm = getattr(cfg, 'sync_batchnorm', 'N/A')
-    
-    cfg.eval_batch_size = 1
-    cfg.sync_batchnorm = False
-    
-    print("\n⚠️  OOM HOTFIX APPLIED ========================================================")
-    print(f"  - Overriding eval_batch_size: {original_eval_batch_size} -> {cfg.eval_batch_size}")
-    print(f"  - Overriding sync_batchnorm: {original_sync_batchnorm} -> {cfg.sync_batchnorm}")
-    print("============================================================================\n")
-
 
     print("\nConfiguration ================================================================")
     for k, v in vars(cfg).items():
