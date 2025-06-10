@@ -203,8 +203,8 @@ def debug_hf_video_object(video_object: Any, idx: int = 0) -> None:
         video_object: HuggingFace Video object to inspect
         idx: Index of the sample (for logging purposes)
     """
-    print(f"\n--- Debug HF Video Object (sample {idx}) ---")
-    print(f"Type: {type(video_object)}")
+    # print(f"\n--- Debug HF Video Object (sample {idx}) ---")
+    # print(f"Type: {type(video_object)}")
     
     if hasattr(video_object, '__dict__'):
         print(f"Attributes: {list(video_object.__dict__.keys())}")
@@ -223,7 +223,7 @@ def debug_hf_video_object(video_object: Any, idx: int = 0) -> None:
     except:
         print("Could not convert to string")
     
-    print("--- End Debug ---\n") 
+    # print("--- End Debug ---\n") 
 
 def validate_hf_video_object(video_object: Any, max_retries: int = 2) -> bool:
     """

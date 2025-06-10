@@ -1,5 +1,6 @@
 import os
 import sys
+import jiwer
 
 # Add project root to path to ensure utils are importable
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -15,11 +16,8 @@ try:
     setup_memory_optimizations()
 except ImportError:
     # Fallback to direct environment variable setting if utils not available
-    print("Warning: Could not import memory_utils. Using fallback memory optimizations.")
-    # CRITICAL MEMORY OPTIMIZATIONS - Must be set before importing PyTorch
-    os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
-    os.environ['CUDA_LAUNCH_BLOCKING'] = '0'  # Disable for better performance
-    os.environ['TORCH_CUDNN_DISABLE'] = '0'  # Keep cuDNN enabled for performance
+    print("Warning: Could not import memory_utils")
+
 
 #=============================================================================================================================================================
 #                                           PATH SETUP AND IMPORTING UTILITIES
@@ -120,7 +118,7 @@ from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.strategies import DDPStrategy
 from tqdm import tqdm
 from datasets import load_from_disk # For loading Hugging Face datasets
-
+import jiwer
 
 from whisper_flamingo.spec_augment import spec_augment # Keep if AmiVideoHFDataset uses it directly or via config
 
@@ -232,6 +230,26 @@ class AmiVideoHFDataset(torch.utils.data.Dataset):
 
         # 2. Process Text --- WHISPER DECODER ------------------------------------------------------------
         text = item['transcript']
+
+        # remove underscore from text
+        text = text.replace("_", "") #eg: This is L_C_D -> This is LCD
+        # preprocess text
+        text_transformation = jiwer.Compose([
+            jiwer.ExpandCommonEnglishContractions(),
+            jiwer.SubstituteWords({
+                "'cause": "because",
+                "cuz": "because",
+                "c'mon": "come on"
+            }),
+            jiwer.RemovePunctuation(),
+            jiwer.RemoveMultipleSpaces(),
+            jiwer.Strip(),
+            jiwer.ToLowerCase()
+        ])
+
+        # Normalize text: lowercase and standardize laugh tokens
+        text = text_transformation(text)
+
         # For now, we'll keep laugh tokens as text (can be processed later if needed)
         # text = text.replace("[laugh]", " laugh ").replace("(laugh)", " laugh ")
 
@@ -253,8 +271,8 @@ class AmiVideoHFDataset(torch.utils.data.Dataset):
         video_object = item['lip_video']  # This is a HF Video() object
         
         # Debug the video object for first few samples only
-        if idx < 2:  # Reduced from 3 to 2 to save memory
-            debug_hf_video_object(video_object, idx)
+        # if idx < 2:  # Reduced from 3 to 2 to save memory
+        #     debug_hf_video_object(video_object, idx)
         
         try:
             # Use our improved function to handle HF Video objects
@@ -439,6 +457,15 @@ class WhisperFlamingoModule(LightningModule):
         self.tokenizer = whisper.tokenizer.get_tokenizer(
             multilingual=multilingual, language=lang, task='transcribe'
         )
+        
+        # Add custom token for laughter
+        print("✓ Adding custom token <laugh> to tokenizer")
+        new_tokens = ['<laugh>']
+        self.tokenizer.add_tokens(new_tokens)
+        self.model.resize_token_embeddings(len(self.tokenizer))
+        laugh_token_id = self.tokenizer.convert_tokens_to_ids('<laugh>')
+        print(f"✓ The token ID for '<laugh>' is: {laugh_token_id}")
+
         print(f"\n✓ Using standard Whisper tokenizer with vocab size: {self.tokenizer.encoding.n_vocab}\n")
         # --- End of tokenizer setup ------------------------------------------------------------
 
@@ -535,95 +562,82 @@ class WhisperFlamingoModule(LightningModule):
         dec_input_ids = batch["dec_input_ids"].long()
         padding_mask = batch["padding_mask"]
 
-        features_av, x_norm, x_v_norm_pre, x_v_norm_post, x_v = self.model.encoder(input_ids, video, track_norm=True,
-                                                                              padding_mask=padding_mask)
-        out_av = self.model.decoder(dec_input_ids, features_av, xv=x_v)
-
-        # Original script had separate A-only and V-only paths for validation if add_gated_x_attn == 0
-        # This might need adjustment based on how AmiVideoHFDataset and the model handle this.
-        # For now, assuming we primarily evaluate the AV model.
-        mod_list = {"av": out_av}
+        # Only process AV modality as per config (add_gated_x_attn=1)
+        mod_list = {"av": None}
         
-        # If you need to evaluate A-only and V-only from the same batch, 
-        # ensure your model's encoder can be called with flags like `test_a=True` or `test_v=True`
-        # and that AmiVideoHFDataset provides inputs compatible with these modes if needed.
-        if self.cfg.add_gated_x_attn == 0: # Replicating original logic for A/V modalities
-            features_a, _ = self.model.encoder(input_ids, video, test_a=True, padding_mask=padding_mask) # video might be ignored by encoder in test_a mode
-            out_a = self.model.decoder(dec_input_ids, features_a)
-            mod_list["a"] = out_a
+        with torch.no_grad():
+            features_av, x_v = self.model.encoder(input_ids, video, track_norm=False, padding_mask=padding_mask)
+            out_av = self.model.decoder(dec_input_ids, features_av, xv=x_v)
+            loss = self.loss_fn(out_av.view(-1, out_av.size(-1)), labels.view(-1))
+        
+        tokens = torch.argmax(out_av, dim=2)
+        
+        # Immediately move results to CPU and clear GPU tensors
+        tokens_cpu = tokens.cpu()
+        labels_cpu = labels.cpu()
+        del video, input_ids, labels, dec_input_ids, padding_mask, features_av, x_v, out_av, tokens
+        
+        # Masking tokens after EOT on CPU
+        eot_find = (torch.where(tokens_cpu == self.tokenizer.eot, 1, 0))
+        if eot_find.shape[1] > 0:
+            first_eot = torch.argmax(torch.arange(eot_find.shape[1], 0, -1, device=tokens_cpu.device) * eot_find, dim=1, keepdim=True)
+            token_indices = torch.arange(eot_find.shape[1], device=tokens_cpu.device)
+            tokens_cpu[token_indices.unsqueeze(0) > first_eot] = self.tokenizer.eot
 
-            features_v, x_v_only = self.model.encoder(input_ids, video, test_v=True, padding_mask=padding_mask) # input_ids might be ignored by encoder in test_v mode
-            out_v = self.model.decoder(dec_input_ids, features_v, xv=x_v_only) # Pass x_v if relevant for V-only
-            mod_list["v"] = out_v
+        # Decode on CPU
+        o_list, l_list = [], []
+        for o_tokens, l_tokens in zip(tokens_cpu, labels_cpu):
+            valid_o_tokens = [t for t in o_tokens if t.item() >= 0 and t.item() not in self.special_token_set]
+            valid_l_tokens = [t for t in l_tokens if t.item() >= 0 and t.item() not in self.special_token_set]
+            o_list.append(self.tokenizer.decode(valid_o_tokens))
+            l_list.append(self.tokenizer.decode(valid_l_tokens))
 
+        # --- Text Normalization for WER/CER ---
+        
+        # Remove punctuation, substitute words, remove multiple spaces, strip, and lowercase
+        transformation = jiwer.Compose([
+            jiwer.ExpandCommonEnglishContractions(),
+            jiwer.RemovePunctuation(),
+            jiwer.SubstituteWords({
+                "'cause": "because",
+                "cuz": "because",
+                "c'mon": "come on"
+            }),
+            jiwer.RemoveMultipleSpaces(),
+            jiwer.Strip(),
+            jiwer.ToLowerCase()
+        ])
+        
+        norm_o_list = []
+        norm_l_list = []
+        for ref, hypo in zip(l_list, o_list):
+            if ref.strip() or hypo.strip(): # Process if at least one is not empty
+                norm_l_list.append(transformation(ref))
+                norm_o_list.append(transformation(hypo))
 
-        for mod, out in mod_list.items():
-            loss = self.loss_fn(out.view(-1, out.size(-1)), labels.view(-1))
-            tokens = torch.argmax(out, dim=2)
-
-            # Masking tokens after EOT
-            eot_find = (torch.where(tokens == self.tokenizer.eot, 1, 0))
-            if eot_find.shape[1] > 0 : # Ensure there are tokens to process
-                first_eot = torch.argmax(torch.arange(eot_find.shape[1], 0, -1, device=tokens.device) * eot_find, dim=1, keepdim=True)
-                token_indices = torch.arange(eot_find.shape[1], device=tokens.device)
-                tokens[token_indices.unsqueeze(0) > first_eot] = self.tokenizer.eot
-            else: # Handle cases with very short sequences or no EOT found within max length
-                 pass
-
-
-            # Calculate accuracy (excluding special tokens in prompt)
-            # Prompt is SOT, LANG, TASK, NO_TIMESTAMPS (4 tokens)
-            prompt_len = 4 
-            mask = ~(tokens[:, prompt_len:] == self.tokenizer.eot)
-            relevant_tokens = tokens[:, prompt_len:].masked_select(mask)
-            relevant_labels = labels[:, prompt_len:].masked_select(mask)
+        # Calculate WER and CER on normalized text
+        wer, cer = wer_cer(hypo=norm_o_list, ref=norm_l_list)
+        
+        if batch_id < 2:
+            print(f"Mod: av, Dataloader Idx: {dataloader_idx}")
+            for i, (hypo, ref) in enumerate(zip(norm_o_list, norm_l_list)): # Print normalized versions
+                print("-" * 10)
+                print(f"PRED ({i}): {hypo}")
+                print(f"REF  ({i}): {ref}")
+                if i == 1: break
+        
+        log_prefix_map = {0: 'test', 1: 'val'}
+        log_prefix = log_prefix_map.get(dataloader_idx, f'unknown_idx_{dataloader_idx}')
+        
+        self.log(f"{log_prefix}/loss_av", loss, prog_bar=True, sync_dist=True, add_dataloader_idx=False)
+        self.log(f"{log_prefix}/cer_av", cer, prog_bar=True, sync_dist=True, add_dataloader_idx=False)
+        self.log(f"{log_prefix}/wer_av", wer, prog_bar=True, sync_dist=True, add_dataloader_idx=False)
             
-            n_correct = torch.sum(relevant_tokens.eq(relevant_labels))
-            total = torch.sum(mask)
-            acc = n_correct.item()  / (total.item() + 1e-6)
-            acc = acc if acc <= 1 else 0 # Ensure acc is not > 1 due to empty selections
-
-            o_list, l_list = [], []
-            for o_tokens, l_tokens in zip(tokens, labels):
-                # Decode ================================================================
-                # Filter out negative tokens (like -100 used for ignore_index) and special tokens
-                valid_o_tokens = [t for t in o_tokens if t.item() >= 0 and t.item() not in self.special_token_set]
-                valid_l_tokens = [t for t in l_tokens if t.item() >= 0 and t.item() not in self.special_token_set]
-                
-                # Decode the tokens to text
-                o_list.append(self.tokenizer.decode(valid_o_tokens))
-                l_list.append(self.tokenizer.decode(valid_l_tokens))
-
-            # Calculate WER and CER ================================================================
-            wer, cer = wer_cer(hypo=o_list, ref=l_list)
-            # =================================================================================
-        
-            if batch_id < 2 : # Print first 2 batches for inspection
-                print(f"Mod: {mod}, Dataloader Idx: {dataloader_idx}")
-                for i, (hypo, ref) in enumerate(zip(o_list, l_list)):
-                    print("-"*10)
-                    print(f"PRED ({i}): {hypo}")
-                    print(f"REF  ({i}): {ref}")
-                    if i == 1: break # Print 2 examples per modality
-
-            # log_prefix_map = {0: 'test_noisy', 1: 'test_clean', 2: 'val_noisy', 3: 'val_clean'}
-            # Simplified logging since there's no noisy variant
-            log_prefix_map = {0: 'test', 1: 'val'} 
-            log_prefix = log_prefix_map.get(dataloader_idx, f'unknown_idx_{dataloader_idx}')
-            
-            self.log(f"{log_prefix}/loss_{mod}", loss, prog_bar=True, sync_dist=True, add_dataloader_idx=False)
-            self.log(f"{log_prefix}/cer_{mod}", cer, prog_bar=True, sync_dist=True, add_dataloader_idx=False)
-            self.log(f"{log_prefix}/wer_{mod}", wer, prog_bar=True, sync_dist=True, add_dataloader_idx=False)
-            self.log(f"{log_prefix}/acc_{mod}", acc, prog_bar=True, sync_dist=True, add_dataloader_idx=False)
-        
-        # if dataloader_idx == log_prefix_map.inverse.get('val_clean', 3): # Log norms only for clean validation set
-        # Simplified: log norms if it's the validation set (index 1 in the new map)
-        if dataloader_idx == 1: # Corresponds to 'val' in the new log_prefix_map
-            self.log("val/x_norm", x_norm, prog_bar=False, sync_dist=True, add_dataloader_idx=False)
-            self.log("val/x_v_norm_pre", x_v_norm_pre, prog_bar=False, sync_dist=True, add_dataloader_idx=False)
-            self.log("val/x_v_norm_post", x_v_norm_post, prog_bar=False, sync_dist=True, add_dataloader_idx=False)
-        
-        return # For validation_step, no loss needs to be returned for optimization
+    def on_validation_batch_end(self, outputs, batch, batch_idx, dataloader_idx=0):
+        # Clear CUDA cache after each validation batch to prevent OOM
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        gc.collect()
 
     def configure_optimizers(self):
         model = self.model
@@ -641,91 +655,46 @@ class WhisperFlamingoModule(LightningModule):
             self.t_total = self.cfg.num_train_steps
 
     def _create_dataloader(self, hf_dataset, audio_lengths, train_mode):
-        if train_mode:
-            spec_aug_conf = self.cfg.spec_augment
-        else: 
-            spec_aug_conf = False # No spec augment for val/test
-
-        # Clear memory before creating dataset
-        try:
-            clear_gpu_memory()
-            log_memory_stats(f"Before creating {'training' if train_mode else 'evaluation'} dataset")
-        except NameError:
-            # Fallback if memory utils aren't available
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-            gc.collect()
+        spec_aug_conf = self.cfg.spec_augment if train_mode else False
 
         dataset = AmiVideoHFDataset(hf_dataset, 
                                     self.tokenizer, 
                                     SAMPLE_RATE,
                                     self.model_name,
-                                    audio_max_length=self.dataset_audio_max_length, # For pad_or_trim
+                                    audio_max_length=self.dataset_audio_max_length,
                                     lang_code=self.lang,
                                     spec_augment_config=spec_aug_conf,
                                     train=train_mode)
         
-        # Determine batch size, potentially adapting to available memory
-        try:
-            from utils.memory_utils import limit_batch_size_to_memory
-            
-            base_batch_size = self.cfg.batch_size if train_mode else (
-                self.cfg.eval_batch_size if hasattr(self.cfg, 'eval_batch_size') else self.cfg.batch_size * 4
-            )
-            
-            # Estimate memory per item based on audio length
-            # For simplicity, we'll use a rough estimate
-            mem_per_item_gb = 0.25 if 'large' in self.model_name else 0.1
-            
-            # Potentially adjust batch size based on available memory
-            adjusted_batch_size = limit_batch_size_to_memory(
-                base_batch_size=base_batch_size,
-                required_memory_per_item=mem_per_item_gb,
-                safety_factor=0.8
-            )
-            
-            # Calculate batch bins with adjusted batch size
-            batch_bins = int(self.cfg.audio_max_length * adjusted_batch_size)
-            print(f"Using {'training' if train_mode else 'evaluation'} batch size: {adjusted_batch_size} (from base {base_batch_size})")
-            
-        except (ImportError, NameError):
-            # Fallback to original logic if memory utils aren't available
-            batch_bins = int(self.cfg.audio_max_length * (
-                self.cfg.batch_size if train_mode else (
-                    self.cfg.eval_batch_size if hasattr(self.cfg, 'eval_batch_size') else self.cfg.batch_size * 4
-                )
-            ))
+        batch_size = self.cfg.batch_size if train_mode else self.cfg.eval_batch_size
+        batch_bins = int(self.cfg.audio_max_length * batch_size)
+        print(f"Using {'training' if train_mode else 'evaluation'} batch size: {batch_size}")
         
         length_sorter = LengthBatchSampler(batch_bins=batch_bins,
-                                           shapes=audio_lengths, # Pre-calculated lengths
+                                           shapes=audio_lengths,
                                            sort_in_batch='descending',
                                            sort_batch='shuffle' if train_mode else 'descending',
-                                           drop_last=train_mode) # Drop last for training
+                                           drop_last=train_mode)
+        
         if self.cfg.num_devices > 1:
             print("Using distributed sampler for DDP.")
-            length_sorter = DistributedSamplerWrapper(length_sorter, shuffle=train_mode) # Shuffle for train
+            length_sorter = DistributedSamplerWrapper(length_sorter, shuffle=train_mode)
 
         return torch.utils.data.DataLoader(dataset,
                                            batch_sampler=length_sorter,
                                            num_workers=self.cfg.num_worker,
                                            collate_fn=WhisperVideoCollatorWithPadding(),
-                                           pin_memory=True, # Added pin_memory
-                                           persistent_workers=True if self.cfg.num_worker > 0 else False) # Keep workers alive
+                                           pin_memory=False, # Set to False to avoid potential instability with reload_dataloaders_every_n_epochs
+                                           persistent_workers=True if self.cfg.num_worker > 0 else False)
 
     def train_dataloader(self):
         return self._create_dataloader(self.train_hf_dataset, self.train_audio_lengths, train_mode=True)
 
     def val_dataloader(self):
-        # Returns a list of dataloaders for multiple validation sets
-        # Order: noisy, clean (to match log_prefix_map if used)
-        # val_noisy_loader = self._create_dataloader(self.val_hf_dataset, self.val_audio_lengths, train_mode=False, noise_override_prob=1.0)
         val_clean_loader = self._create_dataloader(self.val_hf_dataset, self.val_audio_lengths, train_mode=False)
-        return [val_clean_loader] # New order for log_prefix_map consistency, only clean
+        return [val_clean_loader] 
 
     def test_dataloader(self):
-        # Returns a list of dataloaders for multiple test sets
-        # Order: noisy, clean
-        # test_noisy_loader = self._create_dataloader(self.test_hf_dataset, self.test_audio_lengths, train_mode=False, noise_override_prob=1.0)
         test_clean_loader = self._create_dataloader(self.test_hf_dataset, self.test_audio_lengths, train_mode=False)
         return [test_clean_loader]
 
@@ -739,9 +708,17 @@ if __name__ == "__main__":
         sys.exit(1)
         
     cfg_yaml = sys.argv[1]
+    print(f"Loading configuration from: {cfg_yaml}")
+    
+    if not os.path.exists(cfg_yaml):
+        print(f"ERROR: Configuration file not found: {cfg_yaml}")
+        sys.exit(1)
+        
     with open(cfg_yaml, 'r') as file:
         dct = yaml.safe_load(file)
         cfg = types.SimpleNamespace(**dct)
+    
+    print(f"✅ Configuration loaded successfully")
 
     print("\nConfiguration ================================================================")
     for k, v in vars(cfg).items():
@@ -753,9 +730,6 @@ if __name__ == "__main__":
         "train_data_path": getattr(cfg, 'train_data_path', None),
         "val_data_path": getattr(cfg, 'val_data_path', None),
         "test_data_path": getattr(cfg, 'test_data_path', None),
-        "train_data_path_original": getattr(cfg, 'train_data_path_original', None),
-        "val_data_path_original": getattr(cfg, 'val_data_path_original', None),
-        "test_data_path_original": getattr(cfg, 'test_data_path_original', None),
     }
     missing_essential_path = False
     for name, path_val in essential_paths_from_config.items():
@@ -778,6 +752,13 @@ if __name__ == "__main__":
     print(f"✓ Audio max length for dataset (pad_or_trim): {dataset_audio_max_len_cfg} samples")
 
 
+    # Ensure output directories exist
+    os.makedirs(cfg.log_output_dir, exist_ok=True)
+    os.makedirs(cfg.check_output_dir, exist_ok=True)
+    print(f"✅ Created/verified output directories:")
+    print(f"  Log output: {cfg.log_output_dir}")
+    print(f"  Checkpoint output: {cfg.check_output_dir}")
+    
     tflogger, checkpoint_callback, callback_list = setup_logging_and_checkpoint(cfg.log_output_dir, 
                                                                                 cfg.check_output_dir, 
                                                                                 cfg.train_name, 
@@ -787,6 +768,7 @@ if __name__ == "__main__":
     # Load Hugging Face datasets
     print("\nLoading datasets ============================================================")
     
+    #FIXME: IS THIS NEEDED?
     def verify_path_exists(path, description):
         """Verify a path exists and provide a helpful error if it doesn't."""
         if not os.path.exists(path):
@@ -817,56 +799,49 @@ if __name__ == "__main__":
             print(f"⚠️ Warning: Error inspecting {name} dataset sample: {e}")
     
     # Function to filter dataset videos
-    def filter_dataset_videos(dataset, dataset_name):
-        """Filter dataset to remove corrupted videos."""
-        print(f"\n📹 Processing {dataset_name} dataset ({len(dataset)} samples)...")
+    # def filter_dataset_videos(dataset, dataset_name):
+    #     """Filter dataset to remove corrupted videos."""
+    #     print(f"\n📹 Processing {dataset_name} dataset ({len(dataset)} samples)...")
         
-        # Use robust video filtering
-        valid_indices, corrupted_files = create_robust_video_filter(dataset)
+    #     # Use robust video filtering
+    #     valid_indices, corrupted_files = create_robust_video_filter(dataset)
         
-        if corrupted_files:
-            print(f"🚨 Found {len(corrupted_files)} corrupted videos in {dataset_name}:")
+    #     if corrupted_files:
+    #         print(f"🚨 Found {len(corrupted_files)} corrupted videos in {dataset_name}:")
             
-            # Show corruption reasons summary
-            reasons = {}
-            for corrupted in corrupted_files:
-                reason = corrupted['reason'].split(':')[0]
-                reasons[reason] = reasons.get(reason, 0) + 1
+    #         # Show corruption reasons summary
+    #         reasons = {}
+    #         for corrupted in corrupted_files:
+    #             reason = corrupted['reason'].split(':')[0]
+    #             reasons[reason] = reasons.get(reason, 0) + 1
             
-            for reason, count in reasons.items():
-                print(f"   {reason}: {count} files")
+    #         for reason, count in reasons.items():
+    #             print(f"   {reason}: {count} files")
             
-            # Show some example files
-            if len(corrupted_files) <= 5:
-                print(f"   Corrupted files:")
-                for corrupted in corrupted_files:
-                    print(f"     Index {corrupted['index']}: {corrupted['file']}")
-            else:
-                print(f"   Example corrupted files (first 3):")
-                for corrupted in corrupted_files[:3]:
-                    print(f"     Index {corrupted['index']}: {corrupted['file']}")
-                print(f"     ... and {len(corrupted_files) - 3} more")
+    #         # Show some example files
+    #         if len(corrupted_files) <= 5:
+    #             print(f"   Corrupted files:")
+    #             for corrupted in corrupted_files:
+    #                 print(f"     Index {corrupted['index']}: {corrupted['file']}")
+    #         else:
+    #             print(f"   Example corrupted files (first 3):")
+    #             for corrupted in corrupted_files[:3]:
+    #                 print(f"     Index {corrupted['index']}: {corrupted['file']}")
+    #             print(f"     ... and {len(corrupted_files) - 3} more")
         
-        if valid_indices:
-            clean_dataset = dataset.select(valid_indices)
-            print(f"✅ {dataset_name} clean dataset: {len(clean_dataset)} samples ({len(clean_dataset)/len(dataset)*100:.1f}% retention)")
-            return clean_dataset
-        else:
-            print(f"❌ No valid videos found in {dataset_name} dataset!")
-            raise ValueError(f"No valid videos in {dataset_name} dataset")
-    
-    # Define save paths upfront with validation
-    save_dir = os.path.join(project_root, 'data', 'ami')
-    train_clean_path = os.path.join(save_dir, "train_clean")
-    val_clean_path = os.path.join(save_dir, "val_clean")
-    test_clean_path = os.path.join(save_dir, "test_clean")
+    #     if valid_indices:
+    #         clean_dataset = dataset.select(valid_indices)
+    #         print(f"✅ {dataset_name} clean dataset: {len(clean_dataset)} samples ({len(clean_dataset)/len(dataset)*100:.1f}% retention)")
+    #         return clean_dataset
+    #     else:
+    #         print(f"❌ No valid videos found in {dataset_name} dataset!")
+    #         raise ValueError(f"No valid videos in {dataset_name} dataset")
     
     # First try: Load validated datasets
     datasets_loaded = False
     try:
         print("🔍 TRY: Loading validated videos (already processed)...")
-        
-        # Check if paths exist before attempting to load
+
         paths_valid = (
             verify_path_exists(cfg.train_data_path, "Train") and
             verify_path_exists(cfg.val_data_path, "Validation") and
@@ -876,8 +851,7 @@ if __name__ == "__main__":
         if not paths_valid:
             print("❌ One or more validated dataset paths do not exist. Trying fallback approach.")
             raise FileNotFoundError("One or more validated dataset paths do not exist")
-            
-        # Load datasets
+        
         print(f"Loading validated train dataset from: {cfg.train_data_path}")
         train_hf_ds = load_from_disk(cfg.train_data_path)
         print(f"✅ Validated train dataset loaded: {len(train_hf_ds)} samples")
@@ -890,15 +864,12 @@ if __name__ == "__main__":
         test_hf_ds = load_from_disk(cfg.test_data_path)
         print(f"✅ Validated test dataset loaded: {len(test_hf_ds)} samples")
         
-        # Debug dataset structure
         debug_dataset_sample(train_hf_ds, "Train")
         
-        # All datasets successfully loaded
         datasets_loaded = True
     
     except FileNotFoundError as e:
         print(f"❌ Path error loading validated datasets: {e}")
-        # Will continue to fallback approach
     
     except ImportError as e:
         print(f"❌ Import error loading datasets: {e}")
@@ -908,133 +879,20 @@ if __name__ == "__main__":
     except ValueError as e:
         print(f"❌ Value error loading datasets: {e}")
         print("This may be due to corrupted dataset files.")
-        # Will continue to fallback approach
         
     except Exception as e:
         print(f"❌ Unexpected error loading validated datasets: {e}")
         print(f"Error type: {type(e).__name__}")
-        # Will continue to fallback approach
-    
-    # Fallback approach: Load original datasets and filter them
-    if not datasets_loaded:
-        try:
-            print("\n🔍 TRY FALLBACK APPROACH:")
-            print("Step 1: Loading original videos (not processed)...")
-            
-            # Check if original paths exist before attempting to load
-            paths_valid = (
-                verify_path_exists(cfg.train_data_path_original, "Train original") and
-                verify_path_exists(cfg.val_data_path_original, "Validation original") and
-                verify_path_exists(cfg.test_data_path_original, "Test original")
-            )
-            
-            if not paths_valid:
-                raise FileNotFoundError("One or more original dataset paths do not exist")
-            
-            # Load original datasets
-            train_hf_ds = load_from_disk(cfg.train_data_path_original)
-            val_hf_ds = load_from_disk(cfg.val_data_path_original)
-            test_hf_ds = load_from_disk(cfg.test_data_path_original)
-            
-            print(f"✅ Original train dataset loaded: {len(train_hf_ds)} samples")
-            print(f"✅ Original validation dataset loaded: {len(val_hf_ds)} samples")
-            print(f"✅ Original test dataset loaded: {len(test_hf_ds)} samples")
-    
-            print("Step 2: Robust video validation and filtering =================================================")
-            print("🔍 Validating videos to identify and remove corrupted files...")
-            print("⚠️  This may take a while but ensures stable training...")
-        
-            # Apply robust video filtering
-            try:
-                train_hf_ds = filter_dataset_videos(train_hf_ds, "train")
-            except Exception as e:
-                print(f"❌ Error filtering train dataset: {e}")
-                print("Attempting to continue with other datasets...")
-            
-            try:
-                val_hf_ds = filter_dataset_videos(val_hf_ds, "validation")
-            except Exception as e:
-                print(f"❌ Error filtering validation dataset: {e}")
-                print("Attempting to continue with other datasets...")
-                
-            try:
-                test_hf_ds = filter_dataset_videos(test_hf_ds, "test")
-            except Exception as e:
-                print(f"❌ Error filtering test dataset: {e}")
-                print("Attempting to continue with other datasets...")
-    
-            print("\nDataset sizes after robust filtering ------------------")
-            print(f"Train dataset size: {len(train_hf_ds)} samples")
-            print(f"Validation dataset size: {len(val_hf_ds)} samples")
-            print(f"Test dataset size: {len(test_hf_ds)} samples")
-    
-            # Save the filtered datasets
-            print("\nSaving filtered datasets ------------------------------")
-            os.makedirs(save_dir, exist_ok=True)
-            
-            try:
-                train_hf_ds.save_to_disk(train_clean_path)
-                print(f"✅ Saved filtered train dataset to {train_clean_path}")
-            except Exception as e:
-                print(f"❌ Error saving filtered train dataset: {e}")
-                
-            try:
-                val_hf_ds.save_to_disk(val_clean_path)
-                print(f"✅ Saved filtered validation dataset to {val_clean_path}")
-            except Exception as e:
-                print(f"❌ Error saving filtered validation dataset: {e}")
-                
-            try:
-                test_hf_ds.save_to_disk(test_clean_path)
-                print(f"✅ Saved filtered test dataset to {test_clean_path}")
-            except Exception as e:
-                print(f"❌ Error saving filtered test dataset: {e}")
-                
-            datasets_loaded = True
-        
-        except FileNotFoundError as e:
-            print(f"❌ FATAL ERROR: {e}")
-            print("Both primary and fallback dataset paths are missing. Cannot continue.")
-            sys.exit(1)
-            
-        except ImportError as e:
-            print(f"❌ FATAL ERROR: Import error loading original datasets: {e}")
-            print("This may be due to a version mismatch in the datasets library.")
-            sys.exit(1)
-            
-        except Exception as e:
-            print(f"❌ FATAL ERROR: Unexpected error in fallback approach: {e}")
-            print(f"Error type: {type(e).__name__}")
-            import traceback
-            traceback.print_exc()
-            sys.exit(1)
     
     # Final verification
     if not datasets_loaded or len(train_hf_ds) == 0:
         print("❌ FATAL ERROR: Failed to load datasets or train dataset is empty")
         sys.exit(1)
-    
     print("\n===============================================================================================\n")
 
-
-    # 2. Filter by duration (Second Filtering) ------------------------------------------------------------
-    print("\n 2. Filter by duration (Second Filtering) ======================================================")
-    max_duration_filter_sec = getattr(cfg, 'max_duration_filter_seconds', 30.0) # Max 30s by default
-    
-    # Filter by duration first (before robust video validation)
-    print(f"\nFiltering by duration (max {max_duration_filter_sec}s)--------------------")
-    original_train_size = len(train_hf_ds)
-    original_val_size = len(val_hf_ds) 
-    original_test_size = len(test_hf_ds)
-    
-    train_hf_ds = train_hf_ds.filter(lambda x: x['duration'] <= max_duration_filter_sec)
-    val_hf_ds = val_hf_ds.filter(lambda x: x['duration'] <= max_duration_filter_sec)
-    test_hf_ds = test_hf_ds.filter(lambda x: x['duration'] <= max_duration_filter_sec)
-    
-    print(f"After duration filtering:")
-    print(f"  Train: {original_train_size} → {len(train_hf_ds)} ({len(train_hf_ds)/original_train_size*100:.1f}%)")
-    print(f"  Val: {original_val_size} → {len(val_hf_ds)} ({len(val_hf_ds)/original_val_size*100:.1f}%)")
-    print(f"  Test: {original_test_size} → {len(test_hf_ds)} ({len(test_hf_ds)/original_test_size*100:.1f}%)")
+    print(f"Train dataset size: {len(train_hf_ds)}")
+    print(f"Validation dataset size: {len(val_hf_ds)}")
+    print(f"Test dataset size: {len(test_hf_ds)}")
     print("\n===============================================================================================\n")
 
     # Check for empty datasets after all filtering
@@ -1081,16 +939,52 @@ if __name__ == "__main__":
     pre_train_validate_dataloaders = model.test_dataloader()
 
     print("\nCreating Trainer ==================================================================================")
+    
+    # GPU Detection and Configuration
+    print("🔍 GPU Detection and Configuration: ================================================================")
+    print(f"PyTorch CUDA available: {torch.cuda.is_available()}")
+    
+    # Check environment variables for GPU allocation
+    cuda_visible_devices = os.environ.get('CUDA_VISIBLE_DEVICES', 'Not set')
+    slurm_gpus = os.environ.get('SLURM_GPUS', 'Not set')
+    print(f"CUDA_VISIBLE_DEVICES: {cuda_visible_devices}")
+    print(f"SLURM_GPUS: {slurm_gpus}")
+    
+    if torch.cuda.is_available():
+        print(f"CUDA device count: {torch.cuda.device_count()}")
+        print(f"Current CUDA device: {torch.cuda.current_device()}")
+        print(f"CUDA device name: {torch.cuda.get_device_name()}")
+        
+        # Test basic GPU operations
+        try:
+            test_tensor = torch.randn(2, 2).cuda()
+            print("✅ GPU tensor creation successful")
+            accelerator_to_use = getattr(cfg, 'accelerator', 'gpu')
+            devices_to_use = getattr(cfg, 'num_devices', 1)
+        except Exception as e:
+            print(f"❌ GPU tensor creation failed: {e}")
+            print("⚠️ Falling back to CPU despite CUDA being available")
+            accelerator_to_use = 'cpu'
+            devices_to_use = 1
+    else:
+        print("⚠️ CUDA not available, falling back to CPU")
+        print("Note: Training on CPU will be extremely slow for this model size")
+        accelerator_to_use = 'cpu'
+        devices_to_use = 1
+    
+    print(f"Using accelerator: {accelerator_to_use}, devices: {devices_to_use}")
+    print("\n===============================================================================================\n")
+    
     trainer = Trainer(
         precision=getattr(cfg, 'precision', 16), # Default to 16
         strategy=strategy,
-        accelerator="gpu", # Hardcoded, could be from cfg
+        accelerator=accelerator_to_use,
         max_steps=cfg.num_train_steps,
         accumulate_grad_batches=cfg.gradient_accumulation_steps,
         logger=tflogger,
         callbacks=callback_list,
         num_sanity_val_steps=getattr(cfg, 'num_sanity_val_steps', 0),
-        devices=cfg.num_devices,
+        devices=devices_to_use,
         val_check_interval=int(cfg.validate_every_n_batches * cfg.gradient_accumulation_steps),
         check_val_every_n_epoch=None,
         reload_dataloaders_every_n_epochs=getattr(cfg, 'reload_dataloaders_every_n_epochs', 1),
