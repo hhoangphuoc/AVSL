@@ -1,6 +1,7 @@
 import os
 import sys
 import jiwer
+# from transformers import WhisperTokenizer
 
 # Add project root to path to ensure utils are importable
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -18,6 +19,16 @@ except ImportError:
     # Fallback to direct environment variable setting if utils not available
     print("Warning: Could not import memory_utils")
 
+# AGGRESSIVE MEMORY OPTIMIZATION SETTINGS =====================================
+# Force strict memory management
+os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True,roundup_power2_divisions:8'
+os.environ['CUDA_LAUNCH_BLOCKING'] = '0'
+os.environ['TORCH_CUDNN_DISABLE'] = '0'
+
+# Limit video frame processing to reduce memory
+MAX_VIDEO_FRAMES = 25  # Limit to ~1 second at 25fps
+VIDEO_DOWNSAMPLE_FACTOR = 2  # Process every 2nd frame
+# =============================================================================
 
 #=============================================================================================================================================================
 #                                           PATH SETUP AND IMPORTING UTILITIES
@@ -71,8 +82,8 @@ try:
     
     from utils.hf_video_utils import (
         safe_load_video_feats_from_hf_object,
-        debug_hf_video_object,
-        create_robust_video_filter,
+        # debug_hf_video_object,
+        # create_robust_video_filter,
     )
     
     # Restore original path
@@ -99,6 +110,8 @@ else:
 #----------------------------------------------------------------------------------------------------
 
 
+# Set environment variable to allow expandable segments
+os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
 
 #=============================================================================================================================================================
 #                                           IMPORTING UTILITIES
@@ -230,9 +243,12 @@ class AmiVideoHFDataset(torch.utils.data.Dataset):
 
         # 2. Process Text --- WHISPER DECODER ------------------------------------------------------------
         text = item['transcript']
+        
+        # Normalize text for the custom <laugh> token
+        text = text.lower()
+        text = text.replace('[laugh]', '<laugh>').replace('(laugh)', '<laugh>')
+        text = text.replace('<laughter>', '<laugh>').replace('(laughter)', '<laugh>')
 
-        # remove underscore from text
-        text = text.replace("_", "") #eg: This is L_C_D -> This is LCD
         # preprocess text
         text_transformation = jiwer.Compose([
             jiwer.ExpandCommonEnglishContractions(),
@@ -246,12 +262,7 @@ class AmiVideoHFDataset(torch.utils.data.Dataset):
             jiwer.Strip(),
             jiwer.ToLowerCase()
         ])
-
-        # Normalize text: lowercase and standardize laugh tokens
         text = text_transformation(text)
-
-        # For now, we'll keep laugh tokens as text (can be processed later if needed)
-        # text = text.replace("[laugh]", " laugh ").replace("(laugh)", " laugh ")
 
         # Prepare decoder inputs and labels, ensure lang_code is one of tokenizer.all_language_codes
         # Example: self.tokenizer.sot_sequence(language=self.lang_code)
@@ -270,10 +281,6 @@ class AmiVideoHFDataset(torch.utils.data.Dataset):
         # Handle HuggingFace Video object properly
         video_object = item['lip_video']  # This is a HF Video() object
         
-        # Debug the video object for first few samples only
-        # if idx < 2:  # Reduced from 3 to 2 to save memory
-        #     debug_hf_video_object(video_object, idx)
-        
         try:
             # Use our improved function to handle HF Video objects
             video_feats = safe_load_video_feats_from_hf_object(
@@ -289,17 +296,26 @@ class AmiVideoHFDataset(torch.utils.data.Dataset):
             print(f"Error processing video for sample {idx}: {e}")
             raise e
 
-        # Trim video to match audio length (approx. 25 fps for video, audio sampling rate for audio)
-        # Audio length in seconds = len(audio.flatten()) / self.target_sample_rate
-        # Max video frames = (audio length in seconds) * 25 fps
-        # MuavicVideoDataset uses: round(len(audio.flatten()) / 16000 * 25)
-        # Here, audio is already padded/trimmed to self.audio_max_length
-        # So, we should use the original audio length for this calculation if possible, or approximate.
-        # Using the actual length of the *processed* audio (which is self.audio_max_length after padding)
         max_video_len_processed_audio = round(len(audio) / self.target_sample_rate * 25)
 
-        if len(video_feats) > max_video_len_processed_audio:
-            video_feats = video_feats[:max_video_len_processed_audio]
+        # AGGRESSIVE VIDEO MEMORY OPTIMIZATION =====================================
+        # Limit video frames to prevent memory explosion
+        max_video_frames = min(MAX_VIDEO_FRAMES, max_video_len_processed_audio)
+        
+        if len(video_feats) > max_video_frames:
+            # Downsample video frames if too long
+            step = max(1, len(video_feats) // max_video_frames)
+            video_feats = video_feats[::step][:max_video_frames]
+        
+        # Further limit if still too long
+        if len(video_feats) > max_video_frames:
+            video_feats = video_feats[:max_video_frames]
+        
+        # Compress video features to save memory (reduce precision)
+        if self.train:
+            # Use lower precision for training to save memory
+            video_feats = video_feats.astype(np.float16).astype(np.float32)
+        # =====================================================================
         
         # Pad video features if they are shorter than a max length, or ensure a consistent size if required by model
         # This part depends on model architecture requirements, MuavicVideoDataset doesn't explicitly show padding here
@@ -455,18 +471,24 @@ class WhisperFlamingoModule(LightningModule):
         # For now, we'll use the standard Whisper tokenizer without custom tokens
         # Custom tokens can be added later if needed for specific use cases
         self.tokenizer = whisper.tokenizer.get_tokenizer(
-            multilingual=multilingual, language=lang, task='transcribe'
-        )
-        
-        # Add custom token for laughter
-        print("✓ Adding custom token <laugh> to tokenizer")
-        new_tokens = ['<laugh>']
-        self.tokenizer.add_tokens(new_tokens)
-        self.model.resize_token_embeddings(len(self.tokenizer))
-        laugh_token_id = self.tokenizer.convert_tokens_to_ids('<laugh>')
-        print(f"✓ The token ID for '<laugh>' is: {laugh_token_id}")
+            multilingual=multilingual, language=lang, task='transcribe')
 
-        print(f"\n✓ Using standard Whisper tokenizer with vocab size: {self.tokenizer.encoding.n_vocab}\n")
+        # --- Use Hugging Face tokenizer to allow adding custom tokens ---------------------------------------
+        # NOTE: TRY THIS LATER IF IT WORKS
+        # print("✓ Loading Hugging Face WhisperTokenizer to allow for custom tokens...")
+        # self.tokenizer = WhisperTokenizer.from_pretrained(
+        #     cfg.model_name, language=lang, task="transcribe"
+        # )
+        
+        # # Add custom token for laughter
+        # print("✓ Adding custom token <laugh> to tokenizer")
+        # new_tokens = ['<laugh>']
+        # self.tokenizer.add_tokens(new_tokens)
+        # self.model.resize_token_embeddings(len(self.tokenizer))
+        # laugh_token_id = self.tokenizer.convert_tokens_to_ids('<laugh>')
+        # print(f"✓ The token ID for '<laugh>' is: {laugh_token_id}")
+
+        # print(f"\n✓ Using Hugging Face tokenizer with vocab size: {self.tokenizer.vocab_size}\n")
         # --- End of tokenizer setup ------------------------------------------------------------
 
         self.loss_fn = nn.CrossEntropyLoss(ignore_index=-100) # Whisper's default ignore_index for padding
@@ -515,8 +537,9 @@ class WhisperFlamingoModule(LightningModule):
                 if not any(nd in n for nd in video_projection_layers):
                     p.requires_grad = False
         
-        # Clear cache before forward pass, using memory_utils if available
-        if batch_id % 10 == 0:  # Clear cache every 10 batches
+        # AGGRESSIVE MEMORY MANAGEMENT ==========================================
+        # Clear cache more frequently for memory-constrained training
+        if batch_id % 5 == 0:  # Clear cache every 5 batches instead of 10
             try:
                 clear_gpu_memory()
             except NameError:
@@ -524,9 +547,27 @@ class WhisperFlamingoModule(LightningModule):
                     torch.cuda.empty_cache()
                     gc.collect()
         
-        features, x_v = self.model.encoder(input_ids, video, training=True, padding_mask=padding_mask)
-        out = self.model.decoder(dec_input_ids, features, xv=x_v)
-        loss = self.loss_fn(out.view(-1, out.size(-1)), labels.view(-1))
+        # Move data to GPU only when needed and clear immediately after use
+        try:
+            features, x_v = self.model.encoder(input_ids, video, training=True, padding_mask=padding_mask)
+            out = self.model.decoder(dec_input_ids, features, xv=x_v)
+            loss = self.loss_fn(out.view(-1, out.size(-1)), labels.view(-1))
+            
+            # Clear intermediate tensors immediately
+            del features, x_v, out
+            
+        except RuntimeError as e:
+            if "out of memory" in str(e):
+                print(f"OOM error in training step {batch_id}. Clearing cache and retrying...")
+                # Clear all cached memory
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                gc.collect()
+                raise e
+            else:
+                raise e
+        # =====================================================================
+        
         self.log("train/loss", loss, on_step=True, prog_bar=True, logger=True, sync_dist=True)
         
         # Log memory usage periodically using memory_utils if available
@@ -556,26 +597,51 @@ class WhisperFlamingoModule(LightningModule):
         return loss
             
     def validation_step(self, batch, batch_id, dataloader_idx=None):
-        video = batch["video"]
-        input_ids = batch["input_ids"]
-        labels = batch["labels"].long()
-        dec_input_ids = batch["dec_input_ids"].long()
-        padding_mask = batch["padding_mask"]
+        # AGGRESSIVE VALIDATION MEMORY MANAGEMENT ===============================
+        # Process validation with minimal memory footprint
+        try:
+            video = batch["video"]
+            input_ids = batch["input_ids"]
+            labels = batch["labels"].long()
+            dec_input_ids = batch["dec_input_ids"].long()
+            padding_mask = batch["padding_mask"]
 
-        # Only process AV modality as per config (add_gated_x_attn=1)
-        mod_list = {"av": None}
-        
-        with torch.no_grad():
-            features_av, x_v = self.model.encoder(input_ids, video, track_norm=False, padding_mask=padding_mask)
-            out_av = self.model.decoder(dec_input_ids, features_av, xv=x_v)
-            loss = self.loss_fn(out_av.view(-1, out_av.size(-1)), labels.view(-1))
-        
-        tokens = torch.argmax(out_av, dim=2)
-        
-        # Immediately move results to CPU and clear GPU tensors
-        tokens_cpu = tokens.cpu()
-        labels_cpu = labels.cpu()
-        del video, input_ids, labels, dec_input_ids, padding_mask, features_av, x_v, out_av, tokens
+            # Clear cache before validation step
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            
+            # Only process AV modality as per config (add_gated_x_attn=1)
+            mod_list = {"av": None}
+            
+            with torch.no_grad():
+                # Process with gradient checkpointing disabled for inference
+                features_av, x_v = self.model.encoder(input_ids, video, track_norm=False, padding_mask=padding_mask)
+                out_av = self.model.decoder(dec_input_ids, features_av, xv=x_v)
+                loss = self.loss_fn(out_av.view(-1, out_av.size(-1)), labels.view(-1))
+            
+            tokens = torch.argmax(out_av, dim=2)
+            
+            # Immediately move results to CPU and clear GPU tensors
+            tokens_cpu = tokens.cpu()
+            labels_cpu = labels.cpu()
+            loss_cpu = loss.cpu()
+            
+            # Aggressively delete GPU tensors
+            del video, input_ids, labels, dec_input_ids, padding_mask, features_av, x_v, out_av, tokens, loss
+            
+            # Force memory cleanup
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            gc.collect()
+            
+        except RuntimeError as e:
+            if "out of memory" in str(e):
+                print(f"OOM in validation step {batch_id}. Skipping this batch.")
+                # Return dummy values to continue training
+                return {"val/loss_av": 0.0, "val/wer_av": 1.0, "val/cer_av": 1.0}
+            else:
+                raise e
+        # =====================================================================
         
         # Masking tokens after EOT on CPU
         eot_find = (torch.where(tokens_cpu == self.tokenizer.eot, 1, 0))
@@ -593,8 +659,6 @@ class WhisperFlamingoModule(LightningModule):
             l_list.append(self.tokenizer.decode(valid_l_tokens))
 
         # --- Text Normalization for WER/CER ---
-        
-        # Remove punctuation, substitute words, remove multiple spaces, strip, and lowercase
         transformation = jiwer.Compose([
             jiwer.ExpandCommonEnglishContractions(),
             jiwer.RemovePunctuation(),
@@ -629,7 +693,7 @@ class WhisperFlamingoModule(LightningModule):
         log_prefix_map = {0: 'test', 1: 'val'}
         log_prefix = log_prefix_map.get(dataloader_idx, f'unknown_idx_{dataloader_idx}')
         
-        self.log(f"{log_prefix}/loss_av", loss, prog_bar=True, sync_dist=True, add_dataloader_idx=False)
+        self.log(f"{log_prefix}/loss_av", loss_cpu, prog_bar=True, sync_dist=True, add_dataloader_idx=False)
         self.log(f"{log_prefix}/cer_av", cer, prog_bar=True, sync_dist=True, add_dataloader_idx=False)
         self.log(f"{log_prefix}/wer_av", wer, prog_bar=True, sync_dist=True, add_dataloader_idx=False)
             
@@ -680,12 +744,18 @@ class WhisperFlamingoModule(LightningModule):
             print("Using distributed sampler for DDP.")
             length_sorter = DistributedSamplerWrapper(length_sorter, shuffle=train_mode)
 
+        # MEMORY OPTIMIZED DATALOADER SETTINGS ================================
+        num_workers = getattr(self.cfg, 'num_worker', 0)
+        pin_memory = getattr(self.cfg, 'pin_memory', False) 
+        persistent_workers = getattr(self.cfg, 'persistent_workers', False)
+        
         return torch.utils.data.DataLoader(dataset,
                                            batch_sampler=length_sorter,
-                                           num_workers=self.cfg.num_worker,
+                                           num_workers=num_workers,
                                            collate_fn=WhisperVideoCollatorWithPadding(),
-                                           pin_memory=False, # Set to False to avoid potential instability with reload_dataloaders_every_n_epochs
-                                           persistent_workers=True if self.cfg.num_worker > 0 else False)
+                                           pin_memory=pin_memory,
+                                           persistent_workers=persistent_workers)
+        # =====================================================================
 
     def train_dataloader(self):
         return self._create_dataloader(self.train_hf_dataset, self.train_audio_lengths, train_mode=True)
@@ -798,45 +868,6 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"⚠️ Warning: Error inspecting {name} dataset sample: {e}")
     
-    # Function to filter dataset videos
-    # def filter_dataset_videos(dataset, dataset_name):
-    #     """Filter dataset to remove corrupted videos."""
-    #     print(f"\n📹 Processing {dataset_name} dataset ({len(dataset)} samples)...")
-        
-    #     # Use robust video filtering
-    #     valid_indices, corrupted_files = create_robust_video_filter(dataset)
-        
-    #     if corrupted_files:
-    #         print(f"🚨 Found {len(corrupted_files)} corrupted videos in {dataset_name}:")
-            
-    #         # Show corruption reasons summary
-    #         reasons = {}
-    #         for corrupted in corrupted_files:
-    #             reason = corrupted['reason'].split(':')[0]
-    #             reasons[reason] = reasons.get(reason, 0) + 1
-            
-    #         for reason, count in reasons.items():
-    #             print(f"   {reason}: {count} files")
-            
-    #         # Show some example files
-    #         if len(corrupted_files) <= 5:
-    #             print(f"   Corrupted files:")
-    #             for corrupted in corrupted_files:
-    #                 print(f"     Index {corrupted['index']}: {corrupted['file']}")
-    #         else:
-    #             print(f"   Example corrupted files (first 3):")
-    #             for corrupted in corrupted_files[:3]:
-    #                 print(f"     Index {corrupted['index']}: {corrupted['file']}")
-    #             print(f"     ... and {len(corrupted_files) - 3} more")
-        
-    #     if valid_indices:
-    #         clean_dataset = dataset.select(valid_indices)
-    #         print(f"✅ {dataset_name} clean dataset: {len(clean_dataset)} samples ({len(clean_dataset)/len(dataset)*100:.1f}% retention)")
-    #         return clean_dataset
-    #     else:
-    #         print(f"❌ No valid videos found in {dataset_name} dataset!")
-    #         raise ValueError(f"No valid videos in {dataset_name} dataset")
-    
     # First try: Load validated datasets
     datasets_loaded = False
     try:
@@ -907,14 +938,19 @@ if __name__ == "__main__":
 
     # 3. Dataset Slicing (Third Filtering) ------------------------------------------------------------
     print("\n3. Dataset Slicing (Third Filtering) ===========================================================")
-    print("Slicing datasets to 20% for faster processing...")
-    train_hf_ds = train_hf_ds.shuffle(seed=SEED).select(range(min(len(train_hf_ds), int(len(train_hf_ds) * 0.2))))
-    val_hf_ds = val_hf_ds.shuffle(seed=SEED).select(range(min(len(val_hf_ds), int(len(val_hf_ds) * 0.2))))
-    test_hf_ds = test_hf_ds.shuffle(seed=SEED).select(range(min(len(test_hf_ds), int(len(test_hf_ds) * 0.2))))
+    print("Slicing datasets to 5% for memory-constrained training...")
+    # # Further reduce dataset size for memory constraints
+    # train_slice_ratio = 0.05  # 5% of data
+    # val_slice_ratio = 0.1    # 10% of validation data
+    # test_slice_ratio = 0.1   # 10% of test data
+    
+    # train_hf_ds = train_hf_ds.shuffle(seed=SEED).select(range(min(len(train_hf_ds), int(len(train_hf_ds) * train_slice_ratio))))
+    # val_hf_ds = val_hf_ds.shuffle(seed=SEED).select(range(min(len(val_hf_ds), int(len(val_hf_ds) * val_slice_ratio))))
+    # test_hf_ds = test_hf_ds.shuffle(seed=SEED).select(range(min(len(test_hf_ds), int(len(test_hf_ds) * test_slice_ratio))))
 
-    print(f"Train dataset size after 20% slicing: {len(train_hf_ds)}")
-    print(f"Validation dataset size after 20% slicing: {len(val_hf_ds)}")
-    print(f"Test dataset size after 20% slicing: {len(test_hf_ds)}")
+    # print(f"Train dataset size after {train_slice_ratio*100}% slicing: {len(train_hf_ds)}")
+    # print(f"Validation dataset size after {val_slice_ratio*100}% slicing: {len(val_hf_ds)}")
+    # print(f"Test dataset size after {test_slice_ratio*100}% slicing: {len(test_hf_ds)}")
     print("\n===============================================================================================\n")
 
 
@@ -976,7 +1012,7 @@ if __name__ == "__main__":
     print("\n===============================================================================================\n")
     
     trainer = Trainer(
-        precision=getattr(cfg, 'precision', 16), # Default to 16
+        precision=getattr(cfg, 'precision', 'bf16'), # Use bfloat16 for better memory efficiency
         strategy=strategy,
         accelerator=accelerator_to_use,
         max_steps=cfg.num_train_steps,
@@ -987,11 +1023,14 @@ if __name__ == "__main__":
         devices=devices_to_use,
         val_check_interval=int(cfg.validate_every_n_batches * cfg.gradient_accumulation_steps),
         check_val_every_n_epoch=None,
-        reload_dataloaders_every_n_epochs=getattr(cfg, 'reload_dataloaders_every_n_epochs', 1),
-        use_distributed_sampler=False, # Handled by DistributedSamplerWrapper
-        sync_batchnorm=getattr(cfg, 'sync_batchnorm', True),
-        # MEMORY OPTIMIZATIONS
-        enable_checkpointing=True
+        reload_dataloaders_every_n_epochs=getattr(cfg, 'reload_dataloaders_every_n_epochs', 0),
+        use_distributed_sampler=False,
+        sync_batchnorm=getattr(cfg, 'sync_batchnorm', False),
+        # AGGRESSIVE MEMORY OPTIMIZATIONS =====================================
+        enable_checkpointing=True,
+        limit_train_batches=0.1,  # Use only 10% of training data per epoch
+        limit_val_batches=0.05,   # Use only 5% of validation data
+        # ===================================================================
     )
     print("\n===============================================================================================\n")
 

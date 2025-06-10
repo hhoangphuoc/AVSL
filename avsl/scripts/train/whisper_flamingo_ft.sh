@@ -84,5 +84,27 @@ echo "Starting training script..."
 echo "Config file: ${PROJECT_ROOT_ABS}/config/ami_whisper_flamingo_large.yaml"
 echo "Working directory: $(pwd)"
 
-# Run the training script
+# Monitor GPU memory in background
+echo "Starting GPU memory monitor..."
+python ${PROJECT_ROOT_ABS}/utils/gpu_monitor.py --continuous --interval 10 \
+    --log-file ${PROJECT_ROOT_ABS}/avsl/logs/gpu_memory_${SLURM_JOB_ID}.log &
+MONITOR_PID=$!
+
+# Function to cleanup background processes
+cleanup() {
+    echo "Cleaning up background processes..."
+    if [ ! -z "$MONITOR_PID" ]; then
+        kill $MONITOR_PID 2>/dev/null
+    fi
+}
+
+# Setup trap to cleanup on exit
+trap cleanup EXIT
+
+# Check initial GPU memory state
+echo "Initial GPU memory state:"
+python ${PROJECT_ROOT_ABS}/utils/gpu_monitor.py
+
+# Run the training script with memory-optimized config
+echo "Starting training with memory optimizations..."
 python -u whisper_flamingo_ft_ami.py ${PROJECT_ROOT_ABS}/config/ami_whisper_flamingo_large.yaml
