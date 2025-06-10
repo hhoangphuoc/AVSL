@@ -1,0 +1,19 @@
+# Configuration for processing laughter dataset
+csv_path: "/deepstore/datasets/hmi/speechlaugh-corpus/ami/ami_laughter/fluent_laughter/fluent_laugh_markers.csv"
+output_dir: "/deepstore/datasets/hmi/speechlaugh-corpus/ami/ami_laughter/fluent_laughter/segments"
+dataset_path: "/deepstore/datasets/hmi/speechlaugh-corpus/ami/ami_laughter/fluent_laughter/dataset"
+
+# Processing configuration
+extract_lip_videos: True
+to_grayscale: True
+batch_size: 16
+use_shards: True
+files_per_shard: 2000
+chunked: True
+chunk_size: 1000
+balance: True
+
+# Parallelization
+num_workers: 8
+use_parallel: True  # Auto-detect if null
+max_tasks_per_child: 10

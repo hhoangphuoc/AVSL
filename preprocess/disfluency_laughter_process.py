@@ -8,11 +8,16 @@ import argparse
 
 from preprocess.constants import DATA_PATH, TRANS_PATH
 
-data_path = DATA_PATH
-transcript_path = TRANS_PATH
-csv_output_path = os.path.join(DATA_PATH, 'dsfl_laugh')
+data_path = DATA_PATH # /deepstore/datasets/hmi/speechlaugh-corpus/ami/
+transcript_path = TRANS_PATH # /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts
+csv_output_path = os.path.join(DATA_PATH, 'ami_laugh') # /deepstore/datasets/hmi/speechlaugh-corpus/ami/ami_laugh
 
-def disfluency_laughter_to_csv(input_dir=None, output_dir=None):
+def disfluency_laughter_to_csv(
+        input_dir=None, # /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts
+        output_dir=None, # /deepstore/datasets/hmi/speechlaugh-corpus/ami/ami_laugh
+        disfluency_dir=None, # /deepstore/datasets/hmi/speechlaugh-corpus/ami/disfluency (input_dir + 'disfluency')
+        dsfl_types_file=None, # /deepstore/datasets/hmi/speechlaugh-corpus/ami/ontologies/dsfl-types.xml (input_dir + 'ontologies/dsfl-types.xml')
+        ):
     """
     Process AMI Corpus transcript files and export the disfluency and laughter categories to CSV.
     
@@ -32,20 +37,25 @@ def disfluency_laughter_to_csv(input_dir=None, output_dir=None):
     os.makedirs(output_dir, exist_ok=True)
     
     # Load disfluency types from ontology file
-    dsfl_types = load_disfluency_types(os.path.join(input_dir, 'ontologies/dsfl-types.xml')) # a dictionary of disfluency type name
+    if dsfl_types_file:
+        print(f"Loading disfluency types from {dsfl_types_file}")
+        dsfl_types = load_disfluency_types(dsfl_types_file) # a dictionary of disfluency type name
+    else:
+        print("No disfluency types file provided")
+        dsfl_types = None
     
     # Get all words files to determine which meetings and speakers to process
-    words_dir = os.path.join(input_dir, 'words')
+    words_dir = os.path.join(input_dir, 'words') # /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/words
     words_files = [f for f in os.listdir(words_dir) if f.endswith('.words.xml')]
     print(f"Found {len(words_files)} words files")
     
     # Create a CSV file for all processed data
-    csv_file_path = os.path.join(output_dir, 'disfluency_laughter_markers.csv')
+    csv_file_path = os.path.join(output_dir, 'ami_laugh_markers.csv')
     
     with open(csv_file_path, 'w', newline='', encoding='utf-8') as csv_file:
         # Define CSV writer and header
         csv_writer = csv.writer(csv_file)
-        csv_writer.writerow(['meeting_id', 'speaker_id', 'word', 'start_time', 'end_time', 'disfluency_type', 'is_laugh'])
+        csv_writer.writerow(['meeting_id', 'speaker_id', 'word', 'start_time', 'end_time', 'disfluency_type'])
         
         # Process each meeting and speaker
         for words_file in words_files:
@@ -62,25 +72,39 @@ def disfluency_laughter_to_csv(input_dir=None, output_dir=None):
                 continue
             
             meeting_id, speaker_id = match.groups()
+
+
             # Check for corresponding disfluency file
-            disfluency_file = os.path.join(input_dir, 'disfluency', f"{meeting_id}.{speaker_id}.disfluency.xml")
-            
+            # disfluency_file = os.path.join(disfluency_dir, f"{meeting_id}.{speaker_id}.disfluency.xml")
+            if disfluency_dir:
+                print(f"Loading disfluency file from {disfluency_dir}")
+                disfluency_file = os.path.join(disfluency_dir, f"{meeting_id}.{speaker_id}.disfluency.xml")
+            else:
+                print("No disfluency directory provided")
+                disfluency_file = None
             
             # Process the transcript and write to CSV
             print(f"Processing {meeting_id} - Speaker {speaker_id}")
             process_disfluency_laughter_for_csv(
+                csv_writer,
                 meeting_id,
                 speaker_id,
                 words_file_path,  # Pass the full path to the words file
-                disfluency_file if os.path.exists(disfluency_file) else None,
-                dsfl_types,
-                csv_writer
+                disfluency_file,
+                dsfl_types
             )
     
     print(f"CSV export completed: {csv_file_path}")
 
 
-def process_disfluency_laughter_for_csv(meeting_id, speaker_id, words_file, disfluency_file, dsfl_types, csv_writer):
+def process_disfluency_laughter_for_csv(
+        csv_writer,
+        meeting_id, 
+        speaker_id, 
+        words_file, 
+        disfluency_file=None, 
+        dsfl_types=None,
+        ):
     """
     Process transcript files and write disfluency and laughter categories to CSV.
     
@@ -145,7 +169,12 @@ def process_disfluency_laughter_for_csv(meeting_id, speaker_id, words_file, disf
     
     # Process each word and append to CSV
     for word_elem in words_root.findall('.//*[@{{{0}}}id]'.format(ns['nite']), ns):
+
+        # Get word id
         word_id = word_elem.get('{{{0}}}id'.format(ns['nite']))
+
+        # disfluency type
+        disfluency_type = 'fluent' #default is fluent speech
         
         # Only process word elements and vocal sounds
         if word_elem.tag not in ['w', 'vocalsound']:
@@ -155,10 +184,10 @@ def process_disfluency_laughter_for_csv(meeting_id, speaker_id, words_file, disf
         if word_elem.tag == 'w':
             text = word_elem.text if word_elem.text else ""
             text = text.replace('&#39;', "'")  # Replace HTML entities
-            is_laugh = False
+            disfluency_type = 'fluent'
         elif word_elem.tag == 'vocalsound' and word_elem.get('type') == 'laugh':
             text = "<laugh>"
-            is_laugh = True
+            disfluency_type = 'laughter' #replace by laughter
         else:
             continue  # Skip other vocal sounds
         
@@ -167,11 +196,12 @@ def process_disfluency_laughter_for_csv(meeting_id, speaker_id, words_file, disf
         end_time = word_elem.get('endtime', '')
         
         # Get disfluency type
-        disfluency_id = word_to_disfluency.get(word_id, '')
-        disfluency_type = dsfl_types.get(disfluency_id, '')
+        if dsfl_types:
+            disfluency_id = word_to_disfluency.get(word_id, '')
+            disfluency_type = dsfl_types.get(disfluency_id, '')
         
         # Only write to CSV if the word has a disfluency type or is a laugh
-        if disfluency_type or is_laugh:
+        if disfluency_type:
             # Write to CSV
             csv_writer.writerow([
                 meeting_id,
@@ -179,8 +209,7 @@ def process_disfluency_laughter_for_csv(meeting_id, speaker_id, words_file, disf
                 text,
                 start_time,
                 end_time,
-                disfluency_type, # 19 disfluency types
-                1 if is_laugh else 0 # 1 if laughter, 0 otherwise
+                disfluency_type,
             ])
 
 def load_disfluency_types(dsfl_types_file):
@@ -213,6 +242,20 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Export AMI Corpus transcript data to CSV")
     parser.add_argument("--input", default=transcript_path, help="Input directory containing transcript XML files")
     parser.add_argument("--output", default=csv_output_path, help="Output directory for CSV files")
+    parser.add_argument("--use_disfluency", default=False, help="Whether to use disfluency types file")
     
     args = parser.parse_args()
-    disfluency_laughter_to_csv(args.input, args.output) 
+
+    if args.use_disfluency:
+        disfluency_dir = os.path.join(args.input, 'disfluency') # /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/disfluency
+        dsfl_types_file = os.path.join(args.input, 'ontologies/dsfl-types.xml') # /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/ontologies/dsfl-types.xml
+    else:
+        disfluency_dir = None
+        dsfl_types_file = None
+
+    disfluency_laughter_to_csv(
+        input_dir=args.input,
+        output_dir=args.output,
+        disfluency_dir=None,
+        dsfl_types_file=None,
+    ) 

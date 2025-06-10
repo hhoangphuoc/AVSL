@@ -1,0 +1,875 @@
+Loading dialogue act types from /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/ontologies/da-types.xml
+Loaded 15 dialogue act types
+Loading adjacency pair types from /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/ontologies/ap-types.xml
+Loaded 5 adjacency pair types
+Found 687 words files
+Processing dialogue acts for IS1000c - Speaker D
+Processing dialogue acts for TS3008a - Speaker D
+Processing dialogue acts for ES2007c - Speaker A
+Processing dialogue acts for ES2013b - Speaker B
+Processing dialogue acts for ES2002a - Speaker C
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2006a.A.dialog-act.xml
+Processing dialogue acts for IS1006c - Speaker A
+Processing dialogue acts for IS1003a - Speaker C
+Processing dialogue acts for ES2011b - Speaker A
+Processing dialogue acts for ES2005c - Speaker B
+Processing dialogue acts for IS1004c - Speaker B
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2004a.B.dialog-act.xml
+Processing dialogue acts for IS1006a - Speaker D
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1001.D.dialog-act.xml
+Processing dialogue acts for ES2007a - Speaker D
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2001a.E.dialog-act.xml
+Processing dialogue acts for ES2003a - Speaker B
+Processing dialogue acts for ES2012b - Speaker C
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IB4011.D.dialog-act.xml
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2002c.B.dialog-act.xml
+Processing dialogue acts for ES2004c - Speaker C
+Processing dialogue acts for TS3008c - Speaker A
+Processing dialogue acts for IS1005c - Speaker C
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2005a.C.dialog-act.xml
+Processing dialogue acts for IS1000a - Speaker A
+Processing dialogue acts for ES2006a - Speaker D
+Processing dialogue acts for IS1007a - Speaker D
+Processing dialogue acts for IS1001a - Speaker A
+Processing dialogue acts for TS3012d - Speaker D
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2004a.C.dialog-act.xml
+Processing dialogue acts for IS1004c - Speaker C
+Processing dialogue acts for TS3009c - Speaker A
+Processing dialogue acts for ES2005c - Speaker C
+Processing dialogue acts for IS1003a - Speaker B
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IB4001.D.dialog-act.xml
+Processing dialogue acts for ES2002a - Speaker B
+Processing dialogue acts for ES2013b - Speaker C
+Processing dialogue acts for TS3009a - Speaker D
+Processing dialogue acts for IS1001c - Speaker D
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2001a.D.dialog-act.xml
+Processing dialogue acts for ES2016b - Speaker D
+Processing dialogue acts for IB4003 - Speaker A
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2005a.B.dialog-act.xml
+Processing dialogue acts for IS1005c - Speaker B
+Processing dialogue acts for ES2004c - Speaker B
+Processing dialogue acts for ES2010b - Speaker A
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2002c.C.dialog-act.xml
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1013.A.dialog-act.xml
+Processing dialogue acts for IS1007c - Speaker A
+Processing dialogue acts for ES2012b - Speaker B
+Processing dialogue acts for ES2003a - Speaker C
+Processing dialogue acts for ES2006c - Speaker A
+Processing dialogue acts for ES2011b - Speaker C
+Processing dialogue acts for TS3009c - Speaker B
+Processing dialogue acts for IS1001a - Speaker B
+Processing dialogue acts for ES2002a - Speaker A
+Processing dialogue acts for ES2007c - Speaker C
+Processing dialogue acts for IS1003a - Speaker A
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2006a.C.dialog-act.xml
+Processing dialogue acts for IS1006c - Speaker C
+Processing dialogue acts for TS3010d - Speaker D
+Processing dialogue acts for IS1005a - Speaker D
+Processing dialogue acts for ES2004a - Speaker D
+Processing dialogue acts for TS3008c - Speaker C
+Processing dialogue acts for ES2010b - Speaker B
+Processing dialogue acts for ES2004c - Speaker A
+Processing dialogue acts for IS1000a - Speaker C
+Processing dialogue acts for IS1005c - Speaker A
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2005a.A.dialog-act.xml
+Processing dialogue acts for ES2006c - Speaker B
+Processing dialogue acts for ES2012b - Speaker A
+Processing dialogue acts for IS1007c - Speaker B
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1013.B.dialog-act.xml
+Processing dialogue acts for ES2014b - Speaker D
+Processing dialogue acts for IS1003c - Speaker D
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2003a.D.dialog-act.xml
+Processing dialogue acts for ES2002c - Speaker D
+Processing dialogue acts for IB4003 - Speaker B
+Processing dialogue acts for IS1006c - Speaker B
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2006a.B.dialog-act.xml
+Processing dialogue acts for ES2013b - Speaker A
+Processing dialogue acts for ES2007c - Speaker B
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2004a.A.dialog-act.xml
+Processing dialogue acts for IS1004c - Speaker A
+Processing dialogue acts for IS1001a - Speaker C
+Processing dialogue acts for ES2005c - Speaker A
+Processing dialogue acts for TS3009c - Speaker C
+Processing dialogue acts for ES2011b - Speaker B
+Processing dialogue acts for ES2003c - Speaker D
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2002a.D.dialog-act.xml
+Processing dialogue acts for IS1002c - Speaker D
+Processing dialogue acts for ES2015b - Speaker D
+Processing dialogue acts for TS3011d - Speaker D
+Processing dialogue acts for IS1007c - Speaker C
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1013.C.dialog-act.xml
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2002c.A.dialog-act.xml
+Processing dialogue acts for ES2006c - Speaker C
+Processing dialogue acts for ES2003a - Speaker A
+Processing dialogue acts for IS1000a - Speaker B
+Processing dialogue acts for ES2010b - Speaker C
+Processing dialogue acts for TS3008c - Speaker B
+Processing dialogue acts for IB4003 - Speaker C
+Processing dialogue acts for ES2005a - Speaker D
+Processing dialogue acts for IS1004a - Speaker D
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1013.D.dialog-act.xml
+Processing dialogue acts for IS1007c - Speaker D
+Processing dialogue acts for TS3011d - Speaker C
+Processing dialogue acts for ES2006c - Speaker D
+Processing dialogue acts for ES2010b - Speaker D
+Processing dialogue acts for ES2016b - Speaker A
+Processing dialogue acts for IB4003 - Speaker D
+Processing dialogue acts for ES2002c - Speaker B
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2003a.B.dialog-act.xml
+Processing dialogue acts for IS1003c - Speaker B
+Processing dialogue acts for TS3009a - Speaker A
+Processing dialogue acts for ES2014b - Speaker B
+Processing dialogue acts for ES2005a - Speaker C
+Processing dialogue acts for IS1001c - Speaker A
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2001a.A.dialog-act.xml
+Processing dialogue acts for IS1004a - Speaker C
+Processing dialogue acts for TS3010d - Speaker B
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IB4001.A.dialog-act.xml
+Processing dialogue acts for IS1001a - Speaker D
+Processing dialogue acts for TS3012d - Speaker A
+Processing dialogue acts for TS3009c - Speaker D
+Processing dialogue acts for ES2003c - Speaker C
+Processing dialogue acts for ES2006a - Speaker A
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2002a.C.dialog-act.xml
+Processing dialogue acts for IS1002c - Speaker C
+Processing dialogue acts for IS1007a - Speaker A
+Processing dialogue acts for ES2004a - Speaker B
+Processing dialogue acts for ES2015b - Speaker C
+Processing dialogue acts for IS1005a - Speaker B
+Processing dialogue acts for TS3008c - Speaker D
+Processing dialogue acts for IS1000a - Speaker D
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IB4011.A.dialog-act.xml
+Processing dialogue acts for TS3011d - Speaker B
+Processing dialogue acts for IS1004a - Speaker B
+Processing dialogue acts for ES2005a - Speaker B
+Processing dialogue acts for ES2014b - Speaker C
+Processing dialogue acts for IS1006a - Speaker A
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1001.A.dialog-act.xml
+Processing dialogue acts for IS1003c - Speaker C
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2003a.C.dialog-act.xml
+Processing dialogue acts for ES2007a - Speaker A
+Processing dialogue acts for ES2002c - Speaker C
+Processing dialogue acts for ES2011b - Speaker D
+Processing dialogue acts for ES2007c - Speaker D
+Processing dialogue acts for TS3010d - Speaker C
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2006a.D.dialog-act.xml
+Processing dialogue acts for IS1006c - Speaker D
+Processing dialogue acts for IS1005a - Speaker C
+Processing dialogue acts for IS1000c - Speaker A
+Processing dialogue acts for ES2015b - Speaker B
+Processing dialogue acts for ES2004a - Speaker C
+Processing dialogue acts for TS3008a - Speaker A
+Processing dialogue acts for IS1002c - Speaker B
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2002a.B.dialog-act.xml
+Processing dialogue acts for ES2003c - Speaker B
+Processing dialogue acts for ES2005a - Speaker A
+Processing dialogue acts for TS3009a - Speaker C
+Processing dialogue acts for IS1004a - Speaker A
+Processing dialogue acts for IS1001c - Speaker C
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2001a.C.dialog-act.xml
+Processing dialogue acts for ES2016b - Speaker C
+Processing dialogue acts for ES2007a - Speaker B
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1001.B.dialog-act.xml
+Processing dialogue acts for IS1006a - Speaker B
+Processing dialogue acts for TS3011d - Speaker A
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2002c.D.dialog-act.xml
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IB4011.B.dialog-act.xml
+Processing dialogue acts for ES2003a - Speaker D
+Processing dialogue acts for TS3008a - Speaker B
+Processing dialogue acts for ES2015b - Speaker A
+Processing dialogue acts for IS1000c - Speaker B
+Processing dialogue acts for ES2006a - Speaker C
+Processing dialogue acts for ES2003c - Speaker A
+Processing dialogue acts for IS1007a - Speaker C
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2002a.A.dialog-act.xml
+Processing dialogue acts for IS1002c - Speaker A
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2004a.D.dialog-act.xml
+Processing dialogue acts for IS1004c - Speaker D
+Processing dialogue acts for TS3012d - Speaker C
+Processing dialogue acts for ES2005c - Speaker D
+Processing dialogue acts for ES2013b - Speaker D
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IB4001.C.dialog-act.xml
+Processing dialogue acts for IS1003c - Speaker A
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2003a.A.dialog-act.xml
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1001.C.dialog-act.xml
+Processing dialogue acts for IS1006a - Speaker C
+Processing dialogue acts for ES2002c - Speaker A
+Processing dialogue acts for ES2007a - Speaker C
+Processing dialogue acts for ES2016b - Speaker B
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2001a.B.dialog-act.xml
+Processing dialogue acts for IS1001c - Speaker B
+Processing dialogue acts for ES2014b - Speaker A
+Processing dialogue acts for TS3009a - Speaker B
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IB4011.C.dialog-act.xml
+Processing dialogue acts for ES2012b - Speaker D
+Processing dialogue acts for ES2004c - Speaker D
+Processing dialogue acts for IS1005c - Speaker D
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2005a.D.dialog-act.xml
+Processing dialogue acts for IS1007a - Speaker B
+Processing dialogue acts for ES2006a - Speaker B
+Processing dialogue acts for IS1000c - Speaker C
+Processing dialogue acts for IS1005a - Speaker A
+Processing dialogue acts for TS3008a - Speaker C
+Processing dialogue acts for ES2004a - Speaker A
+Processing dialogue acts for ES2002a - Speaker D
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IB4001.B.dialog-act.xml
+Processing dialogue acts for IS1003a - Speaker D
+Processing dialogue acts for TS3010d - Speaker A
+Processing dialogue acts for TS3012d - Speaker B
+Processing dialogue acts for ES2009c - Speaker A
+Processing dialogue acts for TS3005c - Speaker C
+Processing dialogue acts for IS1008c - Speaker A
+Processing dialogue acts for ES2012d - Speaker D
+Processing dialogue acts for ES2016d - Speaker B
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1007.C.dialog-act.xml
+Processing dialogue acts for ES2014d - Speaker A
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1008.C.dialog-act.xml
+Processing dialogue acts for TS3006a - Speaker D
+Processing dialogue acts for TS3004c - Speaker B
+Processing dialogue acts for TS3010b - Speaker A
+Processing dialogue acts for TS3012b - Speaker B
+Processing dialogue acts for TS3003a - Speaker C
+Processing dialogue acts for TS3006c - Speaker A
+Processing dialogue acts for IS1008a - Speaker D
+Processing dialogue acts for ES2009a - Speaker D
+Processing dialogue acts for TS3007c - Speaker A
+Processing dialogue acts for TS3011b - Speaker A
+Processing dialogue acts for TS3005c - Speaker B
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1008.B.dialog-act.xml
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1007.B.dialog-act.xml
+Processing dialogue acts for ES2008a - Speaker D
+Processing dialogue acts for ES2016d - Speaker C
+Processing dialogue acts for IS1009a - Speaker D
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2009c.D.dialog-act.xml
+Processing dialogue acts for TS3003a - Speaker B
+Processing dialogue acts for TS3012b - Speaker C
+Processing dialogue acts for ES2013d - Speaker D
+Processing dialogue acts for IS1009c - Speaker A
+Processing dialogue acts for TS3004c - Speaker C
+Processing dialogue acts for ES2008c - Speaker A
+Processing dialogue acts for TS3007a - Speaker D
+Processing dialogue acts for ES2015d - Speaker A
+Processing dialogue acts for ES2014d - Speaker C
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1008.A.dialog-act.xml
+Processing dialogue acts for TS3003c - Speaker D
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1007.A.dialog-act.xml
+Processing dialogue acts for TS3007c - Speaker B
+Processing dialogue acts for TS3005c - Speaker A
+Processing dialogue acts for ES2009c - Speaker C
+Processing dialogue acts for TS3011b - Speaker B
+Processing dialogue acts for IS1008c - Speaker C
+Processing dialogue acts for ES2015d - Speaker B
+Processing dialogue acts for TS3005a - Speaker D
+Processing dialogue acts for TS3006c - Speaker C
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2001e.E.dialog-act.xml
+Processing dialogue acts for TS3003a - Speaker A
+Processing dialogue acts for ES2011d - Speaker D
+Processing dialogue acts for TS3010b - Speaker C
+Processing dialogue acts for ES2008c - Speaker B
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1005.D.dialog-act.xml
+Processing dialogue acts for IS1009c - Speaker B
+Processing dialogue acts for TS3004a - Speaker D
+Processing dialogue acts for ES2016d - Speaker A
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IB4005.D.dialog-act.xml
+Processing dialogue acts for ES2014d - Speaker B
+Processing dialogue acts for IS1008c - Speaker B
+Processing dialogue acts for TS3011b - Speaker C
+Processing dialogue acts for ES2009c - Speaker B
+Processing dialogue acts for ES2010d - Speaker D
+Processing dialogue acts for TS3007c - Speaker C
+Processing dialogue acts for ES2015d - Speaker C
+Processing dialogue acts for IS1009c - Speaker C
+Processing dialogue acts for ES2008c - Speaker C
+Processing dialogue acts for TS3010b - Speaker B
+Processing dialogue acts for TS3004c - Speaker A
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2001e.D.dialog-act.xml
+Processing dialogue acts for TS3006c - Speaker B
+Processing dialogue acts for TS3012b - Speaker A
+Processing dialogue acts for TS3005a - Speaker B
+Processing dialogue acts for TS3007a - Speaker A
+Processing dialogue acts for ES2015d - Speaker D
+Processing dialogue acts for ES2013d - Speaker A
+Processing dialogue acts for IS1009c - Speaker D
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1005.B.dialog-act.xml
+Processing dialogue acts for ES2008c - Speaker D
+Processing dialogue acts for ES2011d - Speaker B
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2001e.C.dialog-act.xml
+Processing dialogue acts for TS3004a - Speaker C
+Processing dialogue acts for ES2008a - Speaker A
+Processing dialogue acts for IS1009a - Speaker A
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2009c.A.dialog-act.xml
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IB4005.C.dialog-act.xml
+Processing dialogue acts for TS3003c - Speaker B
+Processing dialogue acts for TS3011b - Speaker D
+Processing dialogue acts for ES2010d - Speaker C
+Processing dialogue acts for TS3007c - Speaker D
+Processing dialogue acts for IS1008a - Speaker A
+Processing dialogue acts for ES2009a - Speaker A
+Processing dialogue acts for TS3005a - Speaker C
+Processing dialogue acts for TS3006c - Speaker D
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2001e.B.dialog-act.xml
+Processing dialogue acts for ES2011d - Speaker C
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1005.C.dialog-act.xml
+Processing dialogue acts for TS3010b - Speaker D
+Processing dialogue acts for ES2014d - Speaker D
+Processing dialogue acts for TS3003c - Speaker C
+Processing dialogue acts for TS3006a - Speaker A
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IB4005.B.dialog-act.xml
+Processing dialogue acts for TS3004a - Speaker B
+Processing dialogue acts for ES2010d - Speaker B
+Processing dialogue acts for ES2009c - Speaker D
+Processing dialogue acts for IS1008c - Speaker D
+Processing dialogue acts for ES2012d - Speaker A
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2001e.A.dialog-act.xml
+Processing dialogue acts for TS3012b - Speaker D
+Processing dialogue acts for ES2013d - Speaker C
+Processing dialogue acts for TS3004c - Speaker D
+Processing dialogue acts for TS3007a - Speaker C
+Processing dialogue acts for ES2009a - Speaker B
+Processing dialogue acts for IS1008a - Speaker B
+Processing dialogue acts for ES2010d - Speaker A
+Processing dialogue acts for ES2012d - Speaker B
+Processing dialogue acts for TS3006a - Speaker B
+Processing dialogue acts for ES2008a - Speaker C
+Processing dialogue acts for TS3004a - Speaker A
+Processing dialogue acts for IS1009a - Speaker C
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2009c.C.dialog-act.xml
+Processing dialogue acts for ES2016d - Speaker D
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IB4005.A.dialog-act.xml
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1005.A.dialog-act.xml
+Processing dialogue acts for ES2013d - Speaker B
+Processing dialogue acts for TS3003a - Speaker D
+Processing dialogue acts for ES2011d - Speaker A
+Processing dialogue acts for IS1008a - Speaker C
+Processing dialogue acts for TS3005a - Speaker A
+Processing dialogue acts for ES2009a - Speaker C
+Processing dialogue acts for TS3007a - Speaker B
+Processing dialogue acts for TS3005c - Speaker D
+Processing dialogue acts for ES2012d - Speaker C
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2009c.B.dialog-act.xml
+Processing dialogue acts for IS1009a - Speaker B
+Processing dialogue acts for ES2008a - Speaker B
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1007.D.dialog-act.xml
+Processing dialogue acts for TS3006a - Speaker C
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1008.D.dialog-act.xml
+Processing dialogue acts for TS3003c - Speaker A
+Processing dialogue acts for ES2003d - Speaker C
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1016.A.dialog-act.xml
+Processing dialogue acts for IS1002d - Speaker C
+Processing dialogue acts for TS3006b - Speaker B
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2001d.D.dialog-act.xml
+Processing dialogue acts for TS3012c - Speaker A
+Processing dialogue acts for TS3009d - Speaker D
+Processing dialogue acts for TS3010c - Speaker B
+Processing dialogue acts for ES2008b - Speaker C
+Processing dialogue acts for TS3004b - Speaker A
+Processing dialogue acts for IS1009b - Speaker C
+Processing dialogue acts for IS1001d - Speaker A
+Processing dialogue acts for TS3012a - Speaker D
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IB4004.D.dialog-act.xml
+Processing dialogue acts for ES2002d - Speaker B
+Processing dialogue acts for IS1003d - Speaker B
+Processing dialogue acts for TS3007b - Speaker C
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1014.D.dialog-act.xml
+Processing dialogue acts for ES2009b - Speaker B
+Processing dialogue acts for TS3011c - Speaker C
+Processing dialogue acts for IS1007d - Speaker D
+Processing dialogue acts for IS1008b - Speaker B
+Processing dialogue acts for ES2006d - Speaker D
+Processing dialogue acts for IS1002d - Speaker B
+Processing dialogue acts for ES2003d - Speaker B
+Processing dialogue acts for IS1000d - Speaker A
+Processing dialogue acts for IS1009b - Speaker B
+Processing dialogue acts for ES2007d - Speaker D
+Processing dialogue acts for ES2008b - Speaker B
+Processing dialogue acts for IS1006d - Speaker D
+Processing dialogue acts for TS3010c - Speaker C
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2001d.E.dialog-act.xml
+Processing dialogue acts for TS3006b - Speaker C
+Processing dialogue acts for IS1003d - Speaker C
+Processing dialogue acts for ES2002d - Speaker C
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1009.A.dialog-act.xml
+Processing dialogue acts for TS3003b - Speaker D
+Processing dialogue acts for IS1008b - Speaker C
+Processing dialogue acts for TS3005b - Speaker A
+Processing dialogue acts for TS3011c - Speaker B
+Processing dialogue acts for ES2009b - Speaker C
+Processing dialogue acts for TS3008d - Speaker D
+Processing dialogue acts for TS3007b - Speaker B
+Processing dialogue acts for TS3004b - Speaker C
+Processing dialogue acts for ES2008b - Speaker A
+Processing dialogue acts for IS1009b - Speaker A
+Processing dialogue acts for TS3012c - Speaker C
+Processing dialogue acts for IS1004d - Speaker D
+Processing dialogue acts for ES2005d - Speaker D
+Processing dialogue acts for ES2003d - Speaker A
+Processing dialogue acts for TS3011a - Speaker D
+Processing dialogue acts for IS1002d - Speaker A
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1016.C.dialog-act.xml
+Processing dialogue acts for IS1000d - Speaker B
+Processing dialogue acts for TS3011c - Speaker A
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2002d.D.dialog-act.xml
+Processing dialogue acts for TS3005b - Speaker B
+Processing dialogue acts for TS3007b - Speaker A
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2009b.D.dialog-act.xml
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1009.B.dialog-act.xml
+Processing dialogue acts for IS1001d - Speaker C
+Processing dialogue acts for TS3012c - Speaker B
+Processing dialogue acts for TS3006b - Speaker A
+Processing dialogue acts for TS3004b - Speaker B
+Processing dialogue acts for TS3010c - Speaker A
+Processing dialogue acts for IS1000d - Speaker C
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1016.B.dialog-act.xml
+Processing dialogue acts for ES2004d - Speaker D
+Processing dialogue acts for IS1008b - Speaker A
+Processing dialogue acts for ES2009b - Speaker A
+Processing dialogue acts for TS3005b - Speaker C
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1009.C.dialog-act.xml
+Processing dialogue acts for IS1001d - Speaker B
+Processing dialogue acts for IS1003d - Speaker A
+Processing dialogue acts for TS3010a - Speaker D
+Processing dialogue acts for ES2002d - Speaker A
+Processing dialogue acts for ES2004d - Speaker C
+Processing dialogue acts for TS3008d - Speaker A
+Processing dialogue acts for TS3005b - Speaker D
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2002d.B.dialog-act.xml
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1009.D.dialog-act.xml
+Processing dialogue acts for TS3003b - Speaker A
+Processing dialogue acts for TS3010a - Speaker C
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2009b.B.dialog-act.xml
+Processing dialogue acts for ES2005d - Speaker B
+Processing dialogue acts for IS1004d - Speaker B
+Processing dialogue acts for ES2007d - Speaker A
+Processing dialogue acts for IS1006d - Speaker A
+Processing dialogue acts for IS1000d - Speaker D
+Processing dialogue acts for TS3011a - Speaker B
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1014.A.dialog-act.xml
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2002d.C.dialog-act.xml
+Processing dialogue acts for IS1007d - Speaker A
+Processing dialogue acts for ES2006d - Speaker A
+Processing dialogue acts for ES2004d - Speaker B
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IB4004.A.dialog-act.xml
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2009b.C.dialog-act.xml
+Processing dialogue acts for TS3010a - Speaker B
+Processing dialogue acts for IS1001d - Speaker D
+Processing dialogue acts for TS3012a - Speaker A
+Processing dialogue acts for TS3004b - Speaker D
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2001d.A.dialog-act.xml
+Processing dialogue acts for IS1004d - Speaker C
+Processing dialogue acts for TS3012c - Speaker D
+Processing dialogue acts for TS3009d - Speaker A
+Processing dialogue acts for ES2005d - Speaker C
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1016.D.dialog-act.xml
+Processing dialogue acts for TS3011a - Speaker C
+Processing dialogue acts for IS1003d - Speaker D
+Processing dialogue acts for TS3010a - Speaker A
+Processing dialogue acts for ES2002d - Speaker D
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IB4004.B.dialog-act.xml
+Processing dialogue acts for TS3003b - Speaker C
+Processing dialogue acts for TS3012a - Speaker B
+Processing dialogue acts for ES2006d - Speaker B
+Processing dialogue acts for IS1008b - Speaker D
+Processing dialogue acts for IS1007d - Speaker B
+Processing dialogue acts for ES2009b - Speaker D
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1014.B.dialog-act.xml
+Processing dialogue acts for TS3008d - Speaker C
+Processing dialogue acts for ES2004d - Speaker A
+Processing dialogue acts for ES2007d - Speaker C
+Processing dialogue acts for TS3010c - Speaker D
+Processing dialogue acts for IS1006d - Speaker C
+Processing dialogue acts for TS3009d - Speaker B
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2001d.B.dialog-act.xml
+Processing dialogue acts for TS3006b - Speaker D
+Processing dialogue acts for TS3012a - Speaker C
+Processing dialogue acts for TS3003b - Speaker B
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IB4004.C.dialog-act.xml
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2009b.A.dialog-act.xml
+Processing dialogue acts for TS3007b - Speaker D
+Processing dialogue acts for TS3008d - Speaker B
+Processing dialogue acts for IS1007d - Speaker C
+Processing dialogue acts for TS3011c - Speaker D
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2002d.A.dialog-act.xml
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1014.C.dialog-act.xml
+Processing dialogue acts for ES2006d - Speaker C
+Processing dialogue acts for ES2003d - Speaker D
+Processing dialogue acts for TS3011a - Speaker A
+Processing dialogue acts for IS1002d - Speaker D
+Processing dialogue acts for IS1004d - Speaker A
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2001d.C.dialog-act.xml
+Processing dialogue acts for ES2005d - Speaker A
+Processing dialogue acts for TS3009d - Speaker C
+Processing dialogue acts for IS1006d - Speaker B
+Processing dialogue acts for ES2008b - Speaker D
+Processing dialogue acts for ES2007d - Speaker B
+Processing dialogue acts for IS1009b - Speaker D
+Processing dialogue acts for TS3008b - Speaker B
+Processing dialogue acts for ES2010c - Speaker C
+Processing dialogue acts for ES2015a - Speaker A
+Processing dialogue acts for TS3007d - Speaker D
+Processing dialogue acts for ES2006b - Speaker C
+Processing dialogue acts for IS1007b - Speaker C
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1012.C.dialog-act.xml
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2002b.A.dialog-act.xml
+Processing dialogue acts for TS3003d - Speaker B
+Processing dialogue acts for ES2013a - Speaker D
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IB4002.C.dialog-act.xml
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2009d.A.dialog-act.xml
+Processing dialogue acts for ES2005b - Speaker A
+Processing dialogue acts for ES2011c - Speaker B
+Processing dialogue acts for TS3009b - Speaker C
+Processing dialogue acts for IS1004b - Speaker A
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2001b.C.dialog-act.xml
+Processing dialogue acts for ES2013c - Speaker A
+Processing dialogue acts for ES2007b - Speaker B
+Processing dialogue acts for IS1009d - Speaker D
+Processing dialogue acts for ES2016a - Speaker C
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1002.B.dialog-act.xml
+Processing dialogue acts for IS1006b - Speaker B
+Processing dialogue acts for ES2008d - Speaker D
+Processing dialogue acts for ES2015c - Speaker D
+Processing dialogue acts for IS1002b - Speaker D
+Processing dialogue acts for ES2003b - Speaker D
+Processing dialogue acts for IS1007b - Speaker B
+Processing dialogue acts for ES2009d - Speaker D
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1012.B.dialog-act.xml
+Processing dialogue acts for ES2006b - Speaker B
+Processing dialogue acts for IS1008d - Speaker D
+Processing dialogue acts for ES2012c - Speaker A
+Processing dialogue acts for IS1005b - Speaker A
+Processing dialogue acts for ES2010c - Speaker B
+Processing dialogue acts for TS3008b - Speaker C
+Processing dialogue acts for ES2004b - Speaker A
+Processing dialogue acts for ES2002b - Speaker D
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IB4002.B.dialog-act.xml
+Processing dialogue acts for IS1003b - Speaker D
+Processing dialogue acts for ES2014c - Speaker D
+Processing dialogue acts for TS3003d - Speaker C
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1002.C.dialog-act.xml
+Processing dialogue acts for IS1006b - Speaker C
+Processing dialogue acts for ES2016a - Speaker B
+Processing dialogue acts for ES2007b - Speaker C
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2001b.B.dialog-act.xml
+Processing dialogue acts for TS3006d - Speaker D
+Processing dialogue acts for ES2014a - Speaker A
+Processing dialogue acts for TS3009b - Speaker B
+Processing dialogue acts for ES2011c - Speaker C
+Processing dialogue acts for ES2012a - Speaker D
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IB4002.A.dialog-act.xml
+Processing dialogue acts for ES2016c - Speaker D
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2009d.C.dialog-act.xml
+Processing dialogue acts for IS1001b - Speaker D
+Processing dialogue acts for ES2012c - Speaker B
+Processing dialogue acts for ES2006b - Speaker A
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2002b.C.dialog-act.xml
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1012.A.dialog-act.xml
+Processing dialogue acts for IS1007b - Speaker A
+Processing dialogue acts for ES2015a - Speaker C
+Processing dialogue acts for ES2004b - Speaker B
+Processing dialogue acts for ES2010c - Speaker A
+Processing dialogue acts for IS1005b - Speaker B
+Processing dialogue acts for ES2010a - Speaker D
+Processing dialogue acts for ES2016a - Speaker A
+Processing dialogue acts for ES2013c - Speaker C
+Processing dialogue acts for TS3004d - Speaker D
+Processing dialogue acts for TS3009b - Speaker A
+Processing dialogue acts for ES2005b - Speaker C
+Processing dialogue acts for ES2014a - Speaker B
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2001b.A.dialog-act.xml
+Processing dialogue acts for IS1004b - Speaker C
+Processing dialogue acts for ES2011a - Speaker D
+Processing dialogue acts for TS3003d - Speaker A
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2009d.B.dialog-act.xml
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2006b.D.dialog-act.xml
+Processing dialogue acts for IS1005b - Speaker C
+Processing dialogue acts for ES2004b - Speaker C
+Processing dialogue acts for ES2015a - Speaker B
+Processing dialogue acts for TS3008b - Speaker A
+Processing dialogue acts for TS3005d - Speaker D
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2002b.B.dialog-act.xml
+Processing dialogue acts for ES2012c - Speaker C
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IB4010.D.dialog-act.xml
+Processing dialogue acts for IS1000b - Speaker D
+Processing dialogue acts for IS1004b - Speaker B
+Processing dialogue acts for ES2011c - Speaker A
+Processing dialogue acts for ES2014a - Speaker C
+Processing dialogue acts for ES2005b - Speaker B
+Processing dialogue acts for IS1006b - Speaker A
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1002.A.dialog-act.xml
+Processing dialogue acts for ES2007b - Speaker A
+Processing dialogue acts for ES2013c - Speaker B
+Processing dialogue acts for ES2010a - Speaker B
+Processing dialogue acts for IS1000b - Speaker C
+Processing dialogue acts for ES2012a - Speaker A
+Processing dialogue acts for TS3006d - Speaker A
+Processing dialogue acts for ES2014a - Speaker D
+Processing dialogue acts for TS3004d - Speaker B
+Processing dialogue acts for ES2014c - Speaker A
+Processing dialogue acts for ES2011a - Speaker C
+Processing dialogue acts for IS1001b - Speaker B
+Processing dialogue acts for ES2002b - Speaker A
+Processing dialogue acts for ES2016c - Speaker B
+Processing dialogue acts for IS1003b - Speaker A
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2006b.C.dialog-act.xml
+Processing dialogue acts for IS1005b - Speaker D
+Processing dialogue acts for ES2004b - Speaker D
+Processing dialogue acts for ES2009d - Speaker A
+Processing dialogue acts for TS3005d - Speaker C
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IB4010.C.dialog-act.xml
+Processing dialogue acts for IS1008d - Speaker A
+Processing dialogue acts for ES2012c - Speaker D
+Processing dialogue acts for IS1002b - Speaker A
+Processing dialogue acts for ES2003b - Speaker A
+Processing dialogue acts for IS1000b - Speaker B
+Processing dialogue acts for ES2010a - Speaker C
+Processing dialogue acts for ES2015c - Speaker A
+Processing dialogue acts for ES2013c - Speaker D
+Processing dialogue acts for IS1009d - Speaker A
+Processing dialogue acts for TS3004d - Speaker C
+Processing dialogue acts for ES2008d - Speaker A
+Processing dialogue acts for ES2005b - Speaker D
+Processing dialogue acts for IS1004b - Speaker D
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2006b.B.dialog-act.xml
+Processing dialogue acts for ES2013a - Speaker A
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2009d.D.dialog-act.xml
+Processing dialogue acts for ES2016c - Speaker C
+Processing dialogue acts for IS1001b - Speaker C
+Processing dialogue acts for ES2011a - Speaker B
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IB4010.B.dialog-act.xml
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2002b.D.dialog-act.xml
+Processing dialogue acts for TS3005d - Speaker B
+Processing dialogue acts for ES2015a - Speaker D
+Processing dialogue acts for TS3007d - Speaker A
+Processing dialogue acts for ES2008d - Speaker B
+Processing dialogue acts for IS1006b - Speaker D
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1002.D.dialog-act.xml
+Processing dialogue acts for IS1009d - Speaker B
+Processing dialogue acts for ES2007b - Speaker D
+Processing dialogue acts for TS3006d - Speaker C
+Processing dialogue acts for ES2011c - Speaker D
+Processing dialogue acts for ES2012a - Speaker C
+Processing dialogue acts for ES2003b - Speaker B
+Processing dialogue acts for IS1002b - Speaker B
+Processing dialogue acts for ES2015c - Speaker B
+Processing dialogue acts for IS1000b - Speaker A
+Processing dialogue acts for TS3005d - Speaker A
+Processing dialogue acts for ES2009d - Speaker C
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IB4010.A.dialog-act.xml
+Processing dialogue acts for IS1008d - Speaker C
+Processing dialogue acts for TS3007d - Speaker B
+Processing dialogue acts for TS3008b - Speaker D
+Processing dialogue acts for ES2002b - Speaker C
+Processing dialogue acts for ES2013a - Speaker B
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2006b.A.dialog-act.xml
+Processing dialogue acts for IS1003b - Speaker C
+Processing dialogue acts for ES2011a - Speaker A
+Processing dialogue acts for ES2014c - Speaker C
+Processing dialogue acts for TS3003d - Speaker D
+Processing dialogue acts for TS3009b - Speaker D
+Processing dialogue acts for TS3006d - Speaker B
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2001b.D.dialog-act.xml
+Processing dialogue acts for ES2016a - Speaker D
+Processing dialogue acts for IS1009d - Speaker C
+Processing dialogue acts for ES2008d - Speaker C
+Processing dialogue acts for TS3004d - Speaker A
+Processing dialogue acts for ES2015c - Speaker C
+Processing dialogue acts for ES2010a - Speaker A
+Processing dialogue acts for IS1002b - Speaker C
+Processing dialogue acts for ES2003b - Speaker C
+Processing dialogue acts for ES2012a - Speaker B
+Processing dialogue acts for ES2010c - Speaker D
+Processing dialogue acts for TS3007d - Speaker C
+Processing dialogue acts for IS1008d - Speaker B
+Processing dialogue acts for ES2006b - Speaker D
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1012.D.dialog-act.xml
+Processing dialogue acts for ES2009d - Speaker B
+Processing dialogue acts for IS1007b - Speaker D
+Processing dialogue acts for IS1001b - Speaker A
+Processing dialogue acts for ES2014c - Speaker B
+Processing dialogue acts for IS1003b - Speaker B
+Dialogue acts file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IB4002.D.dialog-act.xml
+Processing dialogue acts for ES2016c - Speaker A
+Processing dialogue acts for ES2013a - Speaker C
+Processing dialogue acts for ES2002b - Speaker B
+------------------------------
+Dialogue acts CSV export completed: /deepstore/datasets/hmi/speechlaugh-corpus/ami/ami_laughter/dialogue_acts_laughter/ami_dialogue_acts.csv
+------------------------------
+Processing adjacency pairs for IS1002c
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IB4002.adjacency-pairs.xml
+Processing adjacency pairs for IS1007b
+Processing adjacency pairs for IS1000a
+Processing adjacency pairs for ES2011a
+Processing adjacency pairs for IS1004d
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2009b.adjacency-pairs.xml
+Processing adjacency pairs for ES2006c
+Processing adjacency pairs for TS3006d
+Processing adjacency pairs for ES2015b
+Processing adjacency pairs for ES2002d
+Processing adjacency pairs for IS1008b
+Processing adjacency pairs for TS3009b
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2002d.adjacency-pairs.xml
+Processing adjacency pairs for TS3007b
+Processing adjacency pairs for IB4003
+Processing adjacency pairs for ES2005d
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1014.adjacency-pairs.xml
+Processing adjacency pairs for ES2007a
+Processing adjacency pairs for ES2010c
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1012.adjacency-pairs.xml
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2006b.adjacency-pairs.xml
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1002.adjacency-pairs.xml
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2006a.adjacency-pairs.xml
+Processing adjacency pairs for TS3009d
+Processing adjacency pairs for TS3010a
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1005.adjacency-pairs.xml
+Processing adjacency pairs for IS1006b
+Processing adjacency pairs for ES2013d
+Processing adjacency pairs for ES2012b
+Processing adjacency pairs for ES2005b
+Processing adjacency pairs for ES2004c
+Processing adjacency pairs for ES2003b
+Processing adjacency pairs for IS1009d
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1008.adjacency-pairs.xml
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2001b.adjacency-pairs.xml
+Processing adjacency pairs for ES2015d
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2001a.adjacency-pairs.xml
+Processing adjacency pairs for ES2002c
+Processing adjacency pairs for TS3007c
+Processing adjacency pairs for IS1004c
+Processing adjacency pairs for IS1009c
+Processing adjacency pairs for IS1005a
+Processing adjacency pairs for ES2006a
+Processing adjacency pairs for IS1009a
+Processing adjacency pairs for ES2012c
+Processing adjacency pairs for IS1004b
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1007.adjacency-pairs.xml
+Processing adjacency pairs for TS3007d
+Processing adjacency pairs for ES2010a
+Processing adjacency pairs for TS3007a
+Processing adjacency pairs for IS1000c
+Processing adjacency pairs for IS1005c
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2002b.adjacency-pairs.xml
+Processing adjacency pairs for TS3008c
+Processing adjacency pairs for ES2014b
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2009d.adjacency-pairs.xml
+Processing adjacency pairs for TS3006b
+Processing adjacency pairs for TS3010b
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1013.adjacency-pairs.xml
+Processing adjacency pairs for ES2007d
+Processing adjacency pairs for TS3005b
+Processing adjacency pairs for TS3004d
+Processing adjacency pairs for ES2009d
+Processing adjacency pairs for TS3008a
+Processing adjacency pairs for TS3011c
+Processing adjacency pairs for TS3003a
+Processing adjacency pairs for TS3011a
+Processing adjacency pairs for TS3003c
+Processing adjacency pairs for IS1007a
+Processing adjacency pairs for IS1006d
+Processing adjacency pairs for TS3010d
+Processing adjacency pairs for ES2013c
+Processing adjacency pairs for ES2016b
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2009c.adjacency-pairs.xml
+Processing adjacency pairs for IS1001b
+Processing adjacency pairs for TS3004b
+Processing adjacency pairs for ES2002a
+Processing adjacency pairs for IS1001a
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IB4010.adjacency-pairs.xml
+Processing adjacency pairs for IS1007c
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2005a.adjacency-pairs.xml
+Processing adjacency pairs for ES2014a
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2002a.adjacency-pairs.xml
+Processing adjacency pairs for ES2012a
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2004a.adjacency-pairs.xml
+Processing adjacency pairs for ES2010b
+Processing adjacency pairs for ES2010d
+Processing adjacency pairs for ES2009c
+Processing adjacency pairs for ES2013b
+Processing adjacency pairs for ES2005a
+Processing adjacency pairs for ES2011d
+Processing adjacency pairs for TS3012b
+Processing adjacency pairs for TS3005a
+Processing adjacency pairs for ES2003d
+Processing adjacency pairs for TS3010c
+Processing adjacency pairs for IS1006c
+Processing adjacency pairs for ES2012d
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IB4011.adjacency-pairs.xml
+Processing adjacency pairs for ES2002b
+Processing adjacency pairs for TS3003d
+Processing adjacency pairs for IS1002b
+Processing adjacency pairs for IS1007d
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2001d.adjacency-pairs.xml
+Processing adjacency pairs for IS1001d
+Processing adjacency pairs for IS1003a
+Processing adjacency pairs for IS1003d
+Processing adjacency pairs for ES2009b
+Processing adjacency pairs for IS1000b
+Processing adjacency pairs for ES2003c
+Processing adjacency pairs for ES2006b
+Processing adjacency pairs for IS1008a
+Processing adjacency pairs for ES2007c
+Processing adjacency pairs for IS1005b
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IB4005.adjacency-pairs.xml
+Processing adjacency pairs for IS1003b
+Processing adjacency pairs for IS1001c
+Processing adjacency pairs for TS3004a
+Processing adjacency pairs for TS3008d
+Processing adjacency pairs for TS3009a
+Processing adjacency pairs for TS3003b
+Processing adjacency pairs for TS3009c
+Processing adjacency pairs for ES2008b
+Processing adjacency pairs for IS1008c
+Processing adjacency pairs for TS3012d
+Processing adjacency pairs for ES2007b
+Processing adjacency pairs for ES2004b
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IB4001.adjacency-pairs.xml
+Processing adjacency pairs for ES2011b
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1016.adjacency-pairs.xml
+Processing adjacency pairs for ES2013a
+Processing adjacency pairs for IS1006a
+Processing adjacency pairs for IS1004a
+Processing adjacency pairs for ES2004a
+Processing adjacency pairs for ES2011c
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2002c.adjacency-pairs.xml
+Processing adjacency pairs for ES2008a
+Processing adjacency pairs for TS3012a
+Processing adjacency pairs for ES2015a
+Processing adjacency pairs for ES2008d
+Processing adjacency pairs for IS1008d
+Processing adjacency pairs for TS3005d
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1009.adjacency-pairs.xml
+Processing adjacency pairs for TS3011d
+Processing adjacency pairs for TS3011b
+Processing adjacency pairs for ES2004d
+Processing adjacency pairs for ES2015c
+Processing adjacency pairs for ES2014d
+Processing adjacency pairs for TS3006c
+Processing adjacency pairs for IS1009b
+Processing adjacency pairs for ES2008c
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2003a.adjacency-pairs.xml
+Processing adjacency pairs for TS3012c
+Processing adjacency pairs for IS1002d
+Processing adjacency pairs for ES2016c
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IN1001.adjacency-pairs.xml
+Processing adjacency pairs for TS3005c
+Processing adjacency pairs for ES2014c
+Processing adjacency pairs for ES2006d
+Processing adjacency pairs for IS1003c
+Processing adjacency pairs for ES2009a
+Processing adjacency pairs for TS3004c
+Processing adjacency pairs for ES2003a
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/IB4004.adjacency-pairs.xml
+Processing adjacency pairs for TS3008b
+Processing adjacency pairs for IS1000d
+Processing adjacency pairs for TS3006a
+Adjacency pairs file not found: /deepstore/datasets/hmi/speechlaugh-corpus/ami/transcripts/dialogueActs/EN2001e.adjacency-pairs.xml
+Processing adjacency pairs for ES2016d
+Processing adjacency pairs for ES2016a
+Processing adjacency pairs for ES2005c
+------------------------------
+Adjacency pairs CSV export completed: /deepstore/datasets/hmi/speechlaugh-corpus/ami/ami_laughter/dialogue_acts_laughter/ami_adjacency_pairs.csv
+------------------------------
+------------------------------
+Join dialogue acts and adjacency pairs CSV files
+------------------------------
+------------------------------
+Joined CSV file saved: /deepstore/datasets/hmi/speechlaugh-corpus/ami/ami_laughter/dialogue_acts_laughter/ami_da_ap_laughter.csv
+------------------------------

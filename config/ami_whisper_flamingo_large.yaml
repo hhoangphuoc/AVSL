@@ -1,0 +1,71 @@
+train_name: whisper_flamingo_ft_ami
+
+# Data paths for Hugging Face datasets (must be loadable by load_from_disk)
+# NOTE: This is the path to the validated videos - FIXME: uncomment later after the clean dataset is splitted
+train_data_path: "/home/s2587130/AVSL/data/ami/ami_clean/train"  
+val_data_path: "/home/s2587130/AVSL/data/ami/ami_clean/val"
+test_data_path: "/home/s2587130/AVSL/data/ami/ami_clean/test"
+
+# Max audio length for LengthBatchSampler (in samples, e.g., 10s * 16000 = 160000)
+# This is different from dataset_audio_max_length for pad_or_trim
+audio_max_length: 160000 # Reduced from 240000 (15s) to 160000 (10s) for memory saving
+
+# Max audio length for whisper.pad_or_trim (in samples)
+dataset_audio_max_length: 160000  # Reduced from 320000 (20s) to 10s
+
+# Max duration in seconds to filter dataset samples before training/evaluation
+max_duration_filter_seconds: 10.0  # Reduced from 20.0 to match dataset_audio_max_length
+
+text_max_length: 350 # Max text length (not directly used by AmiVideoHFDataset, but good for reference)
+accelerator: auto
+# accelerator: gpu
+weight_decay: 0.01
+adam_epsilon: 1.0e-8
+num_worker: 4 # Reduced from 8
+validate_every_n_batches: 1000  # Reduced from 2000
+num_devices: 1
+
+model_name: large-v2 # Whisper model size
+learning_rate: 1.0e-5 # Adjusted typical LR for fine-tuning large models
+
+batch_size: 1 # Reduced from 4 for memory saving
+eval_batch_size: 1 # Reduced from 4 for memory saving
+
+num_train_steps: 8000
+warmup_steps: 1000
+gradient_accumulation_steps: 16  # Increased from 8 to maintain effective batch size
+
+monitor: 'val/wer_av' # Monitor WER on the validation set for AV model (now only one val set)
+
+video_model_ckpt: '/home/s2587130/AVSL/avsl/models/large_noise_pt_noise_ft_433h_only_weights.pt' # Path to AV-HuBERT weights
+freeze_video_model: True
+freeze_video_batch_norm_stats: False 
+
+spec_augment: "ls-basic" # SpecAugment config for AmiVideoHFDataset ("ls-double", "ls-basic", or None)
+dropout_rate: 0.1 # Dropout rate in Whisper model
+
+lang: en # Language is English for AMI dataset
+pt_ckpt: '/home/s2587130/AVSL/avsl/models/whisper_en_large.pt' # Path to pre-trained audio-only Whisper checkpoint (optional)
+resume_training: False
+train_id: whisper-flamingo_large_ft_ami # Updated train_id
+
+video_projection_train_only: False
+video_projection_separate_lr: '' # Not used
+prob_use_av: 1.0 # For Whisper-Flamingo, no modality dropout in this config
+
+# Video settings
+use_av_hubert_encoder: True
+add_gated_x_attn: 1 # 0 for False, 1 for True (enable Flamingo-style cross-attention)
+av_fusion: separate # AV fusion strategy
+
+log_output_dir: "/home/s2587130/AVSL/avsl/output/train_whisper_flamingo_ft" # Directory for TensorBoard logs
+check_output_dir: "/home/s2587130/AVSL/avsl/checkpoints/whisper_flamingo_ft"   # Directory for model checkpoints
+
+num_sanity_val_steps: 2 # Number of sanity check batches before training
+precision: 16 # Mixed precision training (16 or bf16)
+reload_dataloaders_every_n_epochs: 1
+sync_batchnorm: True
+
+# Use local model directory instead of downloading
+download_root: '/home/s2587130/AVSL/avsl/models/whisper' # Local directory where models are stored
+enable_gradient_checkpointing: True

@@ -1,15 +1,29 @@
-from datasets import Dataset, Audio, Video
 import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import shutil
 import json
 from tqdm import tqdm
 from pathlib import Path
+from datasets import Dataset, Audio, Video
 from huggingface_hub import HfApi, create_repo, upload_large_folder
 import pandas as pd
 import time
 import random
 from requests.exceptions import HTTPError
 import re
+import evaluate
+
+#====================================================================================================
+# Validate Huggingface Audio and Video objects
+#--------------------------------------------------------------------------------------------------
+from utils.hf_video_utils import create_robust_video_filter
+
+
+#====================================================================================================
+#--------------------------------------------------------------------------------------------------
+# Create a HuggingFace dataset from the processed segments (audio, video, and lip videos), 
+#--------------------------------------------------------------------------------------------------
 
 def av_to_hf_dataset(recordings, dataset_path=None, prefix="ami"):
     """
@@ -24,32 +38,16 @@ def av_to_hf_dataset(recordings, dataset_path=None, prefix="ami"):
     
     os.makedirs(dataset_path, exist_ok=True)
     
-    # GENERATE THE DATASET FROM THE RECORDINGS
+    # Create a dataframe from the recordings
     df = pd.DataFrame(recordings)
     
-    # Save metadata as JSON for easier handling during upload
-    metadata_path = os.path.join(dataset_path, 'metadata.jsonl')
-    with open(metadata_path, 'w') as f:
-        for record in recordings:
-            # Create a copy of the record to avoid modifying the original
-            metadata = record.copy()
-            
-            # Store relative paths instead of absolute paths
-            if 'audio' in metadata:
-                metadata['audio'] = os.path.basename(metadata['audio'])
-            if 'video' in metadata:
-                metadata['video'] = os.path.basename(metadata['video'])
-            if 'lip_video' in metadata:
-                metadata['lip_video'] = os.path.basename(metadata['lip_video'])
-                
-            # Write the metadata as a JSON line
-            f.write(json.dumps(metadata) + '\n')
-    
-    # Create HuggingFace Dataset containing all recordings
+    # Create HuggingFace Dataset from the dataframe
     dataset = Dataset.from_pandas(df)
     
     # Cast audio and video features to HuggingFace Audio and Video
-    # NOTE: Dataset features casting required full path
+    print("\n" + "-"*40)
+    print("Casting to HuggingFace Audio and Video")
+    print("-"*40)
     if 'audio' in dataset.features: 
         dataset = dataset.cast_column('audio', Audio(sampling_rate=16000))
     
@@ -58,20 +56,53 @@ def av_to_hf_dataset(recordings, dataset_path=None, prefix="ami"):
         
     if 'lip_video' in dataset.features:
         dataset = dataset.cast_column('lip_video', Video())
-
-    # save the dataframe to a csv file
-    # NOTE: The CSV path is relative to the dataset_path, will be: 'data/...` instead of full path
-    df['audio'] = df['audio'].apply(lambda x: os.path.join('data', os.path.basename(x)))
-    df['video'] = df['video'].apply(lambda x: os.path.join('data', os.path.basename(x)))
-    df['lip_video'] = df['lip_video'].apply(lambda x: os.path.join('data', os.path.basename(x)))
-    csv_path = os.path.join(dataset_path, f'{prefix}-segmented-info.csv')
-    print(f"Saving dataframe to csv file: {csv_path}")
-    df.to_csv(csv_path, index=False)
     
-    # Save the dataset
-    print(f"Saving dataset to {dataset_path}")
-    dataset.save_to_disk(dataset_path)
-    print(f"HuggingFace dataset saved: {dataset}")
+    # --------------------------------------------------------------------------------------------------
+    # Validate Huggingface Audio and Video objects
+    print("\n" + "-"*40)
+    print("Filter corrupted video objects")
+    print("-"*40)
+    def progress_callback(current, total, valid_count, corrupted_count):
+        if current % 1000 == 0:
+            print(f"   Progress: {current}/{total} ({current/total*100:.1f}%), "
+                  f"Valid: {valid_count}, Corrupted: {corrupted_count}")
+    # Filter corrupted video objects
+    valid_indices, corrupted_files = create_robust_video_filter(
+        dataset,
+        video_column='lip_video',
+        progress_callback=progress_callback
+    )
+    print(f"✅ Validation complete: {len(valid_indices)} valid, {len(corrupted_files)} corrupted")
+
+    # Create a clean dataset with only valid samples
+    if valid_indices:
+        clean_dataset = dataset.select(valid_indices)
+        clean_dataset_path = os.path.join(dataset_path, f'{prefix}-clean')
+        
+        print(f"💾 Saving clean dataset to: {clean_dataset_path}")
+        clean_dataset.save_to_disk(clean_dataset_path)
+
+        # Save the dataframe to a csv file
+        csv_path = os.path.join(clean_dataset_path, f'{prefix}-clean-info.csv')
+        print(f"Saving Clean HuggingFace Dataset to csv file: {csv_path}")
+        clean_dataset.to_csv(csv_path, index=False)
+
+        return clean_dataset
+    
+    else:
+        print(f"No valid samples found. Saving original dataset to {dataset_path}")
+        dataset.save_to_disk(dataset_path)
+        print(f"Original (not filtered) HuggingFace dataset saved: {dataset}")
+
+        # Save the dataframe to a csv file
+        csv_path = os.path.join(dataset_path, f'{prefix}-original-info.csv')
+        print(f"Saving original dataframe to csv file: {csv_path}")
+        dataset.to_csv(csv_path, index=False)
+
+        return dataset
+    # --------------------------------------------------------------------------------------------------
+
+
 
 #====================================================================================================
 
@@ -101,9 +132,9 @@ def av_to_hf_dataset_with_shards(recordings, dataset_path=None, prefix="ami", fi
     
     # Estimate total number of media files for sharding calculation
     estimated_media_files = sum(
-        int(os.path.exists(record.get('audio', ''))) + 
-        int(os.path.exists(record.get('video', ''))) + 
-        int(os.path.exists(record.get('lip_video', ''))) 
+        int(bool(record.get('audio') and os.path.exists(record.get('audio', '')))) + 
+        int(bool(record.get('video') and os.path.exists(record.get('video', '')))) + 
+        int(bool(record.get('lip_video') and os.path.exists(record.get('lip_video', ''))))
         for record in recordings
     )
     num_shards = max(1, (estimated_media_files + files_per_shard - 1) // files_per_shard)
@@ -124,9 +155,9 @@ def av_to_hf_dataset_with_shards(recordings, dataset_path=None, prefix="ami", fi
         current_record_media_count = 0
         
         # ------------------------ Process and copy audio ----------------------------------------------
-        if 'audio' in metadata and metadata['audio'] and os.path.exists(metadata['audio']):
+        if 'audio' in metadata and metadata['audio'] and os.path.exists(str(metadata['audio'])):
             try:
-                audio_file = os.path.basename(metadata['audio'])
+                audio_file = os.path.basename(str(metadata['audio']))
                 destination_path = os.path.join(shard_dir_abs, audio_file)
                 if not os.path.exists(destination_path):
                     shutil.copy2(metadata['audio'], destination_path)
@@ -142,9 +173,9 @@ def av_to_hf_dataset_with_shards(recordings, dataset_path=None, prefix="ami", fi
              
 
         # ------------------------ Process and copy video ------------------------------------------------
-        if 'video' in metadata and metadata['video'] and os.path.exists(metadata['video']):
+        if 'video' in metadata and metadata['video'] and os.path.exists(str(metadata['video'])):
             try:
-                video_file = os.path.basename(metadata['video'])
+                video_file = os.path.basename(str(metadata['video']))
                 destination_path = os.path.join(shard_dir_abs, video_file)
                 if not os.path.exists(destination_path):
                     shutil.copy2(metadata['video'], destination_path)
@@ -161,9 +192,9 @@ def av_to_hf_dataset_with_shards(recordings, dataset_path=None, prefix="ami", fi
 
 
         # ------------------------ Process and copy lip_video -------------------------------------------
-        if 'lip_video' in metadata and metadata['lip_video'] and os.path.exists(metadata['lip_video']):
+        if 'lip_video' in metadata and metadata['lip_video'] and os.path.exists(str(metadata['lip_video'])):
              try:
-                lip_video_file = os.path.basename(metadata['lip_video'])
+                lip_video_file = os.path.basename(str(metadata['lip_video']))
                 destination_path = os.path.join(shard_dir_abs, lip_video_file)
                 if not os.path.exists(destination_path):
                     shutil.copy2(metadata['lip_video'], destination_path)
@@ -399,19 +430,28 @@ def push_dataset_to_hub(dataset_path, repo_name, token=None, private=True, max_r
         print(f"---------------------")
         raise e
 
-
 # ================================================================================================================
 
 if __name__ == "__main__":
-    import argparse
+    # import argparse
     
-    parser = argparse.ArgumentParser(description='Push the dataset to the HuggingFace Hub')
-    parser.add_argument('--dataset_path', type=str, default='/deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl/dataset', help='Path to the HuggingFace dataset')
-    parser.add_argument('--repo_name', type=str, default='ami-audio-visual', help='Name of the repository to push the dataset')
-    parser.add_argument('--token', type=str, default=None, help='HuggingFace API token')
-    parser.add_argument('--private', default=False, help='Whether to create a private repository')
-    args = parser.parse_args()
+    # parser = argparse.ArgumentParser(description='Push the dataset to the HuggingFace Hub')
+    # parser.add_argument('--dataset_path', type=str, default='/deepstore/datasets/hmi/speechlaugh-corpus/ami/dsfl/dataset', help='Path to the HuggingFace dataset')
+    # parser.add_argument('--repo_name', type=str, default='ami-audio-visual', help='Name of the repository to push the dataset')
+    # parser.add_argument('--token', type=str, default=None, help='HuggingFace API token')
+    # parser.add_argument('--private', default=False, help='Whether to create a private repository')
+    # args = parser.parse_args()
 
-    print(f"Loading dataset from {args.dataset_path}")
-    push_dataset_to_hub(args.dataset_path, args.repo_name, args.token, args.private)
+    # print(f"Loading dataset from {args.dataset_path}")
+    # push_dataset_to_hub(args.dataset_path, args.repo_name, args.token, args.private)
 
+    # model, tokenizer, config = load_pretrained_avhubert2text(
+    #     model_name_or_path="nguyenvulebinh/AV-HuBERT-MuAViC-en",
+    #     cache_dir="../checkpoints/hf-avhubert"
+    # )
+
+    # print(f"Model: {model}")
+    # print(f"Tokenizer: {tokenizer}")
+    # print(f"Config: {config}")
+
+    wer_metrics = evaluate.load("wer",cache_dir="../cache/metrics/wer")

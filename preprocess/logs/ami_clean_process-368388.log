@@ -1,0 +1,138 @@
+============================================
+Job Information:
+Job ID: 368388
+Node: hpc-node02
+CPUs: 16
+Memory: 65536 MB
+Start time: Wed Jun  4 10:09:11 AM CEST 2025
+============================================
+============================================
+Processing Configuration:
+CSV Path: /deepstore/datasets/hmi/speechlaugh-corpus/ami/dataset/ami-segments-info.csv
+Output Dir: /home/s2587130/AVSL/preprocess/output/ami_clean_process
+Dataset Path: /home/s2587130/AVSL/data/ami/ami_clean
+============================================
+Checking prerequisites...
+Checking disk space...
+Filesystem                            Size  Used Avail Use% Mounted on
+10.20.240.28:/storage4/home/s2587130  1.0T  343G  682G  34% /home/s2587130
+Filesystem                            Size  Used Avail Use% Mounted on
+10.20.240.28:/storage4/home/s2587130  1.0T  343G  682G  34% /home/s2587130
+================================================================================================================
+Starting AMI segments dataset processing...
+================================================================================================================
+Running command: python ami_clean_dataset_process.py --csv_path "/deepstore/datasets/hmi/speechlaugh-corpus/ami/dataset/ami-segments-info.csv" --output_dir "/home/s2587130/AVSL/preprocess/output/ami_clean_process" --dataset_path "/home/s2587130/AVSL/data/ami/ami_clean"
+================================================================================
+AMI SEGMENTS DATASET PROCESSING
+================================================================================
+Loading AMI segments from /deepstore/datasets/hmi/speechlaugh-corpus/ami/dataset/ami-segments-info.csv
+Columns in CSV: Index(['id', 'meeting_id', 'speaker_id', 'start_time', 'end_time', 'duration',
+       'transcript', 'has_audio', 'has_video', 'has_lip_video',
+       'has_transcript', 'audio', 'video', 'lip_video', '_audio_abs',
+       '_video_abs', '_lip_video_abs'],
+      dtype='object')
+Using absolute audio paths from '_audio_abs' column
+Using absolute video paths from '_video_abs' column
+Using absolute lip video paths from '_lip_video_abs' column
+Loaded 83438 valid segments
+Segments with audio: 83438
+Segments with video: 78685
+Segments with lip video: 67438
+
+----------------------------------------
+CREATING DATASET RECORDS
+----------------------------------------
+Creating dataset records...
+Created 83438 dataset records
+Saved dataset records to /home/s2587130/AVSL/preprocess/output/ami_clean_process/dataset_records.json
+Creating HuggingFace dataset at /home/s2587130/AVSL/data/ami/ami_clean
+Creating HuggingFace dataset with 83438 records
+
+----------------------------------------
+Casting to HuggingFace Audio and Video
+----------------------------------------
+
+----------------------------------------
+Filter corrupted video objects
+----------------------------------------
+🔍 Validating 83438 video samples...
+   Progress: 0/83438 (0.0%), Valid: 1, Corrupted: 0
+   Progress: 2000/83438 (2.4%), Valid: 1629, Corrupted: 372
+   Progress: 3000/83438 (3.6%), Valid: 2445, Corrupted: 556
+   Progress: 4000/83438 (4.8%), Valid: 3248, Corrupted: 753
+   Progress: 5000/83438 (6.0%), Valid: 4048, Corrupted: 953
+   Progress: 6000/83438 (7.2%), Valid: 4874, Corrupted: 1127
+   Progress: 7000/83438 (8.4%), Valid: 5670, Corrupted: 1331
+   Progress: 8000/83438 (9.6%), Valid: 6482, Corrupted: 1519
+   Progress: 9000/83438 (10.8%), Valid: 7278, Corrupted: 1723
+   Progress: 10000/83438 (12.0%), Valid: 8070, Corrupted: 1931
+   Progress: 11000/83438 (13.2%), Valid: 8884, Corrupted: 2117
+   Progress: 13000/83438 (15.6%), Valid: 10511, Corrupted: 2490
+   Progress: 14000/83438 (16.8%), Valid: 11336, Corrupted: 2665
+   Progress: 15000/83438 (18.0%), Valid: 12137, Corrupted: 2864
+   Progress: 16000/83438 (19.2%), Valid: 12965, Corrupted: 3036
+   Progress: 17000/83438 (20.4%), Valid: 13772, Corrupted: 3229
+   Progress: 18000/83438 (21.6%), Valid: 14570, Corrupted: 3431
+   Progress: 19000/83438 (22.8%), Valid: 15388, Corrupted: 3613
+   Progress: 20000/83438 (24.0%), Valid: 16203, Corrupted: 3798
+   Progress: 21000/83438 (25.2%), Valid: 16994, Corrupted: 4007
+   Progress: 22000/83438 (26.4%), Valid: 17814, Corrupted: 4187
+   Progress: 26000/83438 (31.2%), Valid: 21063, Corrupted: 4938
+   Progress: 27000/83438 (32.4%), Valid: 21874, Corrupted: 5127
+   Progress: 28000/83438 (33.6%), Valid: 22665, Corrupted: 5336
+   Progress: 29000/83438 (34.8%), Valid: 23485, Corrupted: 5516
+   Progress: 30000/83438 (36.0%), Valid: 24288, Corrupted: 5713
+   Progress: 31000/83438 (37.2%), Valid: 25112, Corrupted: 5889
+   Progress: 32000/83438 (38.4%), Valid: 25919, Corrupted: 6082
+   Progress: 33000/83438 (39.6%), Valid: 26711, Corrupted: 6290
+   Progress: 34000/83438 (40.7%), Valid: 27534, Corrupted: 6467
+   Progress: 35000/83438 (41.9%), Valid: 28357, Corrupted: 6644
+   Progress: 37000/83438 (44.3%), Valid: 29983, Corrupted: 7018
+   Progress: 38000/83438 (45.5%), Valid: 30819, Corrupted: 7182
+   Progress: 39000/83438 (46.7%), Valid: 31627, Corrupted: 7374
+   Progress: 43000/83438 (51.5%), Valid: 34858, Corrupted: 8143
+   Progress: 46000/83438 (55.1%), Valid: 37295, Corrupted: 8706
+   Progress: 48000/83438 (57.5%), Valid: 38941, Corrupted: 9060
+   Progress: 49000/83438 (58.7%), Valid: 39774, Corrupted: 9227
+   Progress: 51000/83438 (61.1%), Valid: 41365, Corrupted: 9636
+   Progress: 52000/83438 (62.3%), Valid: 42174, Corrupted: 9827
+   Progress: 53000/83438 (63.5%), Valid: 42974, Corrupted: 10027
+   Progress: 55000/83438 (65.9%), Valid: 44597, Corrupted: 10404
+   Progress: 56000/83438 (67.1%), Valid: 45398, Corrupted: 10603
+   Progress: 58000/83438 (69.5%), Valid: 47004, Corrupted: 10997
+   Progress: 59000/83438 (70.7%), Valid: 47813, Corrupted: 11188
+   Progress: 60000/83438 (71.9%), Valid: 48628, Corrupted: 11373
+   Progress: 61000/83438 (73.1%), Valid: 49432, Corrupted: 11569
+   Progress: 62000/83438 (74.3%), Valid: 50249, Corrupted: 11752
+   Progress: 63000/83438 (75.5%), Valid: 51051, Corrupted: 11950
+   Progress: 64000/83438 (76.7%), Valid: 51836, Corrupted: 12165
+   Progress: 65000/83438 (77.9%), Valid: 52636, Corrupted: 12365
+   Progress: 66000/83438 (79.1%), Valid: 53419, Corrupted: 12582
+   Progress: 67000/83438 (80.3%), Valid: 54227, Corrupted: 12774
+   Progress: 68000/83438 (81.5%), Valid: 55012, Corrupted: 12989
+   Progress: 69000/83438 (82.7%), Valid: 55812, Corrupted: 13189
+   Progress: 70000/83438 (83.9%), Valid: 56602, Corrupted: 13399
+   Progress: 71000/83438 (85.1%), Valid: 57405, Corrupted: 13596
+   Progress: 72000/83438 (86.3%), Valid: 58227, Corrupted: 13774
+   Progress: 73000/83438 (87.5%), Valid: 59042, Corrupted: 13959
+   Progress: 74000/83438 (88.7%), Valid: 59845, Corrupted: 14156
+   Progress: 75000/83438 (89.9%), Valid: 60643, Corrupted: 14358
+   Progress: 78000/83438 (93.5%), Valid: 63044, Corrupted: 14957
+   Progress: 79000/83438 (94.7%), Valid: 63856, Corrupted: 15145
+   Progress: 80000/83438 (95.9%), Valid: 64655, Corrupted: 15346
+   Progress: 83000/83438 (99.5%), Valid: 67098, Corrupted: 15903
+✅ Validation complete: 67438 valid, 16000 corrupted
+✅ Validation complete: 67438 valid, 16000 corrupted
+💾 Saving clean dataset to: /home/s2587130/AVSL/data/ami/ami_clean/ami_clean-clean
+Saving Clean HuggingFace Dataset to csv file: /home/s2587130/AVSL/data/ami/ami_clean/ami_clean-clean/ami_clean-clean-info.csv
+Dataset successfully saved to /home/s2587130/AVSL/data/ami/ami_clean
+Processing complete. 83438 records created.
+Dataset (HuggingFace Dataset): Dataset({
+    features: ['segment_id', 'meeting_id', 'speaker_id', 'start_time', 'end_time', 'duration', 'transcript', 'audio', 'video', 'lip_video'],
+    num_rows: 67438
+})
+================================================================================================================
+Processing completed successfully!
+End time: Wed Jun  4 10:48:29 AM CEST 2025
+================================================================================================================
+Job completed successfully!

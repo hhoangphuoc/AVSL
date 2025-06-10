@@ -36,7 +36,7 @@ def collect_segments_from_dsfl_csv(dsfl_laugh_dir,
                  skipped_short_duration, audio_segments_by_source, video_segments_by_source)
     """
     try:
-        csv_file_path = os.path.join(dsfl_laugh_dir, 'disfluency_laughter_markers.csv')
+        csv_file_path = os.path.join(dsfl_laugh_dir, 'ami_laugh_markers.csv')
         df_markers = pd.read_csv(csv_file_path)
         print(f"Loaded {len(df_markers)} records from {csv_file_path}")
     except FileNotFoundError:
@@ -66,7 +66,7 @@ def collect_segments_from_dsfl_csv(dsfl_laugh_dir,
         start_time = row['start_time']
         end_time = row['end_time']
         disfluency_type = row['disfluency_type']
-        is_laugh = bool(row['is_laugh']) # Convert 0/1 to False/True
+        # is_laugh = bool(row['is_laugh']) # Convert 0/1 to False/True
         word = row['word'] # Can be useful for context or filtering
         
         # Handle potential NaN in disfluency_type
@@ -105,9 +105,7 @@ def collect_segments_from_dsfl_csv(dsfl_laugh_dir,
         end_time_str = f"{end_time:.2f}"
         
         # Determine event type for filename
-        if is_laugh:
-            event_label = "laugh"
-        elif disfluency_type:
+        if disfluency_type:
             # Ensure disfluency_type is treated as a string for the label
             event_label = str(disfluency_type)
         else:
@@ -127,7 +125,7 @@ def collect_segments_from_dsfl_csv(dsfl_laugh_dir,
             'end_time': end_time,
             'duration': duration,
             'disfluency_type': disfluency_type,
-            'is_laugh': is_laugh,
+            # 'is_laugh': is_laugh, # not used
             'word': word
         }
         
@@ -242,7 +240,7 @@ def create_dsfl_dataset_records(
                 "end_time": metadata['end_time'],
                 "duration": metadata['duration'],
                 "disfluency_type": metadata['disfluency_type'],
-                "is_laugh": metadata['is_laugh'],
+                # "is_laugh": metadata['is_laugh'],
                 "has_audio": audio_success,
                 "has_video": video_success,
                 "has_lip_video": lip_success
@@ -559,7 +557,7 @@ def dsfl_dataset_from_existing_segments(
             speaker_id = row['speaker_id']
             start_time = row['start_time']
             end_time = row['end_time']
-            disfluency_type = row['disfluency_type'] if row['is_laugh'] == 0 else 'laugh'
+            disfluency_type = row['disfluency_type']
             transcript = row['word'] #can be disfluency word or <laugh>
 
             # Create a segment ID based on the marker information

@@ -1,4 +1,5 @@
 .venv
+.vscode
 .DS_Store
 .cursorignore
 .cursor
@@ -9,12 +10,26 @@
 data/*
 output/*
 
-# Ignore all files in the output folder
-output/*
+# Ignore all files in the refs folder
+refs/*
+pretrained/*
 
 # Ignore cursor rules
 .cursorignore
 .cursor/rules/*
 
 
+# Ignore all checkpoints cache file
+**/**/cache/*
+checkpoints/*
+**/checkpoints/*
 
+# Ignore all files in the Claude folder
+CLAUDE.md
+
+av_hubert/
+avhuberts2s/
+avsl/models/
+
+#Ignore all files in the logs and output folder
+**/output/*

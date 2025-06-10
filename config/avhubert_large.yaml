@@ -1,0 +1,98 @@
+# AV-HuBERT Large Configuration
+# Based on the original reference implementation from Meta AI Research
+
+common:
+  fp16: true
+  log_format: json
+  log_interval: 200
+  seed: 1337
+
+# Audio-visual parameters
+model:
+  use_audio: true
+  use_visual: true
+  modality_fuse: concat  # "concat", "sum", "weighted_sum"
+  modality_dropout: 0.5  # Probability of dropping a modality during training
+  audio_dropout: 0.5     # Probability of dropping audio when dropping a modality
+  
+  # Model size parameters (large model)
+  encoder_embed_dim: 1024        # Dimensionality of encoder
+  encoder_layers: 24             # Number of layers in encoder
+  encoder_attention_heads: 16    # Number of attention heads
+  encoder_ffn_embed_dim: 4096    # Size of intermediate layers
+  
+  # Visual frontend parameters
+  visual_frontend_channels: 64   # Output channels of visual frontend
+  visual_backbone_channels: 512  # Output channels of visual backbone
+  
+  # Audio frontend parameters
+  audio_feat_dim: 104            # Dimension of audio features after preprocessing
+  conv_dim: [512, 512, 512, 512, 512, 512, 512]  # Dimensions of CNN layers
+  conv_stride: [5, 2, 2, 2, 2, 2, 2]              # Strides of CNN layers
+  conv_kernel: [10, 3, 3, 3, 3, 2, 2]             # Kernel sizes of CNN layers
+  conv_kernel_sizes: [5, 5]
+  
+  # Masking parameters
+  mask_prob_image: 0.3           # Probability for visual time masking
+  mask_length_image: 5           # Length of visual time masking spans
+  mask_prob_audio: 0.8           # Probability for audio time masking
+  mask_length_audio: 10          # Length of audio time masking spans
+  mask_time_prob: 0.0
+  mask_time_length: 10
+  mask_feature_prob: 0.0
+  mask_feature_length: 10
+  
+  # Dropout parameters
+  dropout: 0.1                   # Dropout in encoder layers
+  activation_dropout: 0.1        # Dropout after activation functions
+  attention_dropout: 0.1         # Dropout in attention layers
+  encoder_layerdrop: 0.05        # Probability of dropping encoder layers
+  dropout_input: 0.1             # Dropout applied to encoder inputs
+  dropout_features: 0.1          # Dropout applied to features
+  feature_grad_mult: 0.1         # Gradient multiplier for features
+  
+  # Seq2Seq decoder parameters
+  decoder_embed_dim: 1024        # Dimensionality of decoder embedding
+  decoder_ffn_embed_dim: 4096    # Dimensionality of decoder FFN
+  decoder_layers: 9              # Number of decoder layers
+  decoder_attention_heads: 8     # Number of decoder attention heads
+  decoder_layerdrop: 0.1         # Probability of dropping decoder layers
+  decoder_normalize_before: true # Whether to use layer norm before attention
+  decoder_dropout: 0.1           # Dropout in decoder
+  decoder_attention_dropout: 0.0 # Attention dropout in decoder
+  decoder_activation_dropout: 0.1 # Activation dropout in decoder
+  
+  # Other parameters
+  layer_norm_first: true         # Whether to apply layer norm first in encoder
+  final_dim: 256                 # Final projection dimension
+  untie_final_proj: true         # Whether to untie final projection
+  share_decoder_input_output_embed: true  # Share input and output embeddings
+
+# Tokenizer parameters
+tokenizer:
+  vocab_size: 10000              # Size of vocabulary
+  bos_token_id: 0                # Beginning of sequence token ID
+  pad_token_id: 1                # Padding token ID
+  eos_token_id: 2                # End of sequence token ID
+
+# Training parameters
+training:
+  max_update: 400000
+  lr: 0.002
+  warmup_updates: 32000
+  clip_norm: 10.0
+  weight_decay: 0.01
+  adam_betas: [0.9, 0.98]
+  adam_eps: 1e-06
+  
+# Criterion parameters  
+criterion:
+  label_smoothing: 0.1           # Label smoothing value
+  report_accuracy: true
+
+# Dataset parameters
+dataset:
+  max_tokens: 1000
+  num_workers: 6
+  max_audio_length: 480000       # 30 seconds at 16kHz
+  max_video_frames: 750          # 30 seconds at 25 fps

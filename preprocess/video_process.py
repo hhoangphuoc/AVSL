@@ -748,7 +748,7 @@ def batch_process_lip_videos(video_paths, output_paths,
         # Prepare lists for processing
         for segment_id, (success, video_path) in video_segment_results.items():
             if success and video_path and os.path.exists(video_path):
-                lip_output_path = os.path.join(lip_video_dir, f"{segment_id}-lip_video.mp4")
+                lip_output_path = os.path.join(lip_video_dir, f"{segment_id}-lip.mp4")
                 video_paths.append(video_path)
                 output_paths.append(lip_output_path)
                 segment_ids.append(segment_id)

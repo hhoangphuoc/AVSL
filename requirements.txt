@@ -15,5 +15,15 @@ sentencepiece
 scikit-image
 dlib
 tqdm
+Cython
+packaging
+nemo_toolkit['asr']
+tiktoken==0.5.2
+pytorch-lightning==2.1.3
+numba==0.58.1
+evaluate
+tensorboardX
+
+
 
 
