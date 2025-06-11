@@ -1,139 +1,144 @@
-Reading data from av_laughter/meta/ami_da_ap_laughter.csv...
-Total rows in dataset: 763074
-Total <laugh> events found: 12432
+#=======================================================================================================================================================#
+#                                           DIALOGUE ACTS - LAUGHTER STATS (ALL MEDIA)
+#=======================================================================================================================================================#
+Reading data from ../data/meta/ami_dialogue_acts.csv...
+Total rows in dataset: 702472
+Total <laugh> events found: 12040
+
 Generating segment_id for each laugh event...
 
-Found 99373 potential media files. Processing...
-Categorizing media files: 100%|████████████████████████████████████████████████████████████| 99373/99373 [00:00<00:00, 367680.64it/s]
+Categorizing media files: 100%|█████████████████████████████████████| 99373/99373 [00:00<00:00, 379149.16it/s]
 Cached paths: 
-- 27240 audio, 
-- 26475 video, 
-- 21582 lip video.
+- 9686 audio, 
+- 9474 video, 
+- 7605 lip video.
 
-Created dataframe with columns: segment_id, meeting_id, speaker_id, dact_id, word, start_time, end_time, dialogue_act_type, dialogue_act_gloss, dialogue_act_category, event_type, pair_id, pair_type, pair_type_gloss, target_speaker_id, target_dact_id, audio, video, lip_video
-Filtered laugh events with all media paths saved to analysis/laughs_with_media.csv
+----------------------------
 
-============================================================
-LAUGH EVENT STATISTICS
-============================================================
-Available columns for statistics: segment_id, meeting_id, speaker_id, dact_id, word, start_time, end_time, dialogue_act_type, dialogue_act_gloss, dialogue_act_category, event_type, pair_id, pair_type, pair_type_gloss, target_speaker_id, target_dact_id, audio, video, lip_video
+Mapping media paths to laugh events...
+Created dataframe with columns: segment_id, meeting_id, speaker_id, dact_id, word, start_time, end_time, dialogue_act_type, dialogue_act_gloss, dialogue_act_category, event_type, audio, video, lip_video
+Dropped 6342 rows with missing data in selected columns.
 
-Saving statistics with prefix 'analysis/media_laugh_stats'...
-Saved dialogue_act_type statistics to analysis/media_laugh_stats_dialogue_act_type.csv
-Saved dialogue_act_gloss statistics to analysis/media_laugh_stats_dialogue_act_gloss.csv
-Saved pair_type statistics to analysis/media_laugh_stats_pair_type.csv
-Saved pair_type_gloss statistics to analysis/media_laugh_stats_pair_type_gloss.csv
-Saved speaker statistics to analysis/media_laugh_stats_speaker.csv
-Saved meeting statistics to analysis/media_laugh_stats_meeting.csv
-Saved media path statistics to analysis/media_laugh_stats_media_paths.csv
-
-============================================================
-PROCESSING COMPLETED SUCCESSFULLY
-============================================================
-Filtered events saved to: analysis/laughs_with_media.csv
-Statistics files created with prefix: analysis/media_laugh_stats
-
-=======================================================================================================================================================================
-(whisper-flamingo) (base) s2587130@hpc-head1:~/AVSL$ python filter_laugh_events.py av_laughter/meta/ami_da_ap_laughter.csv -o analysis/laughs_with_media.csv -s analysis/media_laugh_stats
-Reading data from av_laughter/meta/ami_da_ap_laughter.csv...
-Total rows in dataset: 763074
-Total <laugh> events found: 12432
-Generating segment_id for each laugh event...
-
-Found 99373 potential media files. Processing...
-Cached paths: 
-- 27240 audio, 
-- 26475 video, 
-- 21582 lip video.
-
-
-Created dataframe with columns: segment_id, meeting_id, speaker_id, dact_id, word, start_time, end_time, dialogue_act_type, dialogue_act_gloss, dialogue_act_category, event_type, pair_id, pair_type, pair_type_gloss, target_speaker_id, target_dact_id, audio, video, lip_video
-Dropped 11866 rows with missing data in selected columns.
 
 Final dataset has: 
-    - 566 complete rows.
+    - 5698 complete rows.
+
+Filtered laugh events with all media paths saved to dialogue_acts/all_media/laughs_with_media.csv
 
 ============================================================
 LAUGH EVENT STATISTICS
 ============================================================
-Available columns for statistics: segment_id, meeting_id, speaker_id, dact_id, word, start_time, end_time, dialogue_act_type, dialogue_act_gloss, dialogue_act_category, event_type, pair_id, pair_type, pair_type_gloss, target_speaker_id, target_dact_id, audio, video, lip_video
+Available columns for statistics: segment_id, meeting_id, speaker_id, dact_id, word, start_time, end_time, dialogue_act_type, dialogue_act_gloss, dialogue_act_category, event_type, audio, video, lip_video
 
-Saving statistics with prefix 'analysis/media_laugh_stats'...
-Saved dialogue_act_type statistics to analysis/media_laugh_stats_dialogue_act_type.csv
-Saved dialogue_act_gloss statistics to analysis/media_laugh_stats_dialogue_act_gloss.csv
-Saved pair_type statistics to analysis/media_laugh_stats_pair_type.csv
-Saved pair_type_gloss statistics to analysis/media_laugh_stats_pair_type_gloss.csv
-Saved speaker statistics to analysis/media_laugh_stats_speaker.csv
-Saved meeting statistics to analysis/media_laugh_stats_meeting.csv
-Saved media path statistics to analysis/media_laugh_stats_media_paths.csv
+Saving statistics with prefix 'dialogue_acts/all_media/da_laugh_stats'...
 
 ============================================================
 PROCESSING COMPLETED SUCCESSFULLY
 ============================================================
+Filtered events saved to: dialogue_acts/all_media/laughs_with_media.csv
+Statistics files created with prefix: dialogue_acts/all_media/da_laugh_stats
 
-=======================================================================================================================================================================
 
-(whisper-flamingo) (base) s2587130@hpc-head1:~/AVSL$ python filter_laugh_events.py av_laughter/meta/ami_da_ap_laughter.csv -o analysis/laughs_with_media.csv -s analysis/media_laugh_stats
-Reading data from av_laughter/meta/ami_da_ap_laughter.csv...
-Total rows in dataset: 763074
-Total <laugh> events found: 12432
+---------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+#=======================================================================================================================================================#
+#                                           DIALOGUE ACTS - LAUGHTER STATS (AUDIO-ONLY)
+#=======================================================================================================================================================#
+```
+python filter_laugh_events.py ../data/meta/ami_dialogue_acts.csv -o dialogue_acts/audio/laughs_with_media.csv -s dialogue_acts/audio/da_laugh_stats
+```
+
+Reading data from ../data/meta/ami_dialogue_acts.csv...
+Total rows in dataset: 702472
+Total <laugh> events found: 12040
+
 Generating segment_id for each laugh event...
-100%|█████████████████████████████████████████████████████████████████████████| 12432/12432 [00:00<00:00, 90656.44it/s]
-Caching all media file paths. This may take a moment...
-Found 99373 potential media files. Processing...
-Categorizing media files: 100%|██████████████████████████████████████████████| 99373/99373 [00:00<00:00, 372652.44it/s]
-Cached paths: 27240 audio, 26475 video, 21582 lip video.
+
+
+Categorizing media files: 100%|█████████████████████████████████████| 99373/99373 [00:00<00:00, 376901.41it/s]
+Cached paths: 
+    - 9686 audio, 
+    - 9474 video, 
+    - 7605 lip video.
+
 Mapping media paths to laugh events...
-Created dataframe with columns: segment_id, meeting_id, speaker_id, dact_id, word, start_time, end_time, dialogue_act_type, dialogue_act_gloss, dialogue_act_category, event_type, pair_id, pair_type, pair_type_gloss, target_speaker_id, target_dact_id, audio, video, lip_video
-Dropped 10670 rows with missing data in selected columns.
-Final dataset has 1762 complete rows.
-Filtered laugh events with all media paths saved to analysis/laughs_with_media.csv
+Created dataframe with columns: segment_id, meeting_id, speaker_id, dact_id, word, start_time, end_time, dialogue_act_type, dialogue_act_gloss, dialogue_act_category, event_type, audio, video, lip_video
+Dropped 4558 rows with missing data in selected columns.
+
+Final dataset has:
+    - 7482 complete rows.
+
+Filtered laugh events with all media paths saved to dialogue_acts/audio/laughs_with_media.csv
 
 ============================================================
 LAUGH EVENT STATISTICS
 ============================================================
-Available columns for statistics: segment_id, meeting_id, speaker_id, dact_id, word, start_time, end_time, dialogue_act_type, dialogue_act_gloss, dialogue_act_category, event_type, pair_id, pair_type, pair_type_gloss, target_speaker_id, target_dact_id, audio, video, lip_video
+Available columns for statistics: segment_id, meeting_id, speaker_id, dact_id, word, start_time, end_time, dialogue_act_type, dialogue_act_gloss, dialogue_act_category, event_type, audio, video, lip_video
 
-Saving statistics with prefix 'analysis/media_laugh_stats'...
-Saved dialogue_act_type statistics to analysis/media_laugh_stats_dialogue_act_type.csv
-Saved dialogue_act_gloss statistics to analysis/media_laugh_stats_dialogue_act_gloss.csv
-Saved pair_type statistics to analysis/media_laugh_stats_pair_type.csv
-Saved pair_type_gloss statistics to analysis/media_laugh_stats_pair_type_gloss.csv
-Saved speaker statistics to analysis/media_laugh_stats_speaker.csv
-Saved meeting statistics to analysis/media_laugh_stats_meeting.csv
-Saved media path statistics to analysis/media_laugh_stats_media_paths.csv
+Saving statistics with prefix 'dialogue_acts/audio/da_laugh_stats'...
 
 ============================================================
 PROCESSING COMPLETED SUCCESSFULLY
 ============================================================
-Filtered events saved to: analysis/laughs_with_media.csv
-Statistics files created with prefix: analysis/media_laugh_stats
-(whisper-flamingo) (base) s2587130@hpc-head1:~/AVSL$ python filter_laugh_events.py av_laughter/meta/ami_da_ap_laughter.csv -o analysis/laughs_with_media.csv -s analysis/media_laugh_stats
-Reading data from av_laughter/meta/ami_da_ap_laughter.csv...
+Filtered events saved to: dialogue_acts/audio/laughs_with_media.csv
+Statistics files created with prefix: dialogue_acts/audio/da_laugh_stats
+
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+#=======================================================================================================================================================#
+#                                           DIALOGUE ACTS + ADJACENCY PAIRS - LAUGHTER STATS (AUDIO-ONLY)
+#=======================================================================================================================================================#
+
+```
+(whisper-flamingo) (base) s2587130@hpc-head1:~/AVSL/analysis$ python filter_laugh_events.py meta/ami_da_ap_laughter.csv -o da_ap/audio/laughs_
+with_media.csv -s da_ap/audio/da_ap_laugh_stats
+```
+
+Reading data from meta/ami_da_ap_laughter.csv...
 Total rows in dataset: 763074
 Total <laugh> events found: 12432
+
 Generating segment_id for each laugh event...
-100%|█████████████████████████████████████████████████████████████████████████| 12432/12432 [00:00<00:00, 89805.65it/s]
-Caching all media file paths. This may take a moment...
-Found 99373 potential media files. Processing...
-Categorizing media files: 100%|██████████████████████████████████████████████| 99373/99373 [00:00<00:00, 373415.31it/s]
-Cached paths: 27240 audio, 26475 video, 21582 lip video.
+
+
+Categorizing media files: 100%|█████████████████████████████████████████████████████████████████████| 99373/99373 [00:00<00:00, 386328.16it/s]
+Cached paths: 
+    - 9686 audio, 
+    - 9474 video, 
+    - 7605 lip video.
+
 Mapping media paths to laugh events...
 Created dataframe with columns: segment_id, meeting_id, speaker_id, dact_id, word, start_time, end_time, dialogue_act_type, dialogue_act_gloss, dialogue_act_category, event_type, pair_id, pair_type, pair_type_gloss, target_speaker_id, target_dact_id, audio, video, lip_video
-Dropped 11866 rows with missing data in selected columns.
-Final dataset has 566 complete rows.
-Filtered laugh events with all media paths saved to analysis/laughs_with_media.csv
+Dropped 4777 rows with missing data in selected columns.
+
+
+Final dataset has:
+    - 7655 complete rows.
+
+Filtered laugh events with all media paths saved to da_ap/audio/laughs_with_media.csv
 
 ============================================================
 LAUGH EVENT STATISTICS
 ============================================================
 Available columns for statistics: segment_id, meeting_id, speaker_id, dact_id, word, start_time, end_time, dialogue_act_type, dialogue_act_gloss, dialogue_act_category, event_type, pair_id, pair_type, pair_type_gloss, target_speaker_id, target_dact_id, audio, video, lip_video
 
-Saving statistics with prefix 'analysis/media_laugh_stats'...
-Saved dialogue_act_type statistics to analysis/media_laugh_stats_dialogue_act_type.csv
-Saved dialogue_act_gloss statistics to analysis/media_laugh_stats_dialogue_act_gloss.csv
-Saved pair_type statistics to analysis/media_laugh_stats_pair_type.csv
-Saved pair_type_gloss statistics to analysis/media_laugh_stats_pair_type_gloss.csv
-Saved speaker statistics to analysis/media_laugh_stats_speaker.csv
-Saved meeting statistics to analysis/media_laugh_stats_meeting.csv
-Saved media path statistics to analysis/media_laugh_stats_media_paths.csv
+Saving statistics with prefix 'da_ap/audio/da_ap_laugh_stats'...
+
+============================================================
+PROCESSING COMPLETED SUCCESSFULLY
+============================================================
+Filtered events saved to: da_ap/audio/laughs_with_media.csv
+Statistics files created with prefix: da_ap/audio/da_ap_laugh_stats
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+#=======================================================================================================================================================#
+#                                           DIALOGUE ACTS + ADJACENCY PAIRS - LAUGHTER STATS (ALL MEDIA)
+#=======================================================================================================================================================#
+

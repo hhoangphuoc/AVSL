@@ -51,16 +51,13 @@ def cache_media_paths():
             fname_ext = os.path.basename(path)
             fname, ext = os.path.splitext(fname_ext)
             
-            if ext == '.wav' and 'audio_segments' in dir_name:
+            if ext == '.wav' and 'audio_segments' in dir_name and 'laughter' in fname:
                 audio_paths[fname] = path
-            elif ext == '.mp4' and 'video_segments' in dir_name:
+            elif ext == '.mp4' and 'video_segments' in dir_name and 'laughter' in fname:
                 video_paths[fname] = path
-            elif ext == '.mp4' and 'lip_segments' in dir_name:
-                if fname.endswith('_lip'):
-                    segment_id = fname.replace('_lip', '')
-                    lip_video_paths[segment_id] = path
-                else:
-                    video_paths[fname] = path
+            elif ext == '.mp4' and 'lip_segments' in dir_name and '-laughter_lip' in fname:
+                segment_id = fname.replace('_lip', '')
+                lip_video_paths[segment_id] = path
 
     except subprocess.CalledProcessError as e:
         print(f"Error executing find command to cache media paths: {e}", file=sys.stderr)
@@ -117,14 +114,23 @@ def filter_laugh_events(input_file, output_file):
     laugh_events['video'] = laugh_events['segment_id'].map(video_paths)
     laugh_events['lip_video'] = laugh_events['segment_id'].map(lip_video_paths)
 
-    # Define final columns for the output CSV
+    # Define final columns for the output CSV ----------------------------------------------
+    # COLUMNS TO KEEP (TASK 1 - DA)
+    # final_columns = [
+    #     'segment_id', 'meeting_id', 'speaker_id', 'dact_id', 'word', 'start_time', 'end_time',
+    #     'dialogue_act_type', 'dialogue_act_gloss', 'dialogue_act_category', 'event_type',
+    #     'audio', 'video', 'lip_video'
+    # ]
+    # --------------------------------------------------------------------------------------
+    # COLUMNS TO KEEP (TASK 2 - DA + AP) --------------------------------------------------
     final_columns = [
         'segment_id', 'meeting_id', 'speaker_id', 'dact_id', 'word', 'start_time', 'end_time',
         'dialogue_act_type', 'dialogue_act_gloss', 'dialogue_act_category', 'event_type',
         'pair_id', 'pair_type', 'pair_type_gloss', 'target_speaker_id', 'target_dact_id',
         'audio', 'video', 'lip_video'
     ]
-    
+    # --------------------------------------------------------------------------------------
+
     # Use only the columns that exist in the input dataframe, plus the new ones
     existing_columns = [col for col in final_columns if col in laugh_events.columns]
     
@@ -140,19 +146,12 @@ def filter_laugh_events(input_file, output_file):
 
     # Filter out rows that missing the following columns:
     # audio, video, lip_video
-    processed_df = processed_df.dropna(subset=['audio','video','lip_video'])
+    processed_df = processed_df.dropna(subset=['audio', 'video', 'lip_video'])
 
     rows_after_drop = len(processed_df)
     
     print(f"Dropped {rows_before_drop - rows_after_drop} rows with missing data in selected columns.")
     print(f"Final dataset has {rows_after_drop} complete rows.")
-
-    # Drop rows that have any missing values in any column
-    # processed_df.dropna(inplace=True)
-    # rows_after_drop = len(processed_df)
-    
-    # print(f"Dropped {rows_before_drop - rows_after_drop} rows with missing data.")
-    # print(f"Final dataset has {rows_after_drop} complete rows.")
     # --------------------------------------------------------------------------------------
 
     # Save final dataframe to CSV
